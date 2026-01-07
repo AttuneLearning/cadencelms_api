@@ -9,6 +9,12 @@ process.env.JWT_REFRESH_SECRET = 'test-refresh-secret-key-for-testing-only';
 process.env.REDIS_HOST = 'localhost';
 process.env.REDIS_PORT = '6379';
 
+// Mock Redis for tests
+jest.mock('@/config/redis', () => {
+  const { Cache } = require('../tests/__mocks__/redis');
+  return { Cache };
+});
+
 // Increase timeout for database operations
 jest.setTimeout(30000);
 

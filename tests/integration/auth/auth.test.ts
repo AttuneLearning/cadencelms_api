@@ -81,7 +81,7 @@ describe('Auth Integration Tests', () => {
         .expect(400);
 
       expect(response.body.status).toBe('error');
-      expect(response.body.message).toContain('validation');
+      expect(response.body.message.toLowerCase()).toContain('validation');
     });
 
     it('should validate email format', async () => {

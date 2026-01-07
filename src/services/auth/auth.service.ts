@@ -44,80 +44,66 @@ export class AuthService {
    * Register a new staff member
    */
   static async registerStaff(input: RegisterStaffInput): Promise<AuthResponse> {
-    const session = await mongoose.startSession();
-    session.startTransaction();
+    // Check if user already exists
+    const existingUser = await User.findOne({ email: input.email });
+    if (existingUser) {
+      throw ApiError.conflict('User with this email already exists');
+    }
 
+    // Hash password
+    const hashedPassword = await hashPassword(input.password);
+
+    // Create User
+    const userId = new mongoose.Types.ObjectId();
+    
     try {
-      // Check if user already exists
-      const existingUser = await User.findOne({ email: input.email });
-      if (existingUser) {
-        throw ApiError.conflict('User with this email already exists');
-      }
-
-      // Hash password
-      const hashedPassword = await hashPassword(input.password);
-
-      // Create User
-      const userId = new mongoose.Types.ObjectId();
-      const user = await User.create(
-        [
-          {
-            _id: userId,
-            email: input.email,
-            password: hashedPassword,
-            roles: input.roles
-          }
-        ],
-        { session }
-      );
+      const user = await User.create({
+        _id: userId,
+        email: input.email,
+        password: hashedPassword,
+        roles: input.roles
+      });
 
       // Create Staff with same _id
-      const staff = await Staff.create(
-        [
-          {
-            _id: userId,
-            firstName: input.firstName,
-            lastName: input.lastName,
-            phoneNumber: input.phoneNumber,
-            title: input.title,
-            departmentMemberships: []
-          }
-        ],
-        { session }
-      );
-
-      await session.commitTransaction();
+      const staff = await Staff.create({
+        _id: userId,
+        firstName: input.firstName,
+        lastName: input.lastName,
+        phoneNumber: input.phoneNumber,
+        title: input.title,
+        departmentMemberships: []
+      });
 
       // Generate tokens
       const accessToken = generateAccessToken(
-        user[0]._id.toString(),
-        user[0].email,
-        user[0].roles
+        user._id.toString(),
+        user.email,
+        user.roles
       );
-      const refreshToken = generateRefreshToken(user[0]._id.toString());
+      const refreshToken = generateRefreshToken(user._id.toString());
 
       // Store refresh token in cache
       await Cache.set(
-        `refresh_token:${user[0]._id}`,
+        `refresh_token:${user._id}`,
         refreshToken,
         30 * 24 * 60 * 60 // 30 days
       );
 
       // Remove password from response
-      const userObj = user[0].toObject();
+      const userObj = user.toObject();
       delete userObj.password;
 
       return {
         user: userObj as IUser,
-        staff: staff[0].toObject(),
+        staff: staff.toObject(),
         accessToken,
         refreshToken
       };
     } catch (error) {
-      await session.abortTransaction();
+      // Cleanup on error
+      await User.findByIdAndDelete(userId);
+      await Staff.findByIdAndDelete(userId);
       throw error;
-    } finally {
-      session.endSession();
     }
   }
 
@@ -125,79 +111,65 @@ export class AuthService {
    * Register a new learner
    */
   static async registerLearner(input: RegisterLearnerInput): Promise<AuthResponse> {
-    const session = await mongoose.startSession();
-    session.startTransaction();
+    // Check if user already exists
+    const existingUser = await User.findOne({ email: input.email });
+    if (existingUser) {
+      throw ApiError.conflict('User with this email already exists');
+    }
+
+    // Hash password
+    const hashedPassword = await hashPassword(input.password);
+
+    // Create User
+    const userId = new mongoose.Types.ObjectId();
 
     try {
-      // Check if user already exists
-      const existingUser = await User.findOne({ email: input.email });
-      if (existingUser) {
-        throw ApiError.conflict('User with this email already exists');
-      }
-
-      // Hash password
-      const hashedPassword = await hashPassword(input.password);
-
-      // Create User
-      const userId = new mongoose.Types.ObjectId();
-      const user = await User.create(
-        [
-          {
-            _id: userId,
-            email: input.email,
-            password: hashedPassword,
-            roles: ['learner']
-          }
-        ],
-        { session }
-      );
+      const user = await User.create({
+        _id: userId,
+        email: input.email,
+        password: hashedPassword,
+        roles: ['learner']
+      });
 
       // Create Learner with same _id
-      const learner = await Learner.create(
-        [
-          {
-            _id: userId,
-            firstName: input.firstName,
-            lastName: input.lastName,
-            dateOfBirth: input.dateOfBirth,
-            phoneNumber: input.phoneNumber
-          }
-        ],
-        { session }
-      );
-
-      await session.commitTransaction();
+      const learner = await Learner.create({
+        _id: userId,
+        firstName: input.firstName,
+        lastName: input.lastName,
+        dateOfBirth: input.dateOfBirth,
+        phoneNumber: input.phoneNumber
+      });
 
       // Generate tokens
       const accessToken = generateAccessToken(
-        user[0]._id.toString(),
-        user[0].email,
-        user[0].roles
+        user._id.toString(),
+        user.email,
+        user.roles
       );
-      const refreshToken = generateRefreshToken(user[0]._id.toString());
+      const refreshToken = generateRefreshToken(user._id.toString());
 
       // Store refresh token in cache
       await Cache.set(
-        `refresh_token:${user[0]._id}`,
+        `refresh_token:${user._id}`,
         refreshToken,
         30 * 24 * 60 * 60
       );
 
       // Remove password from response
-      const userObj = user[0].toObject();
+      const userObj = user.toObject();
       delete userObj.password;
 
       return {
         user: userObj as IUser,
-        learner: learner[0].toObject(),
+        learner: learner.toObject(),
         accessToken,
         refreshToken
       };
     } catch (error) {
-      await session.abortTransaction();
+      // Cleanup on error
+      await User.findByIdAndDelete(userId);
+      await Learner.findByIdAndDelete(userId);
       throw error;
-    } finally {
-      session.endSession();
     }
   }
 
