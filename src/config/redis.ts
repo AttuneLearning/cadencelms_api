@@ -60,7 +60,11 @@ export class Cache {
    */
   static async del(key: string | string[]): Promise<void> {
     try {
-      await redis.del(key);
+      if (Array.isArray(key)) {
+        await redis.del(...key);
+      } else {
+        await redis.del(key);
+      }
     } catch (error) {
       logger.error(`Cache delete error:`, error);
     }

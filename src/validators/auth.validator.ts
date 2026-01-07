@@ -4,7 +4,7 @@ import { ApiError } from '@/utils/ApiError';
 
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
-export const validateRegisterStaff = (req: Request, res: Response, next: NextFunction) => {
+export const validateRegisterStaff = (req: Request, _res: Response, next: NextFunction) => {
   const schema = Joi.object({
     email: Joi.string().email().required().messages({
       'string.email': 'Please provide a valid email address',
@@ -48,7 +48,7 @@ export const validateRegisterStaff = (req: Request, res: Response, next: NextFun
   next();
 };
 
-export const validateRegisterLearner = (req: Request, res: Response, next: NextFunction) => {
+export const validateRegisterLearner = (req: Request, _res: Response, next: NextFunction) => {
   const schema = Joi.object({
     email: Joi.string().email().required(),
     password: Joi.string().min(8).pattern(passwordRegex).required(),
@@ -71,7 +71,7 @@ export const validateRegisterLearner = (req: Request, res: Response, next: NextF
   next();
 };
 
-export const validateLogin = (req: Request, res: Response, next: NextFunction) => {
+export const validateLogin = (req: Request, _res: Response, next: NextFunction) => {
   const schema = Joi.object({
     email: Joi.string().email().required(),
     password: Joi.string().required()
@@ -90,7 +90,7 @@ export const validateLogin = (req: Request, res: Response, next: NextFunction) =
   next();
 };
 
-export const validateRefresh = (req: Request, res: Response, next: NextFunction) => {
+export const validateRefresh = (req: Request, _res: Response, next: NextFunction) => {
   const schema = Joi.object({
     refreshToken: Joi.string().required()
   });
@@ -104,7 +104,7 @@ export const validateRefresh = (req: Request, res: Response, next: NextFunction)
   next();
 };
 
-export const validatePasswordChange = (req: Request, res: Response, next: NextFunction) => {
+export const validatePasswordChange = (req: Request, _res: Response, next: NextFunction) => {
   const schema = Joi.object({
     currentPassword: Joi.string().required(),
     newPassword: Joi.string().min(8).pattern(passwordRegex).required()
@@ -123,7 +123,7 @@ export const validatePasswordChange = (req: Request, res: Response, next: NextFu
   next();
 };
 
-export const validateForgotPassword = (req: Request, res: Response, next: NextFunction) => {
+export const validateForgotPassword = (req: Request, _res: Response, next: NextFunction) => {
   const schema = Joi.object({
     email: Joi.string().email().required()
   });

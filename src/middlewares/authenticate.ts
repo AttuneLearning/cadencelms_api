@@ -6,7 +6,7 @@ import { ApiError } from '@/utils/ApiError';
  * Authentication middleware
  * Verifies JWT token and attaches user info to request
  */
-export const authenticate = (req: Request, res: Response, next: NextFunction) => {
+export const authenticate = (req: Request, _res: Response, next: NextFunction) => {
   try {
     // Get token from Authorization header
     const authHeader = req.headers.authorization;
@@ -38,7 +38,7 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
  * @param allowedRoles - Array of roles that are allowed to access the route
  */
 export const authorize = (...allowedRoles: string[]) => {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, _res: Response, next: NextFunction) => {
     const user = (req as any).user;
 
     if (!user) {

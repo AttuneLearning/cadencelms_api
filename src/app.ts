@@ -23,7 +23,7 @@ if (config.env !== 'test') {
 }
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.status(200).json({
     status: 'success',
     message: 'Server is healthy',

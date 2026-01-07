@@ -91,10 +91,10 @@ export class AuthService {
 
       // Remove password from response
       const userObj = user.toObject();
-      delete userObj.password;
+      const { password: _, ...userWithoutPassword } = userObj;
 
       return {
-        user: userObj as IUser,
+        user: userWithoutPassword as unknown as IUser,
         staff: staff.toObject(),
         accessToken,
         refreshToken
@@ -157,10 +157,10 @@ export class AuthService {
 
       // Remove password from response
       const userObj = user.toObject();
-      delete userObj.password;
+      const { password: _, ...userWithoutPassword } = userObj;
 
       return {
-        user: userObj as IUser,
+        user: userWithoutPassword as unknown as IUser,
         learner: learner.toObject(),
         accessToken,
         refreshToken
@@ -220,10 +220,10 @@ export class AuthService {
 
     // Remove password from response
     const userObj = user.toObject();
-    delete userObj.password;
+    const { password: _, ...userWithoutPassword } = userObj;
 
     return {
-      user: userObj as IUser,
+      user: userWithoutPassword as unknown as IUser,
       staff: staff?.toObject(),
       learner: learner?.toObject(),
       accessToken,

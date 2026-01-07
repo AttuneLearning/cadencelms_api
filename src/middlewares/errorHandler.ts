@@ -12,7 +12,8 @@ export const errorHandler = (
   err: Error | ApiError,
   req: Request,
   res: Response,
-  next: NextFunction
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _next: NextFunction
 ) => {
   let error = err;
 
@@ -60,7 +61,7 @@ export const errorHandler = (
 /**
  * Not found handler for undefined routes
  */
-export const notFoundHandler = (req: Request, res: Response, next: NextFunction) => {
+export const notFoundHandler = (req: Request, _res: Response, next: NextFunction) => {
   const error = ApiError.notFound(`Route ${req.originalUrl} not found`);
   next(error);
 };

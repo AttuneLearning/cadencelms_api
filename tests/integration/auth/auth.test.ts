@@ -2,9 +2,6 @@ import request from 'supertest';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
 import app from '@/app';
-import { User } from '@/models/auth/User.model';
-import { Staff } from '@/models/auth/Staff.model';
-import { Learner } from '@/models/auth/Learner.model';
 
 describe('Auth Integration Tests', () => {
   let mongoServer: MongoMemoryServer;

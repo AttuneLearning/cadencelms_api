@@ -35,7 +35,7 @@ export function generateAccessToken(
 
   return jwt.sign(payload, config.jwt.accessSecret, {
     expiresIn: config.jwt.accessExpiry
-  });
+  } as jwt.SignOptions);
 }
 
 /**
@@ -49,7 +49,7 @@ export function generateRefreshToken(userId: string): string {
 
   return jwt.sign(payload, config.jwt.refreshSecret, {
     expiresIn: config.jwt.refreshExpiry
-  });
+  } as jwt.SignOptions);
 }
 
 /**
