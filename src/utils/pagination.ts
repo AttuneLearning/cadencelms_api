@@ -49,8 +49,13 @@ export function getPaginationParams(
     page = 1;
   }
 
-  if (isNaN(limit) || limit < 1) {
+  if (isNaN(limit)) {
     limit = defaultLimit;
+  }
+  
+  // Enforce minimum limit of 1
+  if (limit < 1) {
+    limit = 1;
   }
 
   // Enforce maximum limit

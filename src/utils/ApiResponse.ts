@@ -61,7 +61,7 @@ export class ApiResponse {
       message
     };
 
-    if (errors && errors.length > 0) {
+    if (errors !== undefined) {
       response.errors = errors;
     }
 
