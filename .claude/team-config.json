@@ -1,0 +1,144 @@
+{
+  "team": {
+    "name": "LMS Backend Team",
+    "version": "1.0.0",
+    "description": "Backend development team for LMS Node V2"
+  },
+  "agents": [
+    {
+      "id": "backend-lead",
+      "role": "Tech Lead",
+      "description": "Oversees architecture, defines contracts, reviews code, makes technical decisions",
+      "responsibilities": [
+        "Define and maintain API contracts in /contracts/",
+        "Review PRs from other agents",
+        "Make architectural decisions",
+        "Coordinate with UI team on contract changes",
+        "Ensure TDD practices are followed"
+      ],
+      "workingDirectories": [
+        "src/",
+        "contracts/",
+        "devdocs/"
+      ],
+      "contextFiles": [
+        "devdocs/Ideal_TypeScript_DataStructures.md",
+        "devdocs/Ideal_MongoDB_DataObjects.md",
+        "devdocs/Ideal_RestfulAPI_toCurrent_Crosswalk.md",
+        "contracts/README.md"
+      ]
+    },
+    {
+      "id": "backend-models",
+      "role": "Data Engineer",
+      "description": "Implements Mongoose models, migrations, and data layer",
+      "responsibilities": [
+        "Implement Mongoose models with full validation",
+        "Create indexes for performance",
+        "Write migration scripts",
+        "Ensure data integrity constraints",
+        "Write model unit tests"
+      ],
+      "workingDirectories": [
+        "src/models/",
+        "src/services/migration/",
+        "tests/unit/models/"
+      ],
+      "contextFiles": [
+        "devdocs/Ideal_MongoDB_DataObjects.md",
+        "devdocs/Ideal_TypeScript_DataStructures.md"
+      ]
+    },
+    {
+      "id": "backend-services",
+      "role": "Service Developer",
+      "description": "Implements business logic, controllers, routes, and middleware",
+      "responsibilities": [
+        "Implement service classes with business logic",
+        "Create Express controllers",
+        "Define routes with proper middleware",
+        "Implement request validation (Joi schemas)",
+        "Write service and controller tests"
+      ],
+      "workingDirectories": [
+        "src/services/",
+        "src/controllers/",
+        "src/routes/",
+        "src/middlewares/",
+        "src/validators/",
+        "tests/unit/services/",
+        "tests/unit/controllers/"
+      ],
+      "contextFiles": [
+        "devdocs/Ideal_RestfulAPI_toCurrent_Crosswalk.md",
+        "contracts/api/"
+      ]
+    },
+    {
+      "id": "backend-qa",
+      "role": "QA Engineer",
+      "description": "Ensures test coverage, contract compliance, and quality",
+      "responsibilities": [
+        "Write integration tests",
+        "Validate API responses match contracts",
+        "Ensure minimum 80% code coverage",
+        "Test edge cases and error handling",
+        "Maintain test utilities and fixtures"
+      ],
+      "workingDirectories": [
+        "tests/",
+        "contracts/validation/"
+      ],
+      "contextFiles": [
+        "TDD_TEST_COVERAGE_SUMMARY.md",
+        "jest.config.js"
+      ]
+    }
+  ],
+  "sharedContext": {
+    "projectStructure": {
+      "models": "src/models/ - Mongoose schemas organized by domain",
+      "services": "src/services/ - Business logic layer",
+      "controllers": "src/controllers/ - Express route handlers",
+      "routes": "src/routes/ - Express router definitions",
+      "middlewares": "src/middlewares/ - Express middleware",
+      "validators": "src/validators/ - Joi validation schemas",
+      "tests": "tests/ - Jest test suites (unit, integration, e2e)",
+      "contracts": "contracts/ - API contracts shared with UI team"
+    },
+    "conventions": {
+      "naming": {
+        "models": "PascalCase.model.ts (e.g., User.model.ts)",
+        "services": "camelCase.service.ts (e.g., auth.service.ts)",
+        "controllers": "camelCase.controller.ts (e.g., auth.controller.ts)",
+        "routes": "camelCase.routes.ts (e.g., auth.routes.ts)",
+        "tests": "*.test.ts matching source file"
+      },
+      "exports": {
+        "models": "Named exports for User, Learner, Staff, AuditLog, Report; default exports for others",
+        "services": "Default export class",
+        "controllers": "Named export functions"
+      }
+    },
+    "tddWorkflow": [
+      "1. Write failing test first",
+      "2. Implement minimum code to pass",
+      "3. Refactor while keeping tests green",
+      "4. Ensure contract compliance",
+      "5. Update documentation"
+    ]
+  },
+  "workflowRules": {
+    "branchNaming": "feature/<agent-id>/<task-description>",
+    "commitFormat": "<type>(<scope>): <description>",
+    "prRequired": true,
+    "minTestCoverage": 80,
+    "contractsFirst": true
+  },
+  "crossTeamSync": {
+    "contractsLocation": "contracts/",
+    "exportFormat": ["json", "openapi"],
+    "versioningStrategy": "semver",
+    "notifyUITeam": "On any contract changes, export and notify UI team"
+  }
+}
