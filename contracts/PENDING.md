@@ -1,8 +1,8 @@
 # Contract Status Tracker
 
 **Last Updated:** 2026-01-08
-
-This file tracks the status of API contracts for cross-team coordination.
+**Plan:** Contract-First Parallel Development (Week 1-2: Contracts, Week 2-6: Implementation)
+**Reference:** See `/devdocs/CONTRACT_IMPLEMENTATION_PLAN.md` for detailed roadmap
 
 ---
 
@@ -17,81 +17,98 @@ This file tracks the status of API contracts for cross-team coordination.
 
 ---
 
-## Authentication & Users
+## 🔥 Phase 1: Core Identity & Organization (Days 1-2) ✅ COMPLETE
 
-| Contract | Status | Backend | Frontend | Notes |
-|----------|--------|---------|----------|-------|
-| `auth.contract.ts` | ✅ Complete | ✅ | 🔲 | Ready for frontend |
-| `users.contract.ts` | 🔲 Pending | 🔲 | 🔲 | - |
-| `staff.contract.ts` | 🔲 Pending | 🔲 | 🔲 | - |
-| `learners.contract.ts` | 🔲 Pending | 🔲 | 🔲 | - |
+**Critical Path:** Authentication & organizational structure
+**Status:** All contracts defined - Ready for frontend implementation
 
----
+| Contract | Status | Backend | Frontend | Priority | Notes |
+|----------|--------|---------|----------|----------|-------|
+| `auth.contract.ts` | ✅ Complete | ✅ | 🔲 | 🔥 Critical | Ready for frontend |
+| `users.contract.ts` | 📝 Defined | 🔲 | 🔲 | 🔥 Critical | 6 endpoints - Unified /users/me + progress |
+| `staff.contract.ts` | 📝 Defined | 🔲 | 🔲 | 🔥 Critical | 6 endpoints - Staff management + dept assignments |
+| `learners.contract.ts` | 📝 Defined | 🔲 | 🔲 | 🔥 Critical | 5 endpoints - Learner CRUD with soft delete |
+| `departments.contract.ts` | 📝 Defined | 🔲 | 🔲 | ⚡ High | 9 endpoints - Hierarchy + programs + stats (NEW) |
+| `academic-years.contract.ts` | 📝 Defined | 🔲 | 🔲 | 🔹 Medium | 15 endpoints - Years/terms/cohorts |
 
-## Organization
+**Backend Models:** ✅ User, Staff, Learner, Department, AcademicYear
 
-| Contract | Status | Backend | Frontend | Notes |
-|----------|--------|---------|----------|-------|
-| `departments.contract.ts` | 🔲 Pending | 🔲 | 🔲 | - |
-| `academic-years.contract.ts` | 🔲 Pending | 🔲 | 🔲 | - |
-
----
-
-## Courses & Content
-
-| Contract | Status | Backend | Frontend | Notes |
-|----------|--------|---------|----------|-------|
-| `courses.contract.ts` | 🔲 Pending | 🔲 | 🔲 | - |
-| `content.contract.ts` | 🔲 Pending | 🔲 | 🔲 | - |
-| `course-segments.contract.ts` | 🔲 Pending | 🔲 | 🔲 | - |
+**Total Endpoints:** 41 endpoints across 6 contracts
+**Frontend Ready:** All contracts available for implementation
 
 ---
 
-## Programs & Classes
+## ⚡ Phase 2: Programs & Courses (Days 3-4)
 
-| Contract | Status | Backend | Frontend | Notes |
-|----------|--------|---------|----------|-------|
-| `programs.contract.ts` | 🔲 Pending | 🔲 | 🔲 | - |
-| `classes.contract.ts` | 🔲 Pending | 🔲 | 🔲 | - |
+**High Priority:** Course catalog and program structure
 
----
+| Contract | Status | Backend | Frontend | Priority | Notes |
+|----------|--------|---------|----------|----------|-------|
+| `programs.contract.ts` | 🔲 Pending | 🔲 | 🔲 | ⚡ High | Program CRUD + levels |
+| `program-levels.contract.ts` | 🔲 Pending | 🔲 | 🔲 | ⚡ High | Level shortcuts |
+| `courses.contract.ts` | 🔲 Pending | 🔲 | 🔲 | ⚡ High | Course CRUD + publish + duplicate |
+| `course-segments.contract.ts` | 🔲 Pending | 🔲 | 🔲 | ⚡ High | Modules + reorder |
+| `classes.contract.ts` | 🔲 Pending | 🔲 | 🔲 | 🔹 Medium | Class instances + roster |
 
-## Enrollments
-
-| Contract | Status | Backend | Frontend | Notes |
-|----------|--------|---------|----------|-------|
-| `enrollments.contract.ts` | 🔲 Pending | 🔲 | 🔲 | - |
-| `program-enrollments.contract.ts` | 🔲 Pending | 🔲 | 🔲 | - |
+**Backend Models:** ✅ Program, Course, CourseContent, Class
 
 ---
 
-## Assessments
+## ⚡ Phase 3: Content & Templates (Days 5-6)
 
-| Contract | Status | Backend | Frontend | Notes |
-|----------|--------|---------|----------|-------|
-| `exams.contract.ts` | 🔲 Pending | 🔲 | 🔲 | - |
-| `questions.contract.ts` | 🔲 Pending | 🔲 | 🔲 | - |
-| `exam-attempts.contract.ts` | 🔲 Pending | 🔲 | 🔲 | - |
+**High Priority:** Content library and management
 
----
+| Contract | Status | Backend | Frontend | Priority | Notes |
+|----------|--------|---------|----------|----------|-------|
+| `content.contract.ts` | 🔲 Pending | 🔲 | 🔲 | ⚡ High | SCORM + media library |
+| `exercises.contract.ts` | 🔲 Pending | 🔲 | 🔲 | ⚡ High | Custom exercises/exams |
+| `questions.contract.ts` | 🔲 Pending | 🔲 | 🔲 | ⚡ High | Question bank + bulk import |
+| `templates.contract.ts` | 🔲 Pending | 🔲 | 🔲 | 🔹 Medium | Course templates |
 
-## Activity & SCORM
-
-| Contract | Status | Backend | Frontend | Notes |
-|----------|--------|---------|----------|-------|
-| `content-attempts.contract.ts` | 🔲 Pending | 🔲 | 🔲 | - |
-| `learning-events.contract.ts` | 🔲 Pending | 🔲 | 🔲 | - |
-| `scorm.contract.ts` | 🔲 Pending | 🔲 | 🔲 | - |
+**Backend Models:** ✅ Content, CourseContent, Question, QuestionBank
 
 ---
 
-## System
+## 🔥 Phase 4: Enrollments & Progress (Days 7-8)
 
-| Contract | Status | Backend | Frontend | Notes |
-|----------|--------|---------|----------|-------|
-| `settings.contract.ts` | 🔲 Pending | 🔲 | 🔲 | - |
-| `audit-logs.contract.ts` | 🔲 Pending | 🔲 | 🔲 | - |
-| `reports.contract.ts` | 🔲 Pending | 🔲 | 🔲 | - |
+**Critical Path:** Learner experience and progress tracking (TOP PRIORITY)
+
+| Contract | Status | Backend | Frontend | Priority | Notes |
+|----------|--------|---------|----------|----------|-------|
+| `enrollments.contract.ts` | 🔲 Pending | 🔲 | 🔲 | 🔥 Critical | Program/course/class enrollments |
+| `progress.contract.ts` | 🔲 Pending | 🔲 | 🔲 | 🔥 Critical | **Progress tracking - User Priority #1** |
+| `content-attempts.contract.ts` | 🔲 Pending | 🔲 | 🔲 | 🔥 Critical | Attempts + SCORM CMI |
+| `learning-events.contract.ts` | 🔲 Pending | 🔲 | 🔲 | ⚡ High | Activity feeds |
+
+**Backend Models:** ✅ Enrollment, ClassEnrollment, ContentAttempt, ScormAttempt, LearningEvent
+
+**User Priority:** Progress tracking identified as #1 analytics requirement
+
+---
+
+## ⚡ Phase 5: Assessments & Results (Days 9-10)
+
+**High Priority:** Testing and grading
+
+| Contract | Status | Backend | Frontend | Priority | Notes |
+|----------|--------|---------|----------|----------|-------|
+| `exam-attempts.contract.ts` | 🔲 Pending | 🔲 | 🔲 | ⚡ High | Take exams + submit answers |
+| `reports.contract.ts` | 🔲 Pending | 🔲 | 🔲 | 🔹 Medium | Completion + performance + transcript |
+
+**Backend Models:** ✅ ExamResult, Question, QuestionBank
+
+---
+
+## 🔸 Phase 6: System & Settings (Days 11-12)
+
+**Low Priority:** System administration
+
+| Contract | Status | Backend | Frontend | Priority | Notes |
+|----------|--------|---------|----------|----------|-------|
+| `settings.contract.ts` | 🔲 Pending | 🔲 | 🔲 | 🔸 Low | System settings |
+| `audit-logs.contract.ts` | 🔲 Pending | 🔲 | 🔲 | 🔸 Low | Audit trails |
+| `permissions.contract.ts` | 🔲 Pending | 🔲 | 🔲 | 🔸 Low | Permission management |
+| `system.contract.ts` | 🔲 Pending | 🔲 | 🔲 | 🔸 Low | Health + metrics
 
 ---
 

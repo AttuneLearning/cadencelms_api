@@ -4,24 +4,55 @@
 
 This directory contains the API contracts that serve as the **single source of truth** for communication between the backend and UI teams. The backend team owns and maintains these contracts.
 
+**📋 Quick Links:**
+- **Getting Started:** `QUICKSTART.md` - Create your first contract in 15 minutes
+- **Implementation Plan:** `../devdocs/CONTRACT_IMPLEMENTATION_PLAN.md` - Phased roadmap
+- **Status Tracker:** `PENDING.md` - What's done, what's next
+- **Team Coordination:** `~/github/TEAM_COORDINATION_GUIDE.md` - Cross-team workflow
+
+## 🚀 Contract-First Development (2026-01-08)
+
+**Strategy:** Create all contracts quickly (Week 1-2) to unblock frontend team, then implement backend in parallel.
+
+**Current Phase:** Phase 1 - Core Identity & Organization ✅ COMPLETE
+- ✅ `auth.contract.ts` - Complete (6 endpoints)
+- ✅ `users.contract.ts` - Defined (6 endpoints)
+- ✅ `staff.contract.ts` - Defined (6 endpoints)
+- ✅ `learners.contract.ts` - Defined (5 endpoints)
+- ✅ `departments.contract.ts` - Defined (9 endpoints)
+- ✅ `academic-years.contract.ts` - Defined (15 endpoints)
+
+**Phase 1 Total:** 41 endpoints across 6 contracts - Frontend team can start implementing!
+
+See `PENDING.md` for full status.
+
 ## Directory Structure
 
 ```
 contracts/
-├── README.md              # This file
+├── README.md              # This file - Overview and workflow
+├── QUICKSTART.md          # 🆕 Step-by-step guide to create contracts
+├── PENDING.md             # 🆕 Contract status tracker (6 phases)
 ├── api/                   # Endpoint contracts by domain
-│   ├── auth.contract.ts   # Authentication endpoints
-│   ├── user.contract.ts   # User management endpoints
-│   ├── course.contract.ts # Course endpoints
-│   └── ...
-├── types/                 # Shared TypeScript types
-│   ├── api-types.ts       # Request/Response types
-│   └── domain-types.ts    # Domain model types
-├── validation/            # Contract validation utilities
+│   ├── auth.contract.ts   # ✅ Authentication endpoints (COMPLETE)
+│   ├── users.contract.ts  # 🔲 User management endpoints
+│   ├── staff.contract.ts  # 🔲 Staff management
+│   ├── learners.contract.ts # 🔲 Learner management
+│   ├── departments.contract.ts # 🔲 Department hierarchy
+│   ├── programs.contract.ts # 🔲 Program structure
+│   ├── courses.contract.ts # 🔲 Course CRUD
+│   ├── content.contract.ts # 🔲 Content library
+│   ├── progress.contract.ts # 🔲 Progress tracking (HIGH PRIORITY)
+│   ├── enrollments.contract.ts # 🔲 Enrollment lifecycle
+│   └── ...               # (23 total contracts planned)
+├── types/                # Shared TypeScript types
+│   ├── api-types.ts      # Request/Response types
+│   └── domain-types.ts   # Domain model types
+├── validation/           # Contract validation utilities
 │   └── contract-validator.ts
-└── dist/                  # Exported contracts (generated)
-    ├── contracts.json     # JSON export for UI team
-    └── openapi.yaml       # OpenAPI specification
+└── dist/                 # Exported contracts (generated)
+    ├── contracts.json    # JSON export for UI team
+    └── openapi.yaml      # OpenAPI specification
 ```
 
 ## Cross-Team Workflow
