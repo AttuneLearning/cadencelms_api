@@ -6,6 +6,11 @@ import { config } from './config/environment';
 import { stream } from './config/logger';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
 import authRoutes from './routes/auth.routes';
+import usersRoutes from './routes/users.routes';
+import staffRoutes from './routes/staff.routes';
+import learnersRoutes from './routes/learners.routes';
+import departmentsRoutes from './routes/departments.routes';
+import academicYearsRoutes from './routes/academic-years.routes';
 
 const app: Application = express();
 
@@ -31,8 +36,13 @@ app.get('/health', (_req, res) => {
   });
 });
 
-// API routes
+// API routes - Phase 1
 app.use('/api/v2/auth', authRoutes);
+app.use('/api/v2/users', usersRoutes);
+app.use('/api/v2/users/staff', staffRoutes);
+app.use('/api/v2/users/learners', learnersRoutes);
+app.use('/api/v2/departments', departmentsRoutes);
+app.use('/api/v2/calendar', academicYearsRoutes);
 
 // 404 handler
 app.use(notFoundHandler);

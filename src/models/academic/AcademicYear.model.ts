@@ -1,57 +1,15 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-export interface ITerm {
-  name: string;
-  code: string;
-  startDate: Date;
-  endDate: Date;
-}
-
 export interface IAcademicYear extends Document {
   name: string;
-  code: string;
   startDate: Date;
   endDate: Date;
-  terms: ITerm[];
+  isCurrent: boolean;
   isActive: boolean;
   metadata?: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;
 }
-
-const termSchema = new Schema<ITerm>(
-  {
-    name: {
-      type: String,
-      required: [true, 'Term name is required'],
-      trim: true
-    },
-    code: {
-      type: String,
-      required: [true, 'Term code is required'],
-      uppercase: true,
-      trim: true
-    },
-    startDate: {
-      type: Date,
-      required: [true, 'Term start date is required']
-    },
-    endDate: {
-      type: Date,
-      required: [true, 'Term end date is required']
-    }
-  },
-  { _id: false }
-);
-
-// Validate term dates
-termSchema.pre('validate', function (next) {
-  if (this.startDate && this.endDate && this.endDate <= this.startDate) {
-    next(new Error('Term end date must be after start date'));
-  } else {
-    next();
-  }
-});
 
 const academicYearSchema = new Schema<IAcademicYear>(
   {
@@ -59,14 +17,8 @@ const academicYearSchema = new Schema<IAcademicYear>(
       type: String,
       required: [true, 'Academic year name is required'],
       trim: true,
-      maxlength: [100, 'Name cannot exceed 100 characters']
-    },
-    code: {
-      type: String,
-      required: [true, 'Academic year code is required'],
       unique: true,
-      trim: true,
-      maxlength: [50, 'Code cannot exceed 50 characters']
+      maxlength: [100, 'Name cannot exceed 100 characters']
     },
     startDate: {
       type: Date,
@@ -76,9 +28,9 @@ const academicYearSchema = new Schema<IAcademicYear>(
       type: Date,
       required: [true, 'End date is required']
     },
-    terms: {
-      type: [termSchema],
-      default: []
+    isCurrent: {
+      type: Boolean,
+      default: false
     },
     isActive: {
       type: Boolean,
@@ -95,6 +47,8 @@ const academicYearSchema = new Schema<IAcademicYear>(
 );
 
 // Indexes
+academicYearSchema.index({ name: 1 }, { unique: true });
+academicYearSchema.index({ isCurrent: 1 });
 academicYearSchema.index({ isActive: 1 });
 academicYearSchema.index({ startDate: 1, endDate: 1 });
 

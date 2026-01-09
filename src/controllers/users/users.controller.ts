@@ -1,0 +1,149 @@
+import { Request, Response } from 'express';
+import { UsersService } from '@/services/users/users.service';
+import { ApiResponse } from '@/utils/ApiResponse';
+import { asyncHandler } from '@/utils/asyncHandler';
+import { ApiError } from '@/utils/ApiError';
+
+/**
+ * Users Controller
+ * Handles all /api/v2/users endpoints
+ */
+
+/**
+ * GET /api/v2/users/me
+ * Get current authenticated user profile (unified for all roles)
+ */
+export const getMe = asyncHandler(async (req: Request, res: Response) => {
+  const userId = (req as any).user.userId;
+  const result = await UsersService.getMe(userId);
+  res.status(200).json(ApiResponse.success(result));
+});
+
+/**
+ * PUT /api/v2/users/me
+ * Update current authenticated user profile
+ */
+export const updateMe = asyncHandler(async (req: Request, res: Response) => {
+  const userId = (req as any).user.userId;
+  const { firstName, lastName, phone, profileImage } = req.body;
+
+  // Validate input
+  if (firstName !== undefined && (typeof firstName !== 'string' || firstName.length < 1 || firstName.length > 100)) {
+    throw ApiError.badRequest('First name must be between 1 and 100 characters');
+  }
+
+  if (lastName !== undefined && (typeof lastName !== 'string' || lastName.length < 1 || lastName.length > 100)) {
+    throw ApiError.badRequest('Last name must be between 1 and 100 characters');
+  }
+
+  if (phone !== undefined && phone !== null && typeof phone === 'string') {
+    // Validate E.164 format
+    const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+    if (!phoneRegex.test(phone)) {
+      throw ApiError.badRequest('Phone number must be in E.164 format (e.g., +1-555-0123)');
+    }
+  }
+
+  if (profileImage !== undefined && profileImage !== null && typeof profileImage === 'string') {
+    // Basic URL validation
+    try {
+      new URL(profileImage);
+    } catch {
+      throw ApiError.badRequest('Profile image must be a valid URL');
+    }
+  }
+
+  const updateData = {
+    firstName,
+    lastName,
+    phone,
+    profileImage
+  };
+
+  // Remove undefined values
+  Object.keys(updateData).forEach(key => {
+    if (updateData[key as keyof typeof updateData] === undefined) {
+      delete updateData[key as keyof typeof updateData];
+    }
+  });
+
+  const result = await UsersService.updateMe(userId, updateData);
+  res.status(200).json(ApiResponse.success(result, 'Profile updated successfully'));
+});
+
+/**
+ * GET /api/v2/users/me/departments
+ * Get departments assigned to current user (staff only)
+ */
+export const getMyDepartments = asyncHandler(async (req: Request, res: Response) => {
+  const userId = (req as any).user.userId;
+  const result = await UsersService.getMyDepartments(userId);
+  res.status(200).json(ApiResponse.success(result));
+});
+
+/**
+ * GET /api/v2/users/me/courses
+ * Get courses assigned to current user as instructor (staff only)
+ */
+export const getMyCourses = asyncHandler(async (req: Request, res: Response) => {
+  const userId = (req as any).user.userId;
+
+  const filters = {
+    status: req.query.status as 'draft' | 'published' | 'archived' | undefined,
+    departmentId: req.query.departmentId as string | undefined,
+    includeStats: req.query.includeStats === 'true'
+  };
+
+  // Validate status if provided
+  if (filters.status && !['draft', 'published', 'archived'].includes(filters.status)) {
+    throw ApiError.badRequest('Invalid status. Must be one of: draft, published, archived');
+  }
+
+  const result = await UsersService.getMyCourses(userId, filters);
+  res.status(200).json(ApiResponse.success(result));
+});
+
+/**
+ * GET /api/v2/users/me/enrollments
+ * Get all enrollments for current user (learner)
+ */
+export const getMyEnrollments = asyncHandler(async (req: Request, res: Response) => {
+  const userId = (req as any).user.userId;
+
+  const filters = {
+    type: req.query.type as 'program' | 'course' | undefined,
+    status: req.query.status as 'enrolled' | 'in_progress' | 'completed' | 'withdrawn' | undefined,
+    includeProgress: req.query.includeProgress !== 'false' // Default to true
+  };
+
+  // Validate type if provided
+  if (filters.type && !['program', 'course'].includes(filters.type)) {
+    throw ApiError.badRequest('Invalid type. Must be one of: program, course');
+  }
+
+  // Validate status if provided
+  if (filters.status && !['enrolled', 'in_progress', 'completed', 'withdrawn'].includes(filters.status)) {
+    throw ApiError.badRequest('Invalid status. Must be one of: enrolled, in_progress, completed, withdrawn');
+  }
+
+  const result = await UsersService.getMyEnrollments(userId, filters);
+  res.status(200).json(ApiResponse.success(result));
+});
+
+/**
+ * GET /api/v2/users/me/progress
+ * Get comprehensive progress summary for current user
+ */
+export const getMyProgress = asyncHandler(async (req: Request, res: Response) => {
+  const userId = (req as any).user.userId;
+
+  const timeframe = (req.query.timeframe as string) || 'all';
+
+  // Validate timeframe
+  if (!['week', 'month', 'quarter', 'year', 'all'].includes(timeframe)) {
+    throw ApiError.badRequest('Invalid timeframe. Must be one of: week, month, quarter, year, all');
+  }
+
+  const result = await UsersService.getMyProgress(userId, { timeframe: timeframe as any });
+  res.status(200).json(ApiResponse.success(result));
+});
