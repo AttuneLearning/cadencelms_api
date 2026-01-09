@@ -14,15 +14,13 @@ This directory contains the API contracts that serve as the **single source of t
 
 **Strategy:** Create all contracts quickly (Week 1-2) to unblock frontend team, then implement backend in parallel.
 
-**Current Phase:** Phase 1 - Core Identity & Organization ✅ COMPLETE
-- ✅ `auth.contract.ts` - Complete (6 endpoints)
-- ✅ `users.contract.ts` - Defined (6 endpoints)
-- ✅ `staff.contract.ts` - Defined (6 endpoints)
-- ✅ `learners.contract.ts` - Defined (5 endpoints)
-- ✅ `departments.contract.ts` - Defined (9 endpoints)
-- ✅ `academic-years.contract.ts` - Defined (15 endpoints)
+**Completed Phases:**
+- ✅ **Phase 1** - Core Identity & Organization (6 contracts, 41 endpoints)
+- ✅ **Phase 2** - Programs & Courses (5 contracts, 44 endpoints)
 
-**Phase 1 Total:** 41 endpoints across 6 contracts - Frontend team can start implementing!
+**Current Phase:** Phase 3 - Content & Templates (Next)
+
+**Phase 1+2 Total:** 85 endpoints across 11 contracts - Frontend team can start implementing!
 
 See `PENDING.md` for full status.
 
