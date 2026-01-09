@@ -14,8 +14,8 @@
     "type-check:watch": "tsc --noEmit --watch",
     "start": "NODE_ENV=production node dist/server.js",
     "start:prod": "pm2 start ecosystem.config.js --env production",
-    "dev": "NODE_ENV=development ts-node-dev --respawn --transpile-only src/server.ts",
-    "dev:watch": "NODE_ENV=development ts-node-dev --respawn --transpile-only --watch src src/server.ts",
+    "dev": "NODE_ENV=development ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/server.ts",
+    "dev:watch": "NODE_ENV=development ts-node-dev --respawn --transpile-only -r tsconfig-paths/register --watch src src/server.ts",
     "test": "NODE_ENV=test jest --runInBand",
     "test:watch": "NODE_ENV=test jest --watch --runInBand",
     "test:coverage": "NODE_ENV=test jest --coverage --runInBand",
@@ -111,6 +111,7 @@
     "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^5.9.3",
     "yaml": "^2.8.2"
   }
