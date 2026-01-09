@@ -5,12 +5,26 @@ import morgan from 'morgan';
 import { config } from './config/environment';
 import { stream } from './config/logger';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
+
+// Phase 1 routes
 import authRoutes from './routes/auth.routes';
 import usersRoutes from './routes/users.routes';
 import staffRoutes from './routes/staff.routes';
 import learnersRoutes from './routes/learners.routes';
 import departmentsRoutes from './routes/departments.routes';
 import academicYearsRoutes from './routes/academic-years.routes';
+
+// Phase 2 routes
+import programsRoutes from './routes/programs.routes';
+import coursesRoutes from './routes/courses.routes';
+import courseSegmentsRoutes from './routes/course-segments.routes';
+import classesRoutes from './routes/classes.routes';
+
+// Phase 3 routes
+import contentRoutes from './routes/content.routes';
+import exercisesRoutes from './routes/exercises.routes';
+import questionsRoutes from './routes/questions.routes';
+import templatesRoutes from './routes/templates.routes';
 
 const app: Application = express();
 
@@ -43,6 +57,18 @@ app.use('/api/v2/users/staff', staffRoutes);
 app.use('/api/v2/users/learners', learnersRoutes);
 app.use('/api/v2/departments', departmentsRoutes);
 app.use('/api/v2/calendar', academicYearsRoutes);
+
+// API routes - Phase 2
+app.use('/api/v2/programs', programsRoutes);
+app.use('/api/v2/courses', coursesRoutes); // Main courses routes
+app.use('/api/v2/courses', courseSegmentsRoutes); // Nested module routes under /courses/:courseId/modules
+app.use('/api/v2/classes', classesRoutes);
+
+// API routes - Phase 3
+app.use('/api/v2/content', contentRoutes);
+app.use('/api/v2/content/exercises', exercisesRoutes);
+app.use('/api/v2/questions', questionsRoutes);
+app.use('/api/v2/templates', templatesRoutes);
 
 // 404 handler
 app.use(notFoundHandler);
