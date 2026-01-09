@@ -32,6 +32,10 @@ import progressRoutes from './routes/progress.routes';
 import contentAttemptsRoutes from './routes/content-attempts.routes';
 import learningEventsRoutes from './routes/learning-events.routes';
 
+// Phase 5 routes
+import examAttemptsRoutes from './routes/exam-attempts.routes';
+import reportsRoutes from './routes/reports.routes';
+
 const app: Application = express();
 
 // Security middleware
@@ -81,6 +85,10 @@ app.use('/api/v2/enrollments', enrollmentsRoutes);
 app.use('/api/v2/progress', progressRoutes);
 app.use('/api/v2/content-attempts', contentAttemptsRoutes);
 app.use('/api/v2/learning-events', learningEventsRoutes);
+
+// API routes - Phase 5
+app.use('/api/v2/exam-attempts', examAttemptsRoutes);
+app.use('/api/v2/reports', reportsRoutes);
 
 // 404 handler
 app.use(notFoundHandler);
