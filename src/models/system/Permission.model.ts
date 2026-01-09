@@ -2,7 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IPermission extends Document {
   resource: string;
-  action: 'create' | 'read' | 'update' | 'delete' | 'manage';
+  action: 'create' | 'read' | 'write' | 'update' | 'delete' | 'manage';
   name: string;
   description?: string;
   scope?: 'own' | 'department' | 'all';
@@ -25,7 +25,7 @@ const permissionSchema = new Schema<IPermission>(
     action: {
       type: String,
       required: true,
-      enum: ['create', 'read', 'update', 'delete', 'manage'],
+      enum: ['create', 'read', 'write', 'update', 'delete', 'manage'],
     },
     name: {
       type: String,

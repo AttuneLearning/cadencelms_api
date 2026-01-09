@@ -8,6 +8,7 @@ import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
 
 // Phase 1 routes
 import authRoutes from './routes/auth.routes';
+import permissionsRoutes from './routes/permissions.routes';
 import usersRoutes from './routes/users.routes';
 import staffRoutes from './routes/staff.routes';
 import learnersRoutes from './routes/learners.routes';
@@ -36,6 +37,11 @@ import learningEventsRoutes from './routes/learning-events.routes';
 import examAttemptsRoutes from './routes/exam-attempts.routes';
 import reportsRoutes from './routes/reports.routes';
 
+// Phase 6 routes
+import settingsRoutes from './routes/settings.routes';
+import auditLogsRoutes from './routes/audit-logs.routes';
+import systemRoutes from './routes/system.routes';
+
 const app: Application = express();
 
 // Security middleware
@@ -62,6 +68,7 @@ app.get('/health', (_req, res) => {
 
 // API routes - Phase 1
 app.use('/api/v2/auth', authRoutes);
+app.use('/api/v2/permissions', permissionsRoutes);
 app.use('/api/v2/users', usersRoutes);
 app.use('/api/v2/users/staff', staffRoutes);
 app.use('/api/v2/users/learners', learnersRoutes);
@@ -89,6 +96,11 @@ app.use('/api/v2/learning-events', learningEventsRoutes);
 // API routes - Phase 5
 app.use('/api/v2/exam-attempts', examAttemptsRoutes);
 app.use('/api/v2/reports', reportsRoutes);
+
+// API routes - Phase 6
+app.use('/api/v2/settings', settingsRoutes);
+app.use('/api/v2/audit-logs', auditLogsRoutes);
+app.use('/api/v2/system', systemRoutes);
 
 // 404 handler
 app.use(notFoundHandler);
