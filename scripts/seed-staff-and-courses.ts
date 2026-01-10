@@ -23,22 +23,27 @@ import Question from '../src/models/assessment/Question.model';
 // Database connection
 const DB_URI = process.env.DB_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/lms_v2_dev';
 
-// Helper function to generate predictable ObjectIds
-const mockId = (prefix: string, num: number): mongoose.Types.ObjectId => {
-  const hexNum = num.toString(16).padStart(10, '0');
-  const hex = `000000000000${prefix}${hexNum}`;
-  return new mongoose.Types.ObjectId(hex.substring(hex.length - 24));
+/**
+ * Helper function to generate predictable ObjectIds with distinctive pattern
+ * All IDs start with 'feedface' for easy identification and purging
+ * Format: feedface (8 hex) + type (2 hex) + number (6 hex) + padding (8 hex) = 24 chars
+ */
+const mockId = (typeCode: number, num: number): mongoose.Types.ObjectId => {
+  const typeHex = typeCode.toString(16).padStart(2, '0');
+  const numHex = num.toString(16).padStart(6, '0');
+  const hex = `feedface${typeHex}${numHex}00000000`;
+  return new mongoose.Types.ObjectId(hex);
 };
 
-// Prefixes for consistent ObjectId generation
-const PREFIXES = {
-  USER: 'u0',
-  STAFF: 's0',
-  DEPARTMENT: 'd0',
-  COURSE: 'c0',
-  CONTENT: 'n0',
-  COURSE_CONTENT: 'cc',
-  QUESTION: 'q0',
+// Type codes for different entity types (single byte for easy identification)
+const TYPE_CODES = {
+  USER: 0x01,
+  STAFF: 0x02,
+  DEPARTMENT: 0x03,
+  COURSE: 0x04,
+  CONTENT: 0x05,
+  COURSE_CONTENT: 0x06,
+  QUESTION: 0x07,
 };
 
 // Data storage
@@ -67,7 +72,7 @@ async function createDepartments() {
 
   // Department 1: Clinical Psychology
   const dept1 = await Department.create({
-    _id: mockId(PREFIXES.DEPARTMENT, 101),
+    _id: mockId(TYPE_CODES.DEPARTMENT, 101),
     name: 'Clinical Psychology',
     code: 'CLINPSY',
     description: 'Clinical psychology practices and therapeutic interventions',
@@ -82,7 +87,7 @@ async function createDepartments() {
 
   // Department 2: Behavioral Science
   const dept2 = await Department.create({
-    _id: mockId(PREFIXES.DEPARTMENT, 102),
+    _id: mockId(TYPE_CODES.DEPARTMENT, 102),
     name: 'Behavioral Science',
     code: 'BEHSCI',
     description: 'Behavioral analysis and intervention strategies',
@@ -107,18 +112,11 @@ async function createStaffMembers() {
   // - Content Admin + Department Admin for Clinical Psychology (Dept 1)
   // - Instructor for Behavioral Science (Dept 2)
   const user1 = await User.create({
-    _id: mockId(PREFIXES.USER, 201),
+    _id: mockId(TYPE_CODES.USER, 201),
     email: 'emily.carter@lms.edu',
     password: hashedPassword,
-    roles: ['staff'],
+    roles: ['instructor', 'content-admin', 'department-admin'],
     isActive: true,
-    emailVerified: true,
-    lastLogin: new Date(),
-    preferences: {
-      theme: 'light',
-      notifications: { email: true, inApp: true },
-      defaultDashboard: 'instructor',
-    },
   });
   seedData.users.push(user1);
 
@@ -148,18 +146,11 @@ async function createStaffMembers() {
   // - Content Admin + Department Admin for Behavioral Science (Dept 2)
   // - Instructor for Clinical Psychology (Dept 1)
   const user2 = await User.create({
-    _id: mockId(PREFIXES.USER, 202),
+    _id: mockId(TYPE_CODES.USER, 202),
     email: 'michael.rodriguez@lms.edu',
     password: hashedPassword,
-    roles: ['staff'],
+    roles: ['instructor', 'content-admin', 'department-admin'],
     isActive: true,
-    emailVerified: true,
-    lastLogin: new Date(),
-    preferences: {
-      theme: 'light',
-      notifications: { email: true, inApp: true },
-      defaultDashboard: 'instructor',
-    },
   });
   seedData.users.push(user2);
 
@@ -200,7 +191,7 @@ async function createCoursesWithSegments() {
 
   // Course 1: Introduction to Clinical Psychology (Dept 1)
   const course1 = await Course.create({
-    _id: mockId(PREFIXES.COURSE, 301),
+    _id: mockId(TYPE_CODES.COURSE, 301),
     name: 'Introduction to Clinical Psychology',
     code: 'CLINPSY101',
     description: 'Fundamental concepts and practices in clinical psychology',
@@ -220,7 +211,7 @@ async function createCoursesWithSegments() {
 
   // Course 2: Advanced Behavioral Interventions (Dept 2)
   const course2 = await Course.create({
-    _id: mockId(PREFIXES.COURSE, 302),
+    _id: mockId(TYPE_CODES.COURSE, 302),
     name: 'Advanced Behavioral Interventions',
     code: 'BEHSCI301',
     description: 'Advanced techniques in applied behavior analysis and intervention',
@@ -241,7 +232,7 @@ async function createCoursesWithSegments() {
 
   // Course 3: Cognitive Behavioral Therapy (Dept 1)
   const course3 = await Course.create({
-    _id: mockId(PREFIXES.COURSE, 303),
+    _id: mockId(TYPE_CODES.COURSE, 303),
     name: 'Cognitive Behavioral Therapy',
     code: 'CLINPSY201',
     description: 'Core principles and techniques of CBT for various disorders',
@@ -261,7 +252,7 @@ async function createCoursesWithSegments() {
 
   // Course 4: Applied Behavior Analysis (Dept 2)
   const course4 = await Course.create({
-    _id: mockId(PREFIXES.COURSE, 304),
+    _id: mockId(TYPE_CODES.COURSE, 304),
     name: 'Applied Behavior Analysis',
     code: 'BEHSCI201',
     description: 'Principles of ABA and applications across settings',
@@ -301,7 +292,7 @@ async function createModulesForCourse(
 
     // Create quiz content for this module
     const content = await Content.create({
-      _id: mockId(PREFIXES.CONTENT, contentIdNum),
+      _id: mockId(TYPE_CODES.CONTENT, contentIdNum),
       title: moduleData.title,
       description: moduleData.description,
       type: 'quiz',
@@ -320,7 +311,7 @@ async function createModulesForCourse(
 
     // Link content to course as a module
     const courseContent = await CourseContent.create({
-      _id: mockId(PREFIXES.COURSE_CONTENT, contentIdNum),
+      _id: mockId(TYPE_CODES.COURSE_CONTENT, contentIdNum),
       courseId: course._id,
       contentId: content._id,
       moduleNumber: moduleNumber,
@@ -356,7 +347,7 @@ async function createQuestionsForModule(
     const questionNum = startIdNum + i;
 
     let questionData: any = {
-      _id: mockId(PREFIXES.QUESTION, questionNum),
+      _id: mockId(TYPE_CODES.QUESTION, questionNum),
       questionText: generateQuestionText(content.title, questionType, i + 1),
       questionType: questionType,
       departmentId: department._id,
@@ -457,11 +448,60 @@ async function printSummary() {
   console.log('='.repeat(60) + '\n');
 }
 
+async function purgeTestData() {
+  console.log('\n🗑️  Purging existing test data...');
+
+  try {
+    // Delete all documents with IDs in the 'feedface' range
+    // feedface00000000 to feedfacefffffff
+    const minId = new mongoose.Types.ObjectId('feedface0000000000000000');
+    const maxId = new mongoose.Types.ObjectId('feedfaceffffffffffffffff');
+    const idQuery = { _id: { $gte: minId, $lt: maxId } };
+
+    const userResult = await User.deleteMany(idQuery);
+    const staffResult = await Staff.deleteMany(idQuery);
+    const deptResult = await Department.deleteMany(idQuery);
+    const courseResult = await Course.deleteMany(idQuery);
+    const contentResult = await Content.deleteMany(idQuery);
+    const courseContentResult = await CourseContent.deleteMany(idQuery);
+    const questionResult = await Question.deleteMany(idQuery);
+
+    console.log(`  ✓ Deleted ${userResult.deletedCount} users`);
+    console.log(`  ✓ Deleted ${staffResult.deletedCount} staff`);
+    console.log(`  ✓ Deleted ${deptResult.deletedCount} departments`);
+    console.log(`  ✓ Deleted ${courseResult.deletedCount} courses`);
+    console.log(`  ✓ Deleted ${contentResult.deletedCount} content items`);
+    console.log(`  ✓ Deleted ${courseContentResult.deletedCount} course-content links`);
+    console.log(`  ✓ Deleted ${questionResult.deletedCount} questions`);
+
+    const totalDeleted =
+      userResult.deletedCount +
+      staffResult.deletedCount +
+      deptResult.deletedCount +
+      courseResult.deletedCount +
+      contentResult.deletedCount +
+      courseContentResult.deletedCount +
+      questionResult.deletedCount;
+
+    console.log(`\n  ✅ Total records purged: ${totalDeleted}\n`);
+  } catch (error) {
+    console.error('  ✗ Purge failed:', error);
+    throw error;
+  }
+}
+
 async function main() {
   try {
     console.log('🌱 Starting database seeding...\n');
 
     await connectDB();
+
+    // Check for --purge flag
+    const shouldPurge = process.argv.includes('--purge') || process.argv.includes('-p');
+
+    if (shouldPurge) {
+      await purgeTestData();
+    }
 
     // Create all seed data
     await createDepartments();
