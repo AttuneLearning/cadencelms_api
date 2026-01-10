@@ -116,7 +116,7 @@ export class SettingsService {
    */
   static async getAllSettings(filters: GetAllSettingsFilters, _userId: string): Promise<any> {
     // TODO: use userId for audit trail
-    const { category, includePrivate = false, departmentId } = filters;
+    const { category, includePrivate = false, departmentId: _departmentId } = filters;
 
     // TODO: Import Setting model once created
     // import Setting from '@/models/system/Setting.model';
@@ -354,7 +354,7 @@ export class SettingsService {
    * Updates a specific setting with validation
    */
   static async updateSetting(params: UpdateSettingParams): Promise<any> {
-    const { key, value, departmentId, userId, userName } = params;
+    const { key, value, departmentId: _departmentId, userId, userName } = params;
 
     if (!key) {
       throw ApiError.badRequest('Setting key is required');
