@@ -1,0 +1,237 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AI Question Input Schema",
+  "description": "Schema for AI-driven question creation with support for multiple question types",
+  "type": "object",
+  "required": ["type", "questionText", "points"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": ["multiple_choice", "true_false", "essay", "short_answer", "fill_blank"],
+      "description": "Type of question determines which fields are required"
+    },
+    "questionText": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "description": "The question text or prompt shown to students"
+    },
+    "points": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Points awarded for a correct answer. Can be fractional (e.g., 2.5)"
+    },
+    "options": {
+      "type": "array",
+      "description": "Answer options for multiple_choice questions. Required for multiple_choice type. Must have at least 2 options, at least one correct.",
+      "minItems": 2,
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "required": ["text", "isCorrect"],
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Option text displayed to student"
+          },
+          "isCorrect": {
+            "type": "boolean",
+            "description": "Whether this option is the correct answer"
+          },
+          "explanation": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Explanation shown after student selects this option"
+          }
+        }
+      }
+    },
+    "correctAnswer": {
+      "description": "Correct answer for true_false questions. Can be boolean or string 'true'/'false'.",
+      "oneOf": [
+        { "type": "boolean" },
+        { "type": "string", "enum": ["true", "false", "True", "False"] }
+      ]
+    },
+    "sampleAnswer": {
+      "type": "string",
+      "maxLength": 5000,
+      "description": "Sample or model answer for essay, short_answer, and fill_blank questions. Used for grading guidance."
+    },
+    "explanation": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Explanation of the correct answer shown to students after answering"
+    },
+    "hints": {
+      "type": "array",
+      "description": "Hints to help students answer the question. Shown progressively or all at once.",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 500
+      },
+      "maxItems": 5
+    }
+  },
+  "examples": [
+    {
+      "description": "Multiple choice question with explanations",
+      "data": {
+        "type": "multiple_choice",
+        "questionText": "Which of the following is a valid HTTP status code for a successful request?",
+        "points": 10,
+        "options": [
+          {
+            "text": "200 OK",
+            "isCorrect": true,
+            "explanation": "200 OK indicates the request was successful"
+          },
+          {
+            "text": "404 Not Found",
+            "isCorrect": false,
+            "explanation": "404 indicates the requested resource was not found"
+          },
+          {
+            "text": "500 Internal Server Error",
+            "isCorrect": false,
+            "explanation": "500 indicates a server error occurred"
+          },
+          {
+            "text": "403 Forbidden",
+            "isCorrect": false,
+            "explanation": "403 indicates access to the resource is forbidden"
+          }
+        ],
+        "explanation": "HTTP status codes in the 2xx range indicate success. 200 OK is the most common success response.",
+        "hints": [
+          "Look for codes in the 2xx range",
+          "The most common success code"
+        ]
+      }
+    },
+    {
+      "description": "True/false question",
+      "data": {
+        "type": "true_false",
+        "questionText": "JavaScript is a compiled programming language.",
+        "points": 5,
+        "correctAnswer": false,
+        "explanation": "JavaScript is an interpreted language, not compiled. It's executed line-by-line by the JavaScript engine."
+      }
+    },
+    {
+      "description": "Essay question with sample answer",
+      "data": {
+        "type": "essay",
+        "questionText": "Explain the MVC (Model-View-Controller) architectural pattern and discuss its advantages in web application development.",
+        "points": 20,
+        "sampleAnswer": "The MVC pattern separates an application into three interconnected components: Model (data and business logic), View (user interface), and Controller (handles input and updates model/view). Advantages include: separation of concerns, easier testing, parallel development, code reusability, and maintainability. For example, in a web app, the Model manages database interactions, the View renders HTML, and the Controller processes HTTP requests.",
+        "hints": [
+          "Think about the three main components",
+          "Consider how separation of concerns helps development",
+          "Provide a concrete example"
+        ]
+      }
+    },
+    {
+      "description": "Short answer question",
+      "data": {
+        "type": "short_answer",
+        "questionText": "What does CSS stand for?",
+        "points": 5,
+        "sampleAnswer": "Cascading Style Sheets",
+        "hints": [
+          "It's a three-word acronym",
+          "Used for styling web pages"
+        ]
+      }
+    },
+    {
+      "description": "Fill in the blank question",
+      "data": {
+        "type": "fill_blank",
+        "questionText": "In Python, the _____ keyword is used to define a function.",
+        "points": 5,
+        "sampleAnswer": "def",
+        "hints": [
+          "It's a three-letter keyword",
+          "Short for 'define'"
+        ]
+      }
+    },
+    {
+      "description": "Multiple choice with multiple correct answers",
+      "data": {
+        "type": "multiple_choice",
+        "questionText": "Which of the following are JavaScript frameworks? (Select all that apply)",
+        "points": 15,
+        "options": [
+          {
+            "text": "React",
+            "isCorrect": true,
+            "explanation": "React is a popular JavaScript library for building user interfaces"
+          },
+          {
+            "text": "Vue.js",
+            "isCorrect": true,
+            "explanation": "Vue.js is a progressive JavaScript framework"
+          },
+          {
+            "text": "Django",
+            "isCorrect": false,
+            "explanation": "Django is a Python web framework, not JavaScript"
+          },
+          {
+            "text": "Angular",
+            "isCorrect": true,
+            "explanation": "Angular is a TypeScript-based web application framework"
+          },
+          {
+            "text": "Laravel",
+            "isCorrect": false,
+            "explanation": "Laravel is a PHP framework, not JavaScript"
+          }
+        ],
+        "explanation": "React, Vue.js, and Angular are all JavaScript/TypeScript frameworks for building web applications."
+      }
+    },
+    {
+      "description": "Complex essay question",
+      "data": {
+        "type": "essay",
+        "questionText": "Compare and contrast SQL and NoSQL databases. Discuss use cases where each would be most appropriate, and provide specific examples of database systems in each category.",
+        "points": 25,
+        "sampleAnswer": "SQL databases (like MySQL, PostgreSQL) are relational, use structured schemas with tables and relationships, support ACID transactions, and use SQL query language. They excel at complex queries and maintaining data integrity. NoSQL databases (like MongoDB, Cassandra, Redis) are non-relational, schema-flexible, horizontally scalable, and use various data models (document, key-value, graph). Use SQL for: banking systems (ACID compliance critical), e-commerce (complex relationships), traditional business applications. Use NoSQL for: real-time analytics (speed and scalability), IoT systems (handling massive volumes), social networks (flexible data models), caching (key-value stores like Redis). Example: An e-commerce site might use PostgreSQL for transactions and user data, but MongoDB for product catalogs and Redis for session management.",
+        "hints": [
+          "Consider data structure requirements",
+          "Think about scalability needs",
+          "Discuss transaction requirements",
+          "Provide real-world examples"
+        ]
+      }
+    }
+  ],
+  "validations": {
+    "type": {
+      "description": "Question type is required and must be one of: multiple_choice, true_false, essay, short_answer, fill_blank"
+    },
+    "questionText": {
+      "description": "Question text is required and must be 1-2000 characters"
+    },
+    "points": {
+      "description": "Points must be 0 or greater. Can be decimal (e.g., 2.5)"
+    },
+    "options": {
+      "description": "For multiple_choice questions: must have 2-10 options with at least one marked as correct"
+    },
+    "correctAnswer": {
+      "description": "For true_false questions: must be true, false, 'true', 'false', 'True', or 'False'"
+    },
+    "sampleAnswer": {
+      "description": "For essay, short_answer, fill_blank questions: sample answer is recommended for grading guidance"
+    }
+  }
+}

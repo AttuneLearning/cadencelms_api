@@ -1,0 +1,279 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AI Exercise Input Schema",
+  "description": "Schema for AI-driven exercise/quiz creation",
+  "type": "object",
+  "required": ["title", "type", "passingScore", "questions"],
+  "properties": {
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255,
+      "description": "Exercise or quiz title",
+      "examples": ["Module 1 Quiz", "Midterm Exam", "Practice Assessment"]
+    },
+    "type": {
+      "type": "string",
+      "enum": ["quiz", "exam", "practice", "assessment"],
+      "description": "Type of exercise. Quiz: formative, Exam: summative, Practice: no grading, Assessment: graded evaluation"
+    },
+    "passingScore": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Minimum percentage score required to pass (0-100). Example: 70 means student needs 70% to pass."
+    },
+    "timeLimit": {
+      "type": "number",
+      "minimum": 1,
+      "description": "Time limit in minutes. Optional. If not set, students have unlimited time."
+    },
+    "questions": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "description": "Array of questions for the exercise. At least 1 question required, maximum 100.",
+      "items": {
+        "type": "object",
+        "required": ["type", "questionText", "points"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["multiple_choice", "true_false", "essay", "short_answer", "fill_blank"]
+          },
+          "questionText": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "points": {
+            "type": "number",
+            "minimum": 0
+          },
+          "options": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 10
+          },
+          "correctAnswer": {
+            "oneOf": [
+              { "type": "boolean" },
+              { "type": "string" }
+            ]
+          },
+          "sampleAnswer": {
+            "type": "string",
+            "maxLength": 5000
+          },
+          "explanation": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "hints": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "maxItems": 5
+          }
+        }
+      }
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Exercise description or instructions for students"
+    },
+    "allowMultipleAttempts": {
+      "type": "boolean",
+      "description": "Whether students can retake the exercise after completing it",
+      "default": true
+    },
+    "shuffleQuestions": {
+      "type": "boolean",
+      "description": "Whether to randomize question order for each student attempt",
+      "default": false
+    }
+  },
+  "examples": [
+    {
+      "description": "Simple quiz with multiple choice and true/false questions",
+      "data": {
+        "title": "Introduction Quiz",
+        "type": "quiz",
+        "passingScore": 70,
+        "timeLimit": 15,
+        "description": "Quick quiz to test your understanding of the introduction module",
+        "allowMultipleAttempts": true,
+        "shuffleQuestions": false,
+        "questions": [
+          {
+            "type": "multiple_choice",
+            "questionText": "What is the capital of France?",
+            "points": 10,
+            "options": [
+              {
+                "text": "Paris",
+                "isCorrect": true,
+                "explanation": "Paris is the capital and largest city of France"
+              },
+              {
+                "text": "London",
+                "isCorrect": false
+              },
+              {
+                "text": "Berlin",
+                "isCorrect": false
+              },
+              {
+                "text": "Madrid",
+                "isCorrect": false
+              }
+            ],
+            "explanation": "Paris has been the capital of France since the 12th century"
+          },
+          {
+            "type": "true_false",
+            "questionText": "The Earth is flat.",
+            "points": 5,
+            "correctAnswer": false,
+            "explanation": "The Earth is approximately spherical (an oblate spheroid)"
+          },
+          {
+            "type": "multiple_choice",
+            "questionText": "Which programming language is known for web development?",
+            "points": 10,
+            "options": [
+              {
+                "text": "JavaScript",
+                "isCorrect": true
+              },
+              {
+                "text": "Assembly",
+                "isCorrect": false
+              },
+              {
+                "text": "COBOL",
+                "isCorrect": false
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "description": "Practice exam with essay questions",
+      "data": {
+        "title": "Midterm Practice Exam",
+        "type": "practice",
+        "passingScore": 60,
+        "description": "Practice exam to prepare for the midterm. This does not count toward your grade.",
+        "allowMultipleAttempts": true,
+        "shuffleQuestions": true,
+        "questions": [
+          {
+            "type": "essay",
+            "questionText": "Explain the concept of object-oriented programming and provide examples of its key principles.",
+            "points": 20,
+            "sampleAnswer": "Object-oriented programming (OOP) is a programming paradigm based on the concept of objects. Key principles include: 1) Encapsulation - bundling data and methods that work on that data within one unit. 2) Inheritance - ability to create new classes based on existing ones. 3) Polymorphism - ability of objects to take on multiple forms. 4) Abstraction - hiding complex implementation details.",
+            "hints": [
+              "Think about the four main principles of OOP",
+              "Consider how classes and objects relate to each other"
+            ]
+          },
+          {
+            "type": "short_answer",
+            "questionText": "What does API stand for?",
+            "points": 5,
+            "sampleAnswer": "Application Programming Interface",
+            "hints": ["It's a three-word acronym"]
+          }
+        ]
+      }
+    },
+    {
+      "description": "Comprehensive exam with all question types",
+      "data": {
+        "title": "Final Exam",
+        "type": "exam",
+        "passingScore": 75,
+        "timeLimit": 120,
+        "description": "Comprehensive final exam covering all course material. You have 2 hours to complete. Good luck!",
+        "allowMultipleAttempts": false,
+        "shuffleQuestions": true,
+        "questions": [
+          {
+            "type": "multiple_choice",
+            "questionText": "Which data structure uses LIFO (Last In First Out)?",
+            "points": 10,
+            "options": [
+              {
+                "text": "Stack",
+                "isCorrect": true,
+                "explanation": "A stack follows the Last In First Out principle"
+              },
+              {
+                "text": "Queue",
+                "isCorrect": false,
+                "explanation": "A queue follows First In First Out (FIFO)"
+              },
+              {
+                "text": "Array",
+                "isCorrect": false
+              },
+              {
+                "text": "Linked List",
+                "isCorrect": false
+              }
+            ]
+          },
+          {
+            "type": "true_false",
+            "questionText": "In Big O notation, O(n²) is more efficient than O(n log n).",
+            "points": 5,
+            "correctAnswer": false,
+            "explanation": "O(n log n) is more efficient (faster) than O(n²) for large values of n"
+          },
+          {
+            "type": "short_answer",
+            "questionText": "Name the time complexity of binary search.",
+            "points": 5,
+            "sampleAnswer": "O(log n)",
+            "hints": ["It's logarithmic"]
+          },
+          {
+            "type": "essay",
+            "questionText": "Describe the differences between SQL and NoSQL databases. When would you use each?",
+            "points": 20,
+            "sampleAnswer": "SQL databases are relational, use structured schemas, and are ideal for complex queries and transactions. NoSQL databases are non-relational, schema-flexible, and excel at horizontal scaling and handling unstructured data. Use SQL for financial systems, e-commerce with complex relationships. Use NoSQL for real-time analytics, IoT data, or rapidly evolving data models."
+          },
+          {
+            "type": "fill_blank",
+            "questionText": "The _____ design pattern ensures a class has only one instance.",
+            "points": 5,
+            "sampleAnswer": "Singleton",
+            "hints": ["It's a creational design pattern", "The name suggests 'one'"]
+          }
+        ]
+      }
+    }
+  ],
+  "validations": {
+    "title": {
+      "description": "Exercise title is required and must be 1-255 characters"
+    },
+    "type": {
+      "description": "Exercise type must be one of: quiz, exam, practice, assessment"
+    },
+    "passingScore": {
+      "description": "Passing score must be between 0 and 100 (percentage)"
+    },
+    "questions": {
+      "description": "At least 1 question required, maximum 100 questions allowed"
+    },
+    "timeLimit": {
+      "description": "Time limit must be a positive number (in minutes) if provided"
+    }
+  }
+}

@@ -1,0 +1,459 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AI Course Input Schema",
+  "description": "Schema for AI-driven course creation with modules and assessments",
+  "type": "object",
+  "required": ["course"],
+  "properties": {
+    "course": {
+      "type": "object",
+      "description": "Course data for AI course creation",
+      "required": ["title", "code", "department", "credits"],
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "description": "Human-readable course title",
+          "examples": ["Introduction to Computer Science", "Advanced Data Structures"]
+        },
+        "code": {
+          "type": "string",
+          "pattern": "^[A-Z]{2,4}[0-9]{3}[A-Z]?$",
+          "description": "Course code: 2-4 uppercase letters followed by 3 digits and optional letter (e.g., CS101, MATH200A)",
+          "examples": ["CS101", "MATH200", "ENG101A", "PHYS150"]
+        },
+        "department": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Department name or ObjectId. System resolves by name if not a valid ObjectId.",
+          "examples": ["Computer Science", "Mathematics", "673a1234567890abcdef1234"]
+        },
+        "program": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Program name or ObjectId. Optional. System resolves by name if not a valid ObjectId.",
+          "examples": ["Bachelor of Science in Computer Science", "673a1234567890abcdef5678"]
+        },
+        "credits": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 12,
+          "description": "Number of credit hours for the course (typically 1-6)",
+          "examples": [3, 4, 1]
+        },
+        "instructors": {
+          "type": "array",
+          "description": "Array of instructor names, emails, or ObjectIds. System will resolve by name or email.",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "examples": [
+            ["John Doe", "jane.smith@university.edu"],
+            ["673a1234567890abcdef9999"]
+          ]
+        },
+        "prerequisites": {
+          "type": "array",
+          "description": "Array of prerequisite course codes, names, or ObjectIds",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "examples": [["CS100", "Introduction to Programming"], ["MATH101"]]
+        },
+        "publish": {
+          "type": "boolean",
+          "description": "Auto-publish the course after creation. Default is false (creates as draft).",
+          "default": false
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 5000,
+          "description": "Detailed course description and learning objectives"
+        },
+        "difficulty": {
+          "type": "string",
+          "enum": ["beginner", "intermediate", "advanced", "expert"],
+          "description": "Difficulty level of the course"
+        },
+        "tags": {
+          "type": "array",
+          "description": "Tags for categorizing the course",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "maxItems": 20
+        }
+      }
+    },
+    "modules": {
+      "type": "array",
+      "description": "Array of modules to create with the course. Optional.",
+      "items": {
+        "$ref": "#/definitions/module"
+      },
+      "maxItems": 100
+    }
+  },
+  "definitions": {
+    "module": {
+      "type": "object",
+      "required": ["title", "type"],
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "description": "Module title"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Module description"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["custom", "scorm", "video", "document", "exercise"],
+          "description": "Type of module content"
+        },
+        "orderIndex": {
+          "type": "number",
+          "minimum": 1,
+          "description": "Display order of the module. If not provided, will be auto-assigned sequentially."
+        },
+        "content": {
+          "type": "object",
+          "description": "Module content structure (varies by type)",
+          "properties": {
+            "text": {
+              "type": "string",
+              "description": "HTML content for custom modules"
+            },
+            "scormPackage": {
+              "type": "string",
+              "format": "uri",
+              "description": "URL to SCORM package (for scorm type)"
+            },
+            "videoUrl": {
+              "type": "string",
+              "format": "uri",
+              "description": "Video URL (for video type)"
+            },
+            "documentUrl": {
+              "type": "string",
+              "format": "uri",
+              "description": "Document URL (for document type)"
+            },
+            "attachments": {
+              "type": "array",
+              "description": "Additional attachments for the module",
+              "items": {
+                "type": "object",
+                "required": ["type", "url", "title"],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "description": "Attachment type (e.g., pdf, video, image)"
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "URL to the attachment"
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255,
+                    "description": "Attachment title"
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "Attachment description"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "exercise": {
+          "$ref": "#/definitions/exercise"
+        }
+      }
+    },
+    "exercise": {
+      "type": "object",
+      "required": ["title", "type", "passingScore", "questions"],
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "description": "Exercise/quiz title"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["quiz", "exam", "practice", "assessment"],
+          "description": "Type of exercise"
+        },
+        "passingScore": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Minimum score percentage required to pass (0-100)"
+        },
+        "timeLimit": {
+          "type": "number",
+          "minimum": 1,
+          "description": "Time limit in minutes. Optional."
+        },
+        "questions": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 100,
+          "description": "Array of questions for the exercise",
+          "items": {
+            "$ref": "#/definitions/question"
+          }
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Exercise description or instructions"
+        },
+        "allowMultipleAttempts": {
+          "type": "boolean",
+          "description": "Allow students to retake the exercise",
+          "default": true
+        },
+        "shuffleQuestions": {
+          "type": "boolean",
+          "description": "Randomize question order for each student",
+          "default": false
+        }
+      }
+    },
+    "question": {
+      "type": "object",
+      "required": ["type", "questionText", "points"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["multiple_choice", "true_false", "essay", "short_answer", "fill_blank"],
+          "description": "Type of question"
+        },
+        "questionText": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000,
+          "description": "The question text or prompt"
+        },
+        "points": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Points awarded for correct answer"
+        },
+        "options": {
+          "type": "array",
+          "description": "Answer options for multiple_choice questions. Required for multiple_choice type.",
+          "minItems": 2,
+          "maxItems": 10,
+          "items": {
+            "type": "object",
+            "required": ["text", "isCorrect"],
+            "properties": {
+              "text": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500,
+                "description": "Option text"
+              },
+              "isCorrect": {
+                "type": "boolean",
+                "description": "Whether this option is correct"
+              },
+              "explanation": {
+                "type": "string",
+                "maxLength": 1000,
+                "description": "Explanation shown after answer selection"
+              }
+            }
+          }
+        },
+        "correctAnswer": {
+          "description": "Correct answer for true_false questions (true/false or 'true'/'false' string)",
+          "oneOf": [
+            { "type": "boolean" },
+            { "type": "string", "enum": ["true", "false", "True", "False"] }
+          ]
+        },
+        "sampleAnswer": {
+          "type": "string",
+          "description": "Sample answer for essay and short_answer questions",
+          "maxLength": 5000
+        },
+        "explanation": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Explanation of the correct answer"
+        },
+        "hints": {
+          "type": "array",
+          "description": "Hints to help students answer the question",
+          "items": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "maxItems": 5
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "description": "Minimal course with one module",
+      "data": {
+        "course": {
+          "title": "Introduction to Programming",
+          "code": "CS101",
+          "department": "Computer Science",
+          "credits": 3
+        },
+        "modules": [
+          {
+            "title": "Getting Started",
+            "type": "custom",
+            "content": {
+              "text": "<h1>Welcome to Programming</h1><p>In this module, you'll learn the basics of programming.</p>"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "description": "Complete course with multiple modules, quiz, and various content types",
+      "data": {
+        "course": {
+          "title": "Web Development Fundamentals",
+          "code": "CS210",
+          "department": "Computer Science",
+          "program": "Bachelor of Science in Computer Science",
+          "credits": 4,
+          "instructors": ["John Doe", "jane.smith@university.edu"],
+          "prerequisites": ["CS101"],
+          "publish": false,
+          "description": "Learn the fundamentals of web development including HTML, CSS, and JavaScript.",
+          "difficulty": "beginner",
+          "tags": ["web", "frontend", "javascript"]
+        },
+        "modules": [
+          {
+            "title": "Introduction to HTML",
+            "description": "Learn HTML basics and structure",
+            "type": "custom",
+            "orderIndex": 1,
+            "content": {
+              "text": "<h1>HTML Basics</h1><p>HTML is the foundation of web pages.</p>",
+              "attachments": [
+                {
+                  "type": "pdf",
+                  "url": "https://example.com/html-cheatsheet.pdf",
+                  "title": "HTML Cheat Sheet",
+                  "description": "Quick reference for HTML tags"
+                }
+              ]
+            }
+          },
+          {
+            "title": "CSS Styling Tutorial",
+            "description": "Video tutorial on CSS styling",
+            "type": "video",
+            "orderIndex": 2,
+            "content": {
+              "videoUrl": "https://example.com/videos/css-tutorial.mp4"
+            }
+          },
+          {
+            "title": "JavaScript Basics",
+            "description": "Interactive SCORM package for learning JavaScript",
+            "type": "scorm",
+            "orderIndex": 3,
+            "content": {
+              "scormPackage": "https://example.com/scorm/js-basics.zip"
+            }
+          },
+          {
+            "title": "Module 1 Quiz",
+            "type": "exercise",
+            "orderIndex": 4,
+            "exercise": {
+              "title": "HTML & CSS Quiz",
+              "type": "quiz",
+              "passingScore": 70,
+              "timeLimit": 30,
+              "description": "Test your knowledge of HTML and CSS",
+              "allowMultipleAttempts": true,
+              "shuffleQuestions": true,
+              "questions": [
+                {
+                  "type": "multiple_choice",
+                  "questionText": "What does HTML stand for?",
+                  "points": 10,
+                  "options": [
+                    {
+                      "text": "Hyper Text Markup Language",
+                      "isCorrect": true,
+                      "explanation": "Correct! HTML stands for Hyper Text Markup Language."
+                    },
+                    {
+                      "text": "High Tech Modern Language",
+                      "isCorrect": false
+                    },
+                    {
+                      "text": "Home Tool Markup Language",
+                      "isCorrect": false
+                    }
+                  ],
+                  "explanation": "HTML is the standard markup language for creating web pages."
+                },
+                {
+                  "type": "true_false",
+                  "questionText": "CSS is used to style HTML elements.",
+                  "points": 5,
+                  "correctAnswer": true,
+                  "explanation": "CSS (Cascading Style Sheets) is used to style and layout web pages."
+                },
+                {
+                  "type": "short_answer",
+                  "questionText": "What CSS property is used to change text color?",
+                  "points": 5,
+                  "sampleAnswer": "color",
+                  "hints": ["It's a very common CSS property", "It has the same name as what it does"]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "validations": {
+    "course.code": {
+      "pattern": "^[A-Z]{2,4}[0-9]{3}[A-Z]?$",
+      "description": "Course code must be 2-4 uppercase letters followed by 3 digits and optional letter (e.g., CS101, MATH200A)"
+    },
+    "course.title": {
+      "description": "Course title is required and must be 1-255 characters long"
+    },
+    "course.credits": {
+      "description": "Credits must be between 0 and 12"
+    },
+    "course.department": {
+      "description": "Department is required. Can be department name (resolved automatically) or ObjectId"
+    }
+  }
+}

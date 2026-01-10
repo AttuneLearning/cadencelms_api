@@ -8,7 +8,8 @@
     "npm": ">=10.0.0"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && npm run copy-schemas",
+    "copy-schemas": "mkdir -p dist/schemas && cp -r src/schemas/* dist/schemas/",
     "build:watch": "tsc -p tsconfig.build.json --watch",
     "type-check": "tsc --noEmit",
     "type-check:watch": "tsc --noEmit --watch",
