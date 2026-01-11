@@ -25,6 +25,12 @@ router.post('/logout', authenticate, AuthController.logout);
 // Current user
 router.get('/me', authenticate, AuthController.getCurrentUser);
 
+// Role System V2 - Session Management
+router.post('/escalate', authenticate, AuthController.escalate);
+router.post('/deescalate', authenticate, AuthController.deescalate);
+router.post('/switch-department', authenticate, AuthController.switchDepartment);
+router.post('/continue', authenticate, AuthController.continue);
+
 // Password management
 router.post('/password/forgot', validateForgotPassword, PasswordController.forgotPassword);
 router.put('/password/reset/:token', PasswordController.resetPassword);

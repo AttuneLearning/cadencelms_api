@@ -136,3 +136,47 @@ export const validateForgotPassword = (req: Request, _res: Response, next: NextF
 
   next();
 };
+
+/**
+ * Validator for setting escalation password
+ *
+ * Validates the escalation password setup for global admin users.
+ * The escalation password is used to elevate privileges for sensitive operations.
+ *
+ * Requirements:
+ * - Minimum 8 characters
+ * - At least one uppercase letter
+ * - At least one lowercase letter
+ * - At least one number
+ * - At least one special character (@$!%*?&)
+ *
+ * @param req - Express request object
+ * @param _res - Express response object (unused)
+ * @param next - Express next function
+ * @throws {ApiError} Throws 400 error if validation fails
+ */
+export const validateSetEscalationPassword = (req: Request, _res: Response, next: NextFunction) => {
+  const schema = Joi.object({
+    escalationPassword: Joi.string().min(8).pattern(passwordRegex).required().messages({
+      'string.min': 'Escalation password must be at least 8 characters',
+      'string.pattern.base': 'Escalation password must contain at least one uppercase letter, one lowercase letter, one number, and one special character',
+      'any.required': 'Escalation password is required'
+    }),
+    confirmEscalationPassword: Joi.string().valid(Joi.ref('escalationPassword')).required().messages({
+      'any.only': 'Passwords must match',
+      'any.required': 'Password confirmation is required'
+    })
+  });
+
+  const { error } = schema.validate(req.body, { abortEarly: false });
+
+  if (error) {
+    const errors = error.details.map((detail) => ({
+      field: detail.path.join('.'),
+      message: detail.message
+    }));
+    throw ApiError.badRequest('Validation failed', errors as any);
+  }
+
+  next();
+};

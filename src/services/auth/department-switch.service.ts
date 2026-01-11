@@ -1,0 +1,461 @@
+/**
+ * Department Switch Service
+ *
+ * Handles department context switching for authenticated users.
+ * Allows users to switch between departments where they have active membership
+ * and retrieves the appropriate roles and access rights for the selected department.
+ *
+ * Business Logic:
+ * - Validates user has membership in target department (direct or via role cascading)
+ * - Queries User, Staff, and Learner models for department memberships
+ * - Uses RoleService to get roles with cascading support
+ * - Uses AccessRightsService to resolve access rights for roles
+ * - Returns child departments if role cascading is enabled
+ * - Updates User.lastSelectedDepartment for UI state persistence
+ *
+ * Reference: devdocs/Role_System_API_Model_Plan_V2.md Section 6.3
+ * Phase 3, Task 3.5 of Implementation Plan
+ *
+ * @module services/auth/department-switch
+ */
+
+import mongoose from 'mongoose';
+import { User } from '@/models/auth/User.model';
+import { Staff } from '@/models/auth/Staff.model';
+import { Learner } from '@/models/auth/Learner.model';
+import Department from '@/models/organization/Department.model';
+import { ApiError } from '@/utils/ApiError';
+import { UserType } from '@/models/auth/role-constants';
+
+/**
+ * Response structure for department switch operation
+ */
+export interface SwitchDepartmentResponse {
+  /** ID of the switched department */
+  departmentId: string;
+
+  /** Name of the department */
+  departmentName: string;
+
+  /** Roles the user has in this department */
+  roles: string[];
+
+  /** Access rights granted by those roles */
+  accessRights: string[];
+
+  /** Child departments where roles cascade (optional) */
+  childDepartments?: Array<{
+    id: string;
+    name: string;
+    roles: string[];
+  }>;
+}
+
+/**
+ * Child department information
+ */
+interface ChildDepartmentInfo {
+  id: string;
+  name: string;
+  roles: string[];
+}
+
+/**
+ * Department Switch Service
+ *
+ * Provides functionality for switching user's active department context
+ */
+export class DepartmentSwitchService {
+  /**
+   * Switch user's active department context
+   *
+   * This method performs the following:
+   * 1. Validates that the target department exists and is active
+   * 2. Checks user has membership in the department (direct or cascaded)
+   * 3. Retrieves the user's roles for that department
+   * 4. Resolves access rights for those roles
+   * 5. Gets child departments if role cascading is enabled
+   * 6. Updates User.lastSelectedDepartment field
+   *
+   * @param userId - User's ObjectId
+   * @param deptId - Target department's ObjectId
+   * @returns SwitchDepartmentResponse with department context
+   * @throws ApiError 404 if department not found
+   * @throws ApiError 403 if user has no membership in department
+   * @throws ApiError 500 for internal errors
+   */
+  static async switchDepartment(
+    userId: mongoose.Types.ObjectId,
+    deptId: mongoose.Types.ObjectId
+  ): Promise<SwitchDepartmentResponse> {
+    try {
+      // Step 1: Validate department exists and is active
+      const department = await Department.findOne({
+        _id: deptId,
+        isActive: true,
+        isVisible: true
+      });
+
+      if (!department) {
+        throw ApiError.notFound('Department not found or is not accessible');
+      }
+
+      // Step 2: Get user to determine userTypes
+      const user = await User.findById(userId);
+      if (!user) {
+        throw ApiError.notFound('User not found');
+      }
+
+      // Step 3: Check department membership and get roles
+      const { roles, userType } = await this.getUserRolesForDepartment(
+        userId,
+        deptId,
+        user.userTypes
+      );
+
+      if (roles.length === 0) {
+        throw ApiError.forbidden(
+          'You do not have access to this department'
+        );
+      }
+
+      // Step 4: Get access rights for the roles
+      const accessRights = await this.getAccessRightsForRoles(roles);
+
+      // Step 5: Get child departments if role cascading is enabled
+      const childDepartments = await this.getChildDepartments(
+        userId,
+        deptId,
+        roles,
+        userType,
+        department.requireExplicitMembership
+      );
+
+      // Step 6: Update User.lastSelectedDepartment
+      await User.findByIdAndUpdate(userId, {
+        lastSelectedDepartment: deptId
+      });
+
+      // Return the complete response
+      return {
+        departmentId: deptId.toString(),
+        departmentName: department.name,
+        roles,
+        accessRights,
+        ...(childDepartments.length > 0 && { childDepartments })
+      };
+
+    } catch (error) {
+      // Re-throw ApiErrors as-is
+      if (error instanceof ApiError) {
+        throw error;
+      }
+
+      // Wrap other errors
+      console.error('Error in switchDepartment:', error);
+      throw ApiError.internal(
+        'Failed to switch department',
+        error instanceof Error ? error : undefined
+      );
+    }
+  }
+
+  /**
+   * Get user's roles for a specific department
+   *
+   * Checks Staff and Learner models for direct membership.
+   * If no direct membership found, checks for role cascading from parent departments.
+   *
+   * @param userId - User's ObjectId
+   * @param deptId - Department ObjectId
+   * @param userTypes - User's userTypes array
+   * @returns Object containing roles and the userType used
+   * @private
+   */
+  private static async getUserRolesForDepartment(
+    userId: mongoose.Types.ObjectId,
+    deptId: mongoose.Types.ObjectId,
+    userTypes: UserType[]
+  ): Promise<{ roles: string[]; userType: UserType | null }> {
+    // Try staff roles first if user has staff or global-admin type
+    if (userTypes.includes('staff') || userTypes.includes('global-admin')) {
+      const staffRoles = await this.getStaffRolesForDepartment(userId, deptId);
+      if (staffRoles.length > 0) {
+        return { roles: staffRoles, userType: 'staff' };
+      }
+    }
+
+    // Try learner roles if user has learner type
+    if (userTypes.includes('learner')) {
+      const learnerRoles = await this.getLearnerRolesForDepartment(userId, deptId);
+      if (learnerRoles.length > 0) {
+        return { roles: learnerRoles, userType: 'learner' };
+      }
+    }
+
+    // If no direct membership found, check for role cascading
+    const cascadedRoles = await this.checkRoleCascading(userId, deptId, userTypes);
+    return cascadedRoles;
+  }
+
+  /**
+   * Get staff roles for a department (direct membership only)
+   *
+   * @param userId - User's ObjectId
+   * @param deptId - Department ObjectId
+   * @returns Array of staff role names
+   * @private
+   */
+  private static async getStaffRolesForDepartment(
+    userId: mongoose.Types.ObjectId,
+    deptId: mongoose.Types.ObjectId
+  ): Promise<string[]> {
+    const staff = await Staff.findById(userId);
+    if (!staff) {
+      return [];
+    }
+
+    return staff.getRolesForDepartment(deptId);
+  }
+
+  /**
+   * Get learner roles for a department (direct membership only)
+   *
+   * @param userId - User's ObjectId
+   * @param deptId - Department ObjectId
+   * @returns Array of learner role names
+   * @private
+   */
+  private static async getLearnerRolesForDepartment(
+    userId: mongoose.Types.ObjectId,
+    deptId: mongoose.Types.ObjectId
+  ): Promise<string[]> {
+    const learner = await Learner.findById(userId);
+    if (!learner) {
+      return [];
+    }
+
+    return learner.getRolesForDepartment(deptId);
+  }
+
+  /**
+   * Check for role cascading from parent departments
+   *
+   * Recursively checks parent departments to see if user has membership
+   * in a parent that grants cascaded access to this department.
+   * Only applies if parent department has requireExplicitMembership: false
+   *
+   * @param userId - User's ObjectId
+   * @param deptId - Department ObjectId
+   * @param userTypes - User's userTypes array
+   * @returns Object containing cascaded roles and userType, or empty array if none
+   * @private
+   */
+  private static async checkRoleCascading(
+    userId: mongoose.Types.ObjectId,
+    deptId: mongoose.Types.ObjectId,
+    userTypes: UserType[]
+  ): Promise<{ roles: string[]; userType: UserType | null }> {
+    const department = await Department.findById(deptId).populate('parentDepartmentId');
+
+    if (!department || !department.parentDepartmentId) {
+      return { roles: [], userType: null };
+    }
+
+    const parent = await Department.findById(department.parentDepartmentId);
+    if (!parent) {
+      return { roles: [], userType: null };
+    }
+
+    // Only cascade if parent doesn't require explicit membership
+    if (parent.requireExplicitMembership) {
+      return { roles: [], userType: null };
+    }
+
+    // Check if user has roles in parent department
+    const parentRoles = await this.getUserRolesForDepartment(
+      userId,
+      parent._id,
+      userTypes
+    );
+
+    if (parentRoles.roles.length > 0) {
+      return parentRoles;
+    }
+
+    // Continue checking up the hierarchy
+    return this.checkRoleCascading(userId, parent._id, userTypes);
+  }
+
+  /**
+   * Get access rights for an array of roles
+   *
+   * This is a placeholder that should use AccessRightsService.getAccessRightsForRoles()
+   * once Task 3.1 is complete. For now, it uses RoleDefinition model directly.
+   *
+   * @param roles - Array of role names
+   * @returns Array of access right strings
+   * @private
+   */
+  private static async getAccessRightsForRoles(roles: string[]): Promise<string[]> {
+    try {
+      // Import RoleDefinition dynamically to avoid circular dependencies
+      const { RoleDefinition } = await import('@/models/RoleDefinition.model');
+
+      // Get role definitions for all roles
+      const roleDefinitions = await RoleDefinition.find({
+        name: { $in: roles.map(r => r.toLowerCase()) },
+        isActive: true
+      });
+
+      // Collect all unique access rights
+      const accessRightsSet = new Set<string>();
+      for (const roleDef of roleDefinitions) {
+        for (const right of roleDef.accessRights) {
+          accessRightsSet.add(right);
+        }
+      }
+
+      return Array.from(accessRightsSet);
+    } catch (error) {
+      console.error('Error getting access rights:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get child departments where user's roles apply via cascading
+   *
+   * If the department allows role cascading (requireExplicitMembership: false),
+   * returns all active child departments where the user's roles cascade down.
+   *
+   * @param userId - User's ObjectId
+   * @param deptId - Parent department ObjectId
+   * @param roles - User's roles in parent department
+   * @param userType - User's active userType (staff or learner)
+   * @param requireExplicitMembership - Whether department requires explicit membership
+   * @returns Array of child department info
+   * @private
+   */
+  private static async getChildDepartments(
+    userId: mongoose.Types.ObjectId,
+    deptId: mongoose.Types.ObjectId,
+    roles: string[],
+    userType: UserType | null,
+    requireExplicitMembership: boolean
+  ): Promise<ChildDepartmentInfo[]> {
+    // Only return child departments if cascading is enabled
+    if (requireExplicitMembership || !userType) {
+      return [];
+    }
+
+    try {
+      // Find all active, visible child departments
+      const children = await Department.find({
+        parentDepartmentId: deptId,
+        isActive: true,
+        isVisible: true
+      });
+
+      // Map to child department info
+      return children.map(child => ({
+        id: child._id.toString(),
+        name: child.name,
+        roles // Same roles cascade down
+      }));
+
+    } catch (error) {
+      console.error('Error getting child departments:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Validate user has access to department
+   *
+   * Convenience method to check if a user has any access to a department
+   * without performing the full switch operation.
+   *
+   * @param userId - User's ObjectId
+   * @param deptId - Department ObjectId
+   * @returns True if user has access, false otherwise
+   */
+  static async validateDepartmentAccess(
+    userId: mongoose.Types.ObjectId,
+    deptId: mongoose.Types.ObjectId
+  ): Promise<boolean> {
+    try {
+      const user = await User.findById(userId);
+      if (!user) {
+        return false;
+      }
+
+      const { roles } = await this.getUserRolesForDepartment(
+        userId,
+        deptId,
+        user.userTypes
+      );
+
+      return roles.length > 0;
+    } catch (error) {
+      console.error('Error validating department access:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get all departments accessible by user
+   *
+   * Returns all departments where the user has either direct membership
+   * or cascaded access from parent departments.
+   *
+   * @param userId - User's ObjectId
+   * @returns Array of accessible departments with roles
+   */
+  static async getAccessibleDepartments(
+    userId: mongoose.Types.ObjectId
+  ): Promise<Array<{ departmentId: string; departmentName: string; roles: string[] }>> {
+    try {
+      const user = await User.findById(userId);
+      if (!user) {
+        return [];
+      }
+
+      const accessibleDepartments: Array<{
+        departmentId: string;
+        departmentName: string;
+        roles: string[];
+      }> = [];
+
+      // Get all active, visible departments
+      const allDepartments = await Department.find({
+        isActive: true,
+        isVisible: true
+      });
+
+      // Check access for each department
+      for (const dept of allDepartments) {
+        const { roles } = await this.getUserRolesForDepartment(
+          userId,
+          dept._id,
+          user.userTypes
+        );
+
+        if (roles.length > 0) {
+          accessibleDepartments.push({
+            departmentId: dept._id.toString(),
+            departmentName: dept.name,
+            roles
+          });
+        }
+      }
+
+      return accessibleDepartments;
+    } catch (error) {
+      console.error('Error getting accessible departments:', error);
+      return [];
+    }
+  }
+}
+
+export default DepartmentSwitchService;
