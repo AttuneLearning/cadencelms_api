@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { authenticate } from '@/middlewares/authenticate';
+import { requireEscalation } from '@/middlewares/require-escalation';
+import { requireAdminRole } from '@/middlewares/require-admin-role';
 import * as rolesController from '@/controllers/auth/roles.controller';
 
 const router = Router();
@@ -52,8 +54,13 @@ router.get('/:name', rolesController.getRole);
 /**
  * PUT /api/v2/roles/:name/access-rights
  * Update access rights for a specific role
- * Requires system-admin privileges (authorization will be added in later phase)
+ * Requires system-admin privileges
  */
-router.put('/:name/access-rights', rolesController.updateRoleAccessRights);
+router.put(
+  '/:name/access-rights',
+  requireEscalation,
+  requireAdminRole(['system-admin']),
+  rolesController.updateRoleAccessRights
+);
 
 export default router;

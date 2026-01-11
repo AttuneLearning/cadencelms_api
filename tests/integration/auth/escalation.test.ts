@@ -20,8 +20,8 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import app from '@/app';
 import { User } from '@/models/auth/User.model';
-import Staff from '@/models/auth/Staff.model';
-import { GlobalAdmin } from '@/models/GlobalAdmin.model';
+import { Staff } from '@/models/auth/Staff.model';
+import GlobalAdmin from '@/models/GlobalAdmin.model';
 import Department from '@/models/organization/Department.model';
 import { RoleDefinition } from '@/models/RoleDefinition.model';
 
@@ -103,7 +103,7 @@ describe('Escalation Integration Tests', () => {
     });
 
     await Staff.create({
-      userId: adminUser._id,
+      _id: adminUser._id,
       firstName: 'Admin',
       lastName: 'User',
       departmentMemberships: [{
@@ -116,15 +116,25 @@ describe('Escalation Integration Tests', () => {
 
     const escalationPassword = await bcrypt.hash('AdminPass123!', 10);
     await GlobalAdmin.create({
-      userId: adminUser._id,
-      roles: ['system-admin', 'enrollment-admin'],
+      _id: adminUser._id,
       escalationPassword,
+      roleMemberships: [{
+        departmentId: masterDepartment._id,
+        roles: ['system-admin', 'enrollment-admin'],
+        assignedAt: new Date(),
+        isActive: true
+      }],
       isActive: true
     });
 
     // Generate access token for admin
     adminAccessToken = jwt.sign(
-      { userId: adminUser._id.toString(), email: adminUser.email },
+      {
+        userId: adminUser._id.toString(),
+        email: adminUser.email,
+        roles: ['instructor', 'system-admin', 'enrollment-admin'],
+        type: 'access'
+      },
       process.env.JWT_ACCESS_SECRET || 'test-secret',
       { expiresIn: '1h' }
     );
@@ -139,7 +149,7 @@ describe('Escalation Integration Tests', () => {
     });
 
     await Staff.create({
-      userId: staffUser._id,
+      _id: staffUser._id,
       firstName: 'Staff',
       lastName: 'User',
       departmentMemberships: [{
@@ -152,7 +162,12 @@ describe('Escalation Integration Tests', () => {
 
     // Generate access token for staff
     staffAccessToken = jwt.sign(
-      { userId: staffUser._id.toString(), email: staffUser.email },
+      {
+        userId: staffUser._id.toString(),
+        email: staffUser.email,
+        roles: ['instructor'],
+        type: 'access'
+      },
       process.env.JWT_ACCESS_SECRET || 'test-secret',
       { expiresIn: '1h' }
     );

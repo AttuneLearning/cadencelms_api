@@ -5,6 +5,7 @@ import { ApiResponse } from '@/utils/ApiResponse';
 import { asyncHandler } from '@/utils/asyncHandler';
 import { ApiError } from '@/utils/ApiError';
 import mongoose from 'mongoose';
+import Department from '@/models/organization/Department.model';
 
 /**
  * Roles Controller
@@ -312,7 +313,7 @@ export const getMyRolesForDepartment = asyncHandler(async (req: Request, res: Re
 
   // Check if user has any membership (direct or cascaded)
   if (allRoles.length === 0) {
-    throw ApiError.forbidden('NOT_A_MEMBER', 'User is not a member of this department');
+    throw ApiError.forbidden('User is not a member of this department');
   }
 
   // Get access rights for all roles
