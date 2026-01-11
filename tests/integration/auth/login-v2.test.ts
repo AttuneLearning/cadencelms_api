@@ -16,8 +16,8 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import app from '@/app';
 import { User } from '@/models/auth/User.model';
-import Staff from '@/models/auth/Staff.model';
-import Learner from '@/models/auth/Learner.model';
+import { Staff } from '@/models/auth/Staff.model';
+import { Learner } from '@/models/auth/Learner.model';
 import { GlobalAdmin } from '@/models/GlobalAdmin.model';
 import Department from '@/models/organization/Department.model';
 import { RoleDefinition } from '@/models/RoleDefinition.model';
@@ -106,20 +106,20 @@ describe('Auth V2 Login Integration Tests', () => {
       }
     ]);
 
-    // Seed access rights
+    // Seed access rights (must include resource and action fields)
     await AccessRight.create([
-      { name: 'content:courses:read', domain: 'content', description: 'Read courses' },
-      { name: 'content:courses:manage', domain: 'content', description: 'Manage courses' },
-      { name: 'content:lessons:read', domain: 'content', description: 'Read lessons' },
-      { name: 'content:lessons:manage', domain: 'content', description: 'Manage lessons' },
-      { name: 'content:materials:manage', domain: 'content', description: 'Manage materials' },
-      { name: 'enrollment:own:manage', domain: 'enrollment', description: 'Manage own enrollments' },
-      { name: 'grades:own-classes:manage', domain: 'grades', description: 'Manage grades for own classes' },
-      { name: 'staff:department:manage', domain: 'staff', description: 'Manage department' },
-      { name: 'reports:department:read', domain: 'reports', description: 'Read department reports' },
-      { name: 'system:*', domain: 'system', description: 'All system operations' },
-      { name: 'content:*', domain: 'content', description: 'All content operations' },
-      { name: 'enrollment:*', domain: 'enrollment', description: 'All enrollment operations' }
+      { name: 'content:courses:read', domain: 'content', resource: 'courses', action: 'read', description: 'Read courses' },
+      { name: 'content:courses:manage', domain: 'content', resource: 'courses', action: 'manage', description: 'Manage courses' },
+      { name: 'content:lessons:read', domain: 'content', resource: 'lessons', action: 'read', description: 'Read lessons' },
+      { name: 'content:lessons:manage', domain: 'content', resource: 'lessons', action: 'manage', description: 'Manage lessons' },
+      { name: 'content:materials:manage', domain: 'content', resource: 'materials', action: 'manage', description: 'Manage materials' },
+      { name: 'enrollment:own:manage', domain: 'enrollment', resource: 'own', action: 'manage', description: 'Manage own enrollments' },
+      { name: 'grades:own-classes:manage', domain: 'grades', resource: 'own-classes', action: 'manage', description: 'Manage grades for own classes' },
+      { name: 'staff:department:manage', domain: 'staff', resource: 'department', action: 'manage', description: 'Manage department' },
+      { name: 'reports:department:read', domain: 'reports', resource: 'department', action: 'read', description: 'Read department reports' },
+      { name: 'system:*', domain: 'system', resource: '*', action: '*', description: 'All system operations' },
+      { name: 'content:*', domain: 'content', resource: '*', action: '*', description: 'All content operations' },
+      { name: 'enrollment:*', domain: 'enrollment', resource: '*', action: '*', description: 'All enrollment operations' }
     ]);
   });
 
@@ -146,7 +146,7 @@ describe('Auth V2 Login Integration Tests', () => {
       });
 
       const learner = await Learner.create({
-        userId: user._id,
+        _id: user._id,
         firstName: 'John',
         lastName: 'Learner',
         departmentMemberships: [{
@@ -180,7 +180,7 @@ describe('Auth V2 Login Integration Tests', () => {
       });
 
       const staff = await Staff.create({
-        userId: user._id,
+        _id: user._id,
         firstName: 'Jane',
         lastName: 'Staff',
         departmentMemberships: [{
@@ -213,7 +213,7 @@ describe('Auth V2 Login Integration Tests', () => {
       });
 
       const staff = await Staff.create({
-        userId: user._id,
+        _id: user._id,
         firstName: 'Admin',
         lastName: 'User',
         departmentMemberships: [{
@@ -225,9 +225,14 @@ describe('Auth V2 Login Integration Tests', () => {
       });
 
       const globalAdmin = await GlobalAdmin.create({
-        userId: user._id,
-        roles: ['system-admin'],
+        _id: user._id,
         escalationPassword: await bcrypt.hash('AdminPass123!', 10),
+        roleMemberships: [{
+          departmentId: masterDepartment._id,
+          roles: ['system-admin'],
+          assignedAt: new Date(),
+          isActive: true
+        }],
         isActive: true
       });
 
@@ -257,7 +262,7 @@ describe('Auth V2 Login Integration Tests', () => {
       });
 
       const staff = await Staff.create({
-        userId: user._id,
+        _id: user._id,
         firstName: 'Jane',
         lastName: 'Instructor',
         departmentMemberships: [{
@@ -298,7 +303,7 @@ describe('Auth V2 Login Integration Tests', () => {
       });
 
       const staff = await Staff.create({
-        userId: user._id,
+        _id: user._id,
         firstName: 'Jane',
         lastName: 'Instructor',
         departmentMemberships: [{
@@ -340,7 +345,7 @@ describe('Auth V2 Login Integration Tests', () => {
       });
 
       const staff = await Staff.create({
-        userId: user._id,
+        _id: user._id,
         firstName: 'Multi',
         lastName: 'Department',
         departmentMemberships: [
@@ -397,7 +402,7 @@ describe('Auth V2 Login Integration Tests', () => {
       });
 
       const staff = await Staff.create({
-        userId: user._id,
+        _id: user._id,
         firstName: 'Multi',
         lastName: 'Department',
         departmentMemberships: [
@@ -452,7 +457,7 @@ describe('Auth V2 Login Integration Tests', () => {
       });
 
       const learner = await Learner.create({
-        userId: user._id,
+        _id: user._id,
         firstName: 'John',
         lastName: 'Learner',
         departmentMemberships: [{
@@ -484,7 +489,7 @@ describe('Auth V2 Login Integration Tests', () => {
       });
 
       const staff = await Staff.create({
-        userId: user._id,
+        _id: user._id,
         firstName: 'Jane',
         lastName: 'Staff',
         departmentMemberships: [{
@@ -516,7 +521,7 @@ describe('Auth V2 Login Integration Tests', () => {
       });
 
       const staff = await Staff.create({
-        userId: user._id,
+        _id: user._id,
         firstName: 'Admin',
         lastName: 'User',
         departmentMemberships: [{
@@ -528,9 +533,14 @@ describe('Auth V2 Login Integration Tests', () => {
       });
 
       const globalAdmin = await GlobalAdmin.create({
-        userId: user._id,
-        roles: ['system-admin'],
+        _id: user._id,
         escalationPassword: await bcrypt.hash('AdminPass123!', 10),
+        roleMemberships: [{
+          departmentId: masterDepartment._id,
+          roles: ['system-admin'],
+          assignedAt: new Date(),
+          isActive: true
+        }],
         isActive: true
       });
 
@@ -557,7 +567,7 @@ describe('Auth V2 Login Integration Tests', () => {
       });
 
       const learner = await Learner.create({
-        userId: user._id,
+        _id: user._id,
         firstName: 'John',
         lastName: 'Learner',
         departmentMemberships: [{
@@ -589,7 +599,7 @@ describe('Auth V2 Login Integration Tests', () => {
       });
 
       const staff = await Staff.create({
-        userId: user._id,
+        _id: user._id,
         firstName: 'Jane',
         lastName: 'Staff',
         departmentMemberships: [{
@@ -621,9 +631,14 @@ describe('Auth V2 Login Integration Tests', () => {
       });
 
       const globalAdmin = await GlobalAdmin.create({
-        userId: user._id,
-        roles: ['system-admin'],
+        _id: user._id,
         escalationPassword: await bcrypt.hash('AdminPass123!', 10),
+        roleMemberships: [{
+          departmentId: masterDepartment._id,
+          roles: ['system-admin'],
+          assignedAt: new Date(),
+          isActive: true
+        }],
         isActive: true
       });
 
@@ -648,7 +663,7 @@ describe('Auth V2 Login Integration Tests', () => {
       });
 
       const learner = await Learner.create({
-        userId: user._id,
+        _id: user._id,
         firstName: 'Hybrid',
         lastName: 'User',
         departmentMemberships: [{
@@ -660,7 +675,7 @@ describe('Auth V2 Login Integration Tests', () => {
       });
 
       const staff = await Staff.create({
-        userId: user._id,
+        _id: user._id,
         firstName: 'Hybrid',
         lastName: 'User',
         departmentMemberships: [{
@@ -694,7 +709,7 @@ describe('Auth V2 Login Integration Tests', () => {
       });
 
       const staff = await Staff.create({
-        userId: user._id,
+        _id: user._id,
         firstName: 'New',
         lastName: 'User',
         departmentMemberships: [{
@@ -727,7 +742,7 @@ describe('Auth V2 Login Integration Tests', () => {
       });
 
       const staff = await Staff.create({
-        userId: user._id,
+        _id: user._id,
         firstName: 'Existing',
         lastName: 'User',
         departmentMemberships: [
@@ -810,7 +825,7 @@ describe('Auth V2 Login Integration Tests', () => {
       });
 
       const staff = await Staff.create({
-        userId: user._id,
+        _id: user._id,
         firstName: 'Test',
         lastName: 'User',
         departmentMemberships: [{
