@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '@/middlewares/authenticate';
+import { requireAccessRight } from '@/middlewares/require-access-right';
 import * as questionsController from '@/controllers/content/questions.controller';
 
 const router = Router();
@@ -18,7 +19,9 @@ router.use(authenticate);
 /**
  * GET /api/v2/questions
  * List questions with filtering and pagination
- * Permissions: read:questions
+ * Access Rights: content:assessments:manage, content:lessons:read
+ * Roles: instructor, content-admin, department-admin
+ * Service Layer: Department-scoped question bank
  *
  * Query params:
  * - page: number (default: 1)
@@ -30,12 +33,17 @@ router.use(authenticate);
  * - department: ObjectId
  * - sort: string (default: -createdAt)
  */
-router.get('/', questionsController.listQuestions);
+router.get('/',
+  requireAccessRight(['content:assessments:manage', 'content:lessons:read']),
+  questionsController.listQuestions
+);
 
 /**
  * POST /api/v2/questions/bulk
  * Bulk import questions (must be before /:id to avoid route conflict)
- * Permissions: write:questions
+ * Access Right: content:assessments:manage
+ * Roles: content-admin, department-admin
+ * Service Layer: Bulk import questions
  *
  * Body:
  * - format: string (json, csv)
@@ -43,12 +51,17 @@ router.get('/', questionsController.listQuestions);
  * - department: ObjectId (optional)
  * - overwriteExisting: boolean (optional, default: false)
  */
-router.post('/bulk', questionsController.bulkImportQuestions);
+router.post('/bulk',
+  requireAccessRight('content:assessments:manage'),
+  questionsController.bulkImportQuestions
+);
 
 /**
  * POST /api/v2/questions
  * Create a new question
- * Permissions: write:questions
+ * Access Right: content:assessments:manage
+ * Roles: instructor, content-admin, department-admin
+ * Service Layer: Create question (owned by creator)
  *
  * Body:
  * - questionText: string (required, max 2000 chars)
@@ -61,24 +74,34 @@ router.post('/bulk', questionsController.bulkImportQuestions);
  * - explanation: string (optional, max 1000 chars)
  * - department: ObjectId (optional)
  */
-router.post('/', questionsController.createQuestion);
+router.post('/',
+  requireAccessRight('content:assessments:manage'),
+  questionsController.createQuestion
+);
 
 /**
  * GET /api/v2/questions/:id
  * Get details of a specific question
- * Permissions: read:questions
+ * Access Rights: content:assessments:manage, content:lessons:read
+ * Roles: instructor, content-admin, department-admin
+ * Service Layer: View question details
  *
  * Response includes:
  * - All question details
  * - usageCount: number of question banks using this question
  * - lastUsed: date when question was last included in an assessment
  */
-router.get('/:id', questionsController.getQuestionById);
+router.get('/:id',
+  requireAccessRight(['content:assessments:manage', 'content:lessons:read']),
+  questionsController.getQuestionById
+);
 
 /**
  * PUT /api/v2/questions/:id
  * Update an existing question
- * Permissions: write:questions
+ * Access Right: content:assessments:manage
+ * Roles: instructor (unused, own), content-admin, department-admin
+ * Service Layer: Cannot edit questions in use
  *
  * Body: (all fields optional)
  * - questionText: string
@@ -93,15 +116,23 @@ router.get('/:id', questionsController.getQuestionById);
  *
  * Note: Cannot update questions in use in active assessments
  */
-router.put('/:id', questionsController.updateQuestion);
+router.put('/:id',
+  requireAccessRight('content:assessments:manage'),
+  questionsController.updateQuestion
+);
 
 /**
  * DELETE /api/v2/questions/:id
  * Delete a question (soft delete)
- * Permissions: write:questions
+ * Access Right: content:assessments:manage
+ * Roles: instructor (unused, own), department-admin (unused)
+ * Service Layer: Cannot delete questions in use
  *
  * Note: Cannot delete questions in use in assessments
  */
-router.delete('/:id', questionsController.deleteQuestion);
+router.delete('/:id',
+  requireAccessRight('content:assessments:manage'),
+  questionsController.deleteQuestion
+);
 
 export default router;
