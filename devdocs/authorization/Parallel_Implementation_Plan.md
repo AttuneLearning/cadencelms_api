@@ -11,6 +11,8 @@
 
 This plan divides the authorization implementation work across 5 specialized agents who can work in parallel on independent route domains. Each agent is responsible for applying middleware to their assigned routes and implementing service layer changes.
 
+**Total scope:** ~170 routes across 26 route files + admin role management system
+
 ---
 
 ## Team Structure
@@ -153,35 +155,53 @@ src/services/
 
 ### Agent 5: System & Infrastructure Specialist
 **Domain:** System Administration and Shared Infrastructure
-**Route Files:** 2 files, ~11 routes + utilities
-**Estimated Time:** 2-3 hours
+**Route Files:** 3 files, ~31 routes + utilities
+**Estimated Time:** 3-4 hours
 
 **Responsibilities:**
-- Apply authorization middleware to settings and audit logs routes
+- Apply authorization middleware to settings, audit logs, and admin routes
+- **CREATE new admin role management routes** (system-admin only)
 - Implement settings read-only access for instructors
 - Ensure audit log escalation requirements
+- **Implement role assignment management service**
 - Create integration tests for all authorization
 
 **Files to Modify:**
 ```
 src/routes/
 ├── settings.routes.ts        (6 routes)
-└── audit-logs.routes.ts      (5 routes)
+├── audit-logs.routes.ts      (5 routes)
+└── admin.routes.ts           (20 routes - NEW)
+
+src/controllers/
+└── admin/admin.controller.ts (NEW)
 
 src/services/
 ├── system/settings.service.ts
-└── system/audit-logs.service.ts
+├── system/audit-logs.service.ts
+└── admin/role-management.service.ts (NEW)
+
+contracts/api/
+└── admin-roles.contract.ts   (NEW - already created)
 
 tests/integration/middleware/
 ├── authorization.test.ts     (EXPAND)
 ├── data-masking.test.ts      (NEW)
 ├── department-scoping.test.ts (NEW)
 └── creator-editing.test.ts   (NEW)
+
+tests/integration/admin/
+└── role-management.test.ts   (NEW)
 ```
 
 **Key Implementations:**
 - Settings read-only for instructors
 - Audit log escalation enforcement
+- **Admin role assignment routes (system-admin only)**
+- **Global admin management routes**
+- **Role definition management routes**
+- **Bulk role assignment operations**
+- **User search for role assignment**
 - Integration test suite for authorization
 - Test helpers for common authorization patterns
 

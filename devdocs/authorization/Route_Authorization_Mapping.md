@@ -439,6 +439,56 @@ router.get('/:id',
 | `/user/:userId` | GET | `audit:logs:read` | system-admin | `requireAccessRight()` + `requireEscalation` | Get user activity audit trail |
 | `/entity/:entityType/:entityId` | GET | Domain-specific audit rights | content-admin (content), enrollment-admin (enrollment), financial-admin (billing), system-admin (all) | `requireAccessRight()` + `requireEscalation` | **Admin-only - instructors cannot view even for own content** |
 
+### Admin Role Management Routes (`/api/v2/admin`)
+
+**Route File:** `src/routes/admin.routes.ts` (NEW)
+**Contract:** `contracts/api/admin-roles.contract.ts`
+
+#### User Role Assignment
+
+| Endpoint | Method | Access Right | Roles | Middleware | Service Layer Notes |
+|----------|--------|-------------|-------|------------|-------------------|
+| `/users/:userId/roles` | GET | `system:*` | system-admin | `requireAccessRight()` + `requireEscalation` + `requireAdminRole(['system-admin'])` | List user's role assignments |
+| `/users/:userId/roles` | POST | `system:*` | system-admin | `requireAccessRight()` + `requireEscalation` + `requireAdminRole(['system-admin'])` | Assign role to user in department |
+| `/users/:userId/roles/:membershipId` | PUT | `system:*` | system-admin | `requireAccessRight()` + `requireEscalation` + `requireAdminRole(['system-admin'])` | Update role membership |
+| `/users/:userId/roles/:membershipId` | DELETE | `system:*` | system-admin | `requireAccessRight()` + `requireEscalation` + `requireAdminRole(['system-admin'])` | Remove role from user |
+| `/users/:userId/role-history` | GET | `system:*` | system-admin | `requireAccessRight()` + `requireEscalation` + `requireAdminRole(['system-admin'])` | View role assignment history |
+| `/users/search` | GET | `system:*` | system-admin | `requireAccessRight()` + `requireEscalation` + `requireAdminRole(['system-admin'])` | Search users for role assignment |
+
+#### Global Admin Management
+
+| Endpoint | Method | Access Right | Roles | Middleware | Service Layer Notes |
+|----------|--------|-------------|-------|------------|-------------------|
+| `/global-admins` | GET | `system:*` | system-admin | `requireAccessRight()` + `requireEscalation` + `requireAdminRole(['system-admin'])` | List all global admins |
+| `/global-admins` | POST | `system:*` | system-admin | `requireAccessRight()` + `requireEscalation` + `requireAdminRole(['system-admin'])` | Create/promote global admin |
+| `/global-admins/:userId` | DELETE | `system:*` | system-admin | `requireAccessRight()` + `requireEscalation` + `requireAdminRole(['system-admin'])` | **Cannot remove last system-admin** |
+| `/global-admins/:userId/roles` | PUT | `system:*` | system-admin | `requireAccessRight()` + `requireEscalation` + `requireAdminRole(['system-admin'])` | Update global admin roles |
+
+#### Role Definition Management
+
+| Endpoint | Method | Access Right | Roles | Middleware | Service Layer Notes |
+|----------|--------|-------------|-------|------------|-------------------|
+| `/role-definitions` | GET | `system:*` | system-admin | `requireAccessRight()` + `requireEscalation` + `requireAdminRole(['system-admin'])` | List all role definitions |
+| `/role-definitions/:roleName` | GET | `system:*` | system-admin | `requireAccessRight()` + `requireEscalation` + `requireAdminRole(['system-admin'])` | Get role details with user count |
+| `/role-definitions/:roleName/access-rights` | PUT | `system:*` | system-admin | `requireAccessRight()` + `requireEscalation` + `requireAdminRole(['system-admin'])` | Replace role's access rights |
+| `/role-definitions/:roleName/access-rights` | POST | `system:*` | system-admin | `requireAccessRight()` + `requireEscalation` + `requireAdminRole(['system-admin'])` | Add access right to role |
+| `/role-definitions/:roleName/access-rights/:rightId` | DELETE | `system:*` | system-admin | `requireAccessRight()` + `requireEscalation` + `requireAdminRole(['system-admin'])` | Remove access right from role |
+
+#### Bulk Operations
+
+| Endpoint | Method | Access Right | Roles | Middleware | Service Layer Notes |
+|----------|--------|-------------|-------|------------|-------------------|
+| `/users/bulk/assign-roles` | POST | `system:*` | system-admin | `requireAccessRight()` + `requireEscalation` + `requireAdminRole(['system-admin'])` | Bulk assign roles to multiple users |
+| `/users/bulk/remove-roles` | POST | `system:*` | system-admin | `requireAccessRight()` + `requireEscalation` + `requireAdminRole(['system-admin'])` | Bulk remove roles from multiple users |
+
+**Notes:**
+- ALL admin role management endpoints require system-admin role
+- ALL endpoints require escalation (admin token)
+- Access right: `system:*` (system-admin wildcard)
+- Service layer must prevent removing last system-admin
+- Role history logged in audit trail
+- Validate role compatibility with user type (staff vs learner)
+
 ---
 
 ## Access Rights Summary by Role

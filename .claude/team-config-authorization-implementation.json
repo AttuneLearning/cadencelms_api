@@ -211,12 +211,14 @@
     {
       "id": "agent-system-infrastructure",
       "role": "System & Infrastructure Authorization Specialist",
-      "domain": "System Administration and Integration Testing",
-      "description": "Apply authorization middleware to system routes and coordinate integration testing",
+      "domain": "System Administration, Role Management, and Integration Testing",
+      "description": "Apply authorization middleware to system routes, create admin role management, and coordinate integration testing",
       "responsibilities": [
-        "Apply authorization middleware to 2 route files (11 routes total)",
+        "Apply authorization middleware to 3 route files (31 routes total)",
+        "CREATE new admin role management routes (system-admin only)",
         "Implement settings read-only access for instructors",
         "Ensure audit log escalation requirements",
+        "CREATE role assignment management service",
         "CREATE comprehensive integration test suite",
         "COORDINATE testing across all agents",
         "Monitor and report test coverage",
@@ -225,21 +227,34 @@
       "tasks": {
         "PHASE1-1": "Apply middleware to settings.routes.ts (6 routes)",
         "PHASE1-2": "Apply middleware to audit-logs.routes.ts (5 routes)",
+        "PHASE1-3": "CREATE admin.routes.ts with full middleware (20 routes)",
         "PHASE2-1": "Implement settings read-only in settings.service.ts",
         "PHASE2-2": "Ensure audit log escalation in audit-logs.service.ts",
+        "PHASE2-3": "CREATE admin.controller.ts for role management",
+        "PHASE2-4": "CREATE role-management.service.ts",
+        "PHASE2-5": "Implement user role assignment operations",
+        "PHASE2-6": "Implement global admin management operations",
+        "PHASE2-7": "Implement role definition management operations",
+        "PHASE2-8": "Implement bulk role operations",
+        "PHASE2-9": "Implement user search for role assignment",
         "PHASE3-1": "CREATE tests/integration/middleware/data-masking.test.ts",
         "PHASE3-2": "CREATE tests/integration/middleware/department-scoping.test.ts",
         "PHASE3-3": "CREATE tests/integration/middleware/creator-editing.test.ts",
-        "PHASE3-4": "EXPAND tests/integration/middleware/authorization.test.ts",
-        "PHASE3-5": "Run full integration test suite",
-        "PHASE3-6": "Coordinate test fixes with other agents",
-        "PHASE3-7": "Generate test coverage report",
+        "PHASE3-4": "CREATE tests/integration/admin/role-management.test.ts",
+        "PHASE3-5": "EXPAND tests/integration/middleware/authorization.test.ts",
+        "PHASE3-6": "Run full integration test suite",
+        "PHASE3-7": "Coordinate test fixes with other agents",
+        "PHASE3-8": "Generate test coverage report",
         "PHASE4-1": "Ensure 85%+ authorization test coverage"
       },
       "workingDirectories": [
         "src/routes/",
+        "src/controllers/admin/",
         "src/services/system/",
+        "src/services/admin/",
+        "contracts/api/",
         "tests/integration/middleware/",
+        "tests/integration/admin/",
         "tests/integration/auth/",
         "tests/helpers/"
       ],
@@ -251,18 +266,23 @@
         "tests/integration/middleware/authorization.test.ts"
       ],
       "filesToCreate": [
+        "src/routes/admin.routes.ts",
+        "src/controllers/admin/admin.controller.ts",
+        "src/services/admin/role-management.service.ts",
         "tests/integration/middleware/data-masking.test.ts",
         "tests/integration/middleware/department-scoping.test.ts",
         "tests/integration/middleware/creator-editing.test.ts",
+        "tests/integration/admin/role-management.test.ts",
         "tests/helpers/authorizationHelpers.ts"
       ],
       "referenceFiles": [
         "devdocs/authorization/Route_Authorization_Mapping.md",
         "devdocs/authorization/Implementation_Summary.md",
-        "devdocs/authorization/Parallel_Implementation_Plan.md"
+        "devdocs/authorization/Parallel_Implementation_Plan.md",
+        "contracts/api/admin-roles.contract.ts"
       ],
-      "estimatedTime": "2-3 hours",
-      "priority": "CRITICAL - Coordinates testing for all agents",
+      "estimatedTime": "3-4 hours",
+      "priority": "CRITICAL - Coordinates testing for all agents + creates admin role management",
       "dependencies": {
         "blockedBy": [],
         "blocks": [],

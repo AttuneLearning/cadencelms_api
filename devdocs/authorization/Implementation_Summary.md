@@ -10,7 +10,7 @@
 
 Apply the authorization middleware defined in [Route_Authorization_Mapping.md](./Route_Authorization_Mapping.md) to all route files.
 
-### Files to Update (25 route files)
+### Files to Update (26 route files)
 
 ```
 src/routes/
@@ -29,6 +29,7 @@ src/routes/
 ├── reports.routes.ts          ✅ 8 routes mapped
 ├── settings.routes.ts         ✅ 6 routes mapped
 ├── audit-logs.routes.ts       ✅ 5 routes mapped
+├── admin.routes.ts            ✅ 20 routes mapped (NEW - system-admin only)
 ├── academic-years.routes.ts   ⏳ Not yet mapped
 ├── templates.routes.ts        ⏳ Not yet mapped
 ├── exercises.routes.ts        ⏳ Not yet mapped
