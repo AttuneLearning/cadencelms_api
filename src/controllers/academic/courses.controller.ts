@@ -43,6 +43,9 @@ export const listCourses = asyncHandler(async (req: Request, res: Response) => {
 
   // Get authenticated user from request
   const user = (req as any).user;
+  if (!user) {
+    throw ApiError.unauthorized('User context not found');
+  }
 
   const result = await CoursesService.listCourses(filters);
 
@@ -162,10 +165,15 @@ export const getCourseById = asyncHandler(async (req: Request, res: Response) =>
     throw ApiError.badRequest('Course ID is required');
   }
 
+  // Extract user from request
+  const user = (req as any).user;
+  if (!user) {
+    throw ApiError.unauthorized('User context not found');
+  }
+
   const course = await CoursesService.getCourseById(id);
 
   // Check if user has permission to view this course
-  const user = (req as any).user;
   const canView = await CoursesService.canViewCourse(course, user);
 
   if (!canView) {
@@ -189,9 +197,14 @@ export const updateCourse = asyncHandler(async (req: Request, res: Response) => 
     throw ApiError.badRequest('Course ID is required');
   }
 
+  // Extract user from request
+  const user = (req as any).user;
+  if (!user) {
+    throw ApiError.unauthorized('User context not found');
+  }
+
   // Get course and check edit permissions
   const course = await CoursesService.getCourseById(id);
-  const user = (req as any).user;
   const canEdit = await CoursesService.canEditCourse(course, user);
 
   if (!canEdit) {

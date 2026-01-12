@@ -14,6 +14,12 @@ import { ApiError } from '@/utils/ApiError';
  * Get learner progress for a specific program
  */
 export const getProgramProgress = asyncHandler(async (req: Request, res: Response) => {
+  // Extract and validate user context
+  const user = (req as any).user;
+  if (!user) {
+    throw ApiError.unauthorized('User context not found');
+  }
+
   const { programId } = req.params;
   const { learnerId } = req.query;
 
@@ -23,15 +29,19 @@ export const getProgramProgress = asyncHandler(async (req: Request, res: Respons
   }
 
   // Determine learner ID (from query or current user)
-  const targetLearnerId = (learnerId as string) || (req as any).user?.id;
+  const targetLearnerId = (learnerId as string) || user.userId;
   if (!targetLearnerId) {
     throw ApiError.badRequest('Learner ID is required');
   }
 
-  // TODO: Add permission checks
-  // - Learners can only view their own progress
-  // - Staff can view progress for learners in their departments
-  // - Global admins can view any learner's progress
+  // Apply authorization checks
+  const isOwnProgress = targetLearnerId === user.userId;
+  const canViewOthers = user.allAccessRights?.includes('reports:department:read') ||
+                        user.roles?.includes('system-admin');
+
+  if (!isOwnProgress && !canViewOthers) {
+    throw ApiError.forbidden('You do not have permission to view this progress');
+  }
 
   const result = await ProgressService.getProgramProgress({
     programId,
@@ -46,6 +56,12 @@ export const getProgramProgress = asyncHandler(async (req: Request, res: Respons
  * Get detailed progress for a specific course
  */
 export const getCourseProgress = asyncHandler(async (req: Request, res: Response) => {
+  // Extract and validate user context
+  const user = (req as any).user;
+  if (!user) {
+    throw ApiError.unauthorized('User context not found');
+  }
+
   const { courseId } = req.params;
   const { learnerId } = req.query;
 
@@ -55,15 +71,19 @@ export const getCourseProgress = asyncHandler(async (req: Request, res: Response
   }
 
   // Determine learner ID (from query or current user)
-  const targetLearnerId = (learnerId as string) || (req as any).user?.id;
+  const targetLearnerId = (learnerId as string) || user.userId;
   if (!targetLearnerId) {
     throw ApiError.badRequest('Learner ID is required');
   }
 
-  // TODO: Add permission checks
-  // - Learners can only view their own course progress
-  // - Instructors can view progress for their assigned courses
-  // - Staff can view progress for courses in their departments
+  // Apply authorization checks
+  const isOwnProgress = targetLearnerId === user.userId;
+  const canViewOthers = user.allAccessRights?.includes('reports:department:read') ||
+                        user.roles?.includes('system-admin');
+
+  if (!isOwnProgress && !canViewOthers) {
+    throw ApiError.forbidden('You do not have permission to view this progress');
+  }
 
   const result = await ProgressService.getCourseProgress({
     courseId,
@@ -78,6 +98,12 @@ export const getCourseProgress = asyncHandler(async (req: Request, res: Response
  * Get progress for a specific class with attendance tracking
  */
 export const getClassProgress = asyncHandler(async (req: Request, res: Response) => {
+  // Extract and validate user context
+  const user = (req as any).user;
+  if (!user) {
+    throw ApiError.unauthorized('User context not found');
+  }
+
   const { classId } = req.params;
   const { learnerId } = req.query;
 
@@ -87,15 +113,19 @@ export const getClassProgress = asyncHandler(async (req: Request, res: Response)
   }
 
   // Determine learner ID (from query or current user)
-  const targetLearnerId = (learnerId as string) || (req as any).user?.id;
+  const targetLearnerId = (learnerId as string) || user.userId;
   if (!targetLearnerId) {
     throw ApiError.badRequest('Learner ID is required');
   }
 
-  // TODO: Add permission checks
-  // - Learners can view their own class progress
-  // - Instructors can view progress for their assigned classes
-  // - Staff can view progress for classes in their departments
+  // Apply authorization checks
+  const isOwnProgress = targetLearnerId === user.userId;
+  const canViewOthers = user.allAccessRights?.includes('reports:department:read') ||
+                        user.roles?.includes('system-admin');
+
+  if (!isOwnProgress && !canViewOthers) {
+    throw ApiError.forbidden('You do not have permission to view this progress');
+  }
 
   const result = await ProgressService.getClassProgress({
     classId,
@@ -110,6 +140,12 @@ export const getClassProgress = asyncHandler(async (req: Request, res: Response)
  * Get comprehensive progress overview for a learner across all enrollments
  */
 export const getLearnerProgress = asyncHandler(async (req: Request, res: Response) => {
+  // Extract and validate user context
+  const user = (req as any).user;
+  if (!user) {
+    throw ApiError.unauthorized('User context not found');
+  }
+
   const { learnerId } = req.params;
 
   // Validate learnerId
@@ -117,10 +153,14 @@ export const getLearnerProgress = asyncHandler(async (req: Request, res: Respons
     throw ApiError.badRequest('Learner ID is required');
   }
 
-  // TODO: Add permission checks
-  // - Learners can view their own overall progress
-  // - Staff can view learners in their departments
-  // - Global admins can view any learner
+  // Apply authorization checks
+  const isOwnProgress = learnerId === user.userId;
+  const canViewOthers = user.allAccessRights?.includes('reports:department:read') ||
+                        user.roles?.includes('system-admin');
+
+  if (!isOwnProgress && !canViewOthers) {
+    throw ApiError.forbidden('You do not have permission to view this progress');
+  }
 
   const result = await ProgressService.getLearnerProgress(learnerId);
 
@@ -132,6 +172,12 @@ export const getLearnerProgress = asyncHandler(async (req: Request, res: Respons
  * Get detailed progress for a specific learner in a specific program
  */
 export const getLearnerProgramProgress = asyncHandler(async (req: Request, res: Response) => {
+  // Extract and validate user context
+  const user = (req as any).user;
+  if (!user) {
+    throw ApiError.unauthorized('User context not found');
+  }
+
   const { learnerId, programId } = req.params;
 
   // Validate params
@@ -142,10 +188,14 @@ export const getLearnerProgramProgress = asyncHandler(async (req: Request, res: 
     throw ApiError.badRequest('Program ID is required');
   }
 
-  // TODO: Add permission checks
-  // - Staff can view learners in their departments
-  // - Instructors can view progress for their assigned courses within the program
-  // - Global admins can view any learner's progress
+  // Apply authorization checks
+  const isOwnProgress = learnerId === user.userId;
+  const canViewOthers = user.allAccessRights?.includes('reports:department:read') ||
+                        user.roles?.includes('system-admin');
+
+  if (!isOwnProgress && !canViewOthers) {
+    throw ApiError.forbidden('You do not have permission to view this progress');
+  }
 
   const result = await ProgressService.getProgramProgress({
     programId,
@@ -247,6 +297,12 @@ export const updateProgress = asyncHandler(async (req: Request, res: Response) =
  * Get progress summary report with filtering options
  */
 export const getProgressSummary = asyncHandler(async (req: Request, res: Response) => {
+  // Extract and validate user context
+  const user = (req as any).user;
+  if (!user) {
+    throw ApiError.unauthorized('User context not found');
+  }
+
   // Extract and validate query parameters
   const {
     programId,
@@ -357,6 +413,12 @@ export const getProgressSummary = asyncHandler(async (req: Request, res: Respons
  * Get detailed progress report with module-level breakdown
  */
 export const getDetailedProgressReport = asyncHandler(async (req: Request, res: Response) => {
+  // Extract and validate user context
+  const user = (req as any).user;
+  if (!user) {
+    throw ApiError.unauthorized('User context not found');
+  }
+
   // Extract and validate query parameters
   const {
     programId,
@@ -394,9 +456,6 @@ export const getDetailedProgressReport = asyncHandler(async (req: Request, res: 
   const shouldIncludeModules = includeModules !== 'false';
   const shouldIncludeAssessments = includeAssessments !== 'false';
   const shouldIncludeAttendance = includeAttendance === 'true';
-
-  // Authorization: Apply instructor and department scoping
-  const user = (req as any).user;
 
   const filters = {
     programId: programId as string | undefined,

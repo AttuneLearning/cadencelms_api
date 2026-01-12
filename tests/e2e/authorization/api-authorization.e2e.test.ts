@@ -109,7 +109,7 @@ describe('E2E Authorization API Tests', () => {
         userType: 'staff',
         displayName: 'Instructor',
         description: 'Can teach courses',
-        accessRights: ['content:courses:read', 'content:lessons:read'],
+        accessRights: ['content:courses:read', 'content:lessons:read', 'learner:grades:read', 'grades:own-classes:manage', 'reports:own-classes:read'],
         isActive: true
       },
       {
@@ -125,7 +125,7 @@ describe('E2E Authorization API Tests', () => {
         userType: 'staff',
         displayName: 'Department Administrator',
         description: 'Can manage department',
-        accessRights: ['content:courses:read', 'content:courses:manage', 'staff:department:manage', 'reports:department:read'],
+        accessRights: ['content:courses:read', 'content:courses:manage', 'staff:department:manage', 'reports:department:read', 'learner:transcripts:read'],
         isActive: true
       },
       {
@@ -133,7 +133,7 @@ describe('E2E Authorization API Tests', () => {
         userType: 'staff',
         displayName: 'Enrollment Administrator',
         description: 'Manages enrollments',
-        accessRights: ['enrollment:*', 'content:courses:read', 'reports:*'],
+        accessRights: ['enrollment:*', 'content:courses:read', 'reports:*', 'learner:transcripts:read'],
         isActive: true
       },
       {
@@ -154,6 +154,11 @@ describe('E2E Authorization API Tests', () => {
       { name: 'content:lessons:manage', domain: 'content', resource: 'lessons', action: 'manage', description: 'Manage lessons', isActive: true },
       { name: 'staff:department:manage', domain: 'staff', resource: 'department', action: 'manage', description: 'Manage department', isActive: true },
       { name: 'reports:department:read', domain: 'reports', resource: 'department', action: 'read', description: 'Read department reports', isActive: true },
+      { name: 'learner:transcripts:read', domain: 'learner', resource: 'transcripts', action: 'read', description: 'Read learner transcripts', isActive: true },
+      { name: 'grades:own:read', domain: 'grades', resource: 'own', action: 'read', description: 'Read own grades', isActive: true },
+      { name: 'learner:grades:read', domain: 'learner', resource: 'grades', action: 'read', description: 'Read learner grades', isActive: true },
+      { name: 'grades:own-classes:manage', domain: 'grades', resource: 'own-classes', action: 'manage', description: 'Manage own class grades', isActive: true },
+      { name: 'reports:own-classes:read', domain: 'reports', resource: 'own-classes', action: 'read', description: 'Read own class reports', isActive: true },
       { name: 'enrollment:*', domain: 'enrollment', resource: '*', action: '*', description: 'All enrollment operations', isActive: true },
       { name: 'reports:*', domain: 'reports', resource: '*', action: '*', description: 'All reporting operations', isActive: true },
       { name: 'system:*', domain: 'system', resource: '*', action: '*', description: 'All system operations', isActive: true },
@@ -251,7 +256,7 @@ describe('E2E Authorization API Tests', () => {
         email: instructorUser.email,
         roles: ['instructor'],
         type: 'access',
-        allAccessRights: ['content:courses:read', 'content:lessons:read'],
+        allAccessRights: ['content:courses:read', 'content:lessons:read', 'learner:grades:read', 'grades:own-classes:manage', 'reports:own-classes:read'],
         departmentMemberships: [{ departmentId: topLevelDepartment._id.toString(), roles: ['instructor'] }]
       },
       process.env.JWT_ACCESS_SECRET || 'test-secret',
@@ -323,7 +328,7 @@ describe('E2E Authorization API Tests', () => {
         email: deptAdminUser.email,
         roles: ['department-admin'],
         type: 'access',
-        allAccessRights: ['content:courses:read', 'content:courses:manage', 'staff:department:manage', 'reports:department:read'],
+        allAccessRights: ['content:courses:read', 'content:courses:manage', 'staff:department:manage', 'reports:department:read', 'learner:transcripts:read'],
         departmentMemberships: [{ departmentId: topLevelDepartment._id.toString(), roles: ['department-admin'] }]
       },
       process.env.JWT_ACCESS_SECRET || 'test-secret',
@@ -356,7 +361,7 @@ describe('E2E Authorization API Tests', () => {
         email: enrollmentAdminUser.email,
         roles: ['enrollment-admin'],
         type: 'access',
-        allAccessRights: ['enrollment:*', 'content:courses:read', 'reports:*'],
+        allAccessRights: ['enrollment:*', 'content:courses:read', 'reports:*', 'learner:transcripts:read'],
         departmentMemberships: [{ departmentId: topLevelDepartment._id.toString(), roles: ['enrollment-admin'] }]
       },
       process.env.JWT_ACCESS_SECRET || 'test-secret',
@@ -668,10 +673,10 @@ describe('E2E Authorization API Tests', () => {
   });
 
   describe('Data Masking API Tests (FERPA Compliance)', () => {
-    describe('GET /api/v2/progress/detailed', () => {
+    describe('GET /api/v2/progress/reports/detailed', () => {
       it('should mask learner last names for instructors', async () => {
         const response = await request(app)
-          .get('/api/v2/progress/detailed')
+          .get('/api/v2/progress/reports/detailed')
           .set('Authorization', `Bearer ${instructorToken}`)
           .query({ classId: testClass._id.toString() })
           .expect(200);
@@ -687,7 +692,7 @@ describe('E2E Authorization API Tests', () => {
 
       it('should mask learner last names for department-admin', async () => {
         const response = await request(app)
-          .get('/api/v2/progress/detailed')
+          .get('/api/v2/progress/reports/detailed')
           .set('Authorization', `Bearer ${deptAdminToken}`)
           .query({ classId: testClass._id.toString() })
           .expect(200);
@@ -702,7 +707,7 @@ describe('E2E Authorization API Tests', () => {
 
       it('should NOT mask learner names for enrollment-admin', async () => {
         const response = await request(app)
-          .get('/api/v2/progress/detailed')
+          .get('/api/v2/progress/reports/detailed')
           .set('Authorization', `Bearer ${enrollmentAdminToken}`)
           .query({ classId: testClass._id.toString() })
           .expect(200);
@@ -718,7 +723,7 @@ describe('E2E Authorization API Tests', () => {
 
       it('should NOT mask learner names for system-admin', async () => {
         const response = await request(app)
-          .get('/api/v2/progress/detailed')
+          .get('/api/v2/progress/reports/detailed')
           .set('Authorization', `Bearer ${systemAdminToken}`)
           .query({ classId: testClass._id.toString() })
           .expect(200);

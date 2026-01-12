@@ -181,11 +181,13 @@ export const getPerformanceReport = asyncHandler(async (req: Request, res: Respo
   // Parse boolean
   const parsedIncludeRankings = includeRankings === 'true';
 
-  // TODO: Add permission checks
-  // - Staff can only view reports for their departments
-  // - Global admins can view reports across all departments
+  // Extract user context
+  const user = (req as any).user;
+  if (!user) {
+    throw ApiError.unauthorized('User context not found');
+  }
 
-  const filters = {
+  let filters = {
     programId: programId as string | undefined,
     courseId: courseId as string | undefined,
     classId: classId as string | undefined,
@@ -199,7 +201,15 @@ export const getPerformanceReport = asyncHandler(async (req: Request, res: Respo
     limit: parsedLimit
   };
 
+  // Apply authorization scoping to filters
+  filters = await ReportsService.applyAuthorizationScoping(filters, user);
+
   const result = await ReportsService.getPerformanceReport(filters);
+
+  // Apply data masking
+  if (result.performanceMetrics && Array.isArray(result.performanceMetrics)) {
+    result.performanceMetrics = ReportsService.applyDataMaskingToList(result.performanceMetrics, user);
+  }
 
   res.status(200).json(ApiResponse.success(result));
 });
@@ -248,6 +258,22 @@ export const generatePDFTranscript = asyncHandler(async (req: Request, res: Resp
     throw ApiError.badRequest('Learner ID is required');
   }
 
+  // Extract user context
+  const user = (req as any).user;
+  if (!user) {
+    throw ApiError.unauthorized('User context not found');
+  }
+
+  // Authorization: Learners can generate own, staff must have access
+  const isOwnTranscript = learnerId === user.userId;
+  const hasAccess = isOwnTranscript ||
+                    user.allAccessRights?.includes('learner:transcripts:read') ||
+                    user.roles?.includes('system-admin');
+
+  if (!hasAccess) {
+    throw ApiError.forbidden('You do not have permission to generate this transcript');
+  }
+
   // Validate watermark
   const validWatermarks = ['none', 'unofficial', 'draft'];
   const parsedWatermark = watermark || 'none';
@@ -260,10 +286,6 @@ export const generatePDFTranscript = asyncHandler(async (req: Request, res: Resp
   // Parse booleans
   const parsedIncludeInProgress = includeInProgress === true || includeInProgress === 'true';
   const parsedOfficialFormat = officialFormat !== false && officialFormat !== 'false';
-
-  // TODO: Add permission checks
-  // - Learners can generate their own transcripts
-  // - Staff must have department access to generate for learners
 
   const result = await ReportsService.generatePDFTranscript(
     learnerId,
@@ -291,6 +313,12 @@ export const getCourseReport = asyncHandler(async (req: Request, res: Response) 
     throw ApiError.badRequest('Course ID is required');
   }
 
+  // Extract user context
+  const user = (req as any).user;
+  if (!user) {
+    throw ApiError.unauthorized('User context not found');
+  }
+
   // Validate dates
   let parsedStartDate: Date | undefined;
   let parsedEndDate: Date | undefined;
@@ -312,11 +340,7 @@ export const getCourseReport = asyncHandler(async (req: Request, res: Response) 
   // Parse boolean
   const parsedIncludeModules = includeModules !== 'false';
 
-  // TODO: Add permission checks
-  // - Staff can only view reports for courses in their departments
-  // - Global admins can view any course report
-
-  const params = {
+  let filters = {
     courseId,
     classId: classId as string | undefined,
     startDate: parsedStartDate,
@@ -324,7 +348,15 @@ export const getCourseReport = asyncHandler(async (req: Request, res: Response) 
     includeModules: parsedIncludeModules
   };
 
-  const result = await ReportsService.getCourseReport(params);
+  // Apply authorization scoping
+  filters = await ReportsService.applyAuthorizationScoping(filters, user);
+
+  const result = await ReportsService.getCourseReport(filters);
+
+  // Apply data masking
+  if (result.data && Array.isArray(result.data)) {
+    result.data = ReportsService.applyDataMaskingToList(result.data, user);
+  }
 
   res.status(200).json(ApiResponse.success(result));
 });
@@ -340,6 +372,12 @@ export const getProgramReport = asyncHandler(async (req: Request, res: Response)
   // Validate programId
   if (!programId) {
     throw ApiError.badRequest('Program ID is required');
+  }
+
+  // Extract user context
+  const user = (req as any).user;
+  if (!user) {
+    throw ApiError.unauthorized('User context not found');
   }
 
   // Validate dates
@@ -360,18 +398,22 @@ export const getProgramReport = asyncHandler(async (req: Request, res: Response)
     }
   }
 
-  // TODO: Add permission checks
-  // - Staff can only view reports for programs in their departments
-  // - Global admins can view any program report
-
-  const params = {
+  let filters = {
     programId,
     academicYearId: academicYearId as string | undefined,
     startDate: parsedStartDate,
     endDate: parsedEndDate
   };
 
-  const result = await ReportsService.getProgramReport(params);
+  // Apply authorization scoping
+  filters = await ReportsService.applyAuthorizationScoping(filters, user);
+
+  const result = await ReportsService.getProgramReport(filters);
+
+  // Apply data masking
+  if (result.data && Array.isArray(result.data)) {
+    result.data = ReportsService.applyDataMaskingToList(result.data, user);
+  }
 
   res.status(200).json(ApiResponse.success(result));
 });
@@ -387,6 +429,12 @@ export const getDepartmentReport = asyncHandler(async (req: Request, res: Respon
   // Validate departmentId
   if (!departmentId) {
     throw ApiError.badRequest('Department ID is required');
+  }
+
+  // Extract user context
+  const user = (req as any).user;
+  if (!user) {
+    throw ApiError.unauthorized('User context not found');
   }
 
   // Validate dates
@@ -410,18 +458,22 @@ export const getDepartmentReport = asyncHandler(async (req: Request, res: Respon
   // Parse boolean
   const parsedIncludeSubDepartments = includeSubDepartments === 'true';
 
-  // TODO: Add permission checks
-  // - Staff can only view reports for their own departments
-  // - Global admins can view any department report
-
-  const params = {
+  let filters = {
     departmentId,
     startDate: parsedStartDate,
     endDate: parsedEndDate,
     includeSubDepartments: parsedIncludeSubDepartments
   };
 
-  const result = await ReportsService.getDepartmentReport(params);
+  // Apply authorization scoping (department admin can only see own department)
+  filters = await ReportsService.applyAuthorizationScoping(filters, user);
+
+  const result = await ReportsService.getDepartmentReport(filters);
+
+  // Apply data masking
+  if (result.data && Array.isArray(result.data)) {
+    result.data = ReportsService.applyDataMaskingToList(result.data, user);
+  }
 
   res.status(200).json(ApiResponse.success(result));
 });
@@ -481,9 +533,11 @@ export const exportReport = asyncHandler(async (req: Request, res: Response) => 
   // Parse boolean
   const parsedIncludeDetails = includeDetails !== 'false';
 
-  // TODO: Add permission checks
-  // - Staff can only export reports for their departments
-  // - Global admins can export any reports
+  // Extract user context
+  const user = (req as any).user;
+  if (!user) {
+    throw ApiError.unauthorized('User context not found');
+  }
 
   const filters = {
     reportType: reportType as string,
