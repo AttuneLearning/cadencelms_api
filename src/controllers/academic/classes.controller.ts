@@ -359,7 +359,8 @@ export const getClassRoster = asyncHandler(async (req: Request, res: Response) =
     throw ApiError.badRequest('Invalid status. Must be one of: active, withdrawn, completed');
   }
 
-  const result = await ClassesService.getClassRoster(id, includeProgress, status);
+  // Pass viewer (authenticated user) for data masking
+  const result = await ClassesService.getClassRoster(id, includeProgress, status, (req as any).user);
   res.status(200).json(ApiResponse.success(result));
 });
 

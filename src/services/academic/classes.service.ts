@@ -9,6 +9,7 @@ import Department from '@/models/organization/Department.model';
 import { Staff } from '@/models/auth/Staff.model';
 import { User } from '@/models/auth/User.model';
 import { ApiError } from '@/utils/ApiError';
+import { maskLastName } from '@/utils/dataMasking';
 
 interface ListClassesFilters {
   course?: string;
@@ -852,7 +853,8 @@ export class ClassesService {
   static async getClassRoster(
     classId: string,
     includeProgress: boolean = true,
-    statusFilter?: string
+    statusFilter?: string,
+    viewer?: any
   ): Promise<any> {
     if (!mongoose.Types.ObjectId.isValid(classId)) {
       throw ApiError.notFound('Class not found');
@@ -881,12 +883,15 @@ export class ClassesService {
         const learner = enrollment.learnerId as any;
         const user = await User.findById(learner._id);
 
+        // Apply data masking if viewer is provided
+        const maskedLearner = viewer ? maskLastName(learner, viewer) : learner;
+
         const rosterEntry: any = {
           enrollmentId: enrollment._id.toString(),
           learner: {
             id: learner._id.toString(),
-            firstName: learner.firstName || '',
-            lastName: learner.lastName || '',
+            firstName: maskedLearner.firstName || '',
+            lastName: maskedLearner.lastName || '',
             email: user ? user.email : '',
             studentId: learner._id.toString(),
             profileImage: null

@@ -67,6 +67,78 @@ interface ProgramEnrollmentFilters {
 
 export class EnrollmentsService {
   /**
+   * Check if self-enrollment is allowed for a department
+   *
+   * @param departmentId - The department ID to check
+   * @returns True if self-enrollment is allowed
+   *
+   * TODO: Replace with actual Setting model lookup when implemented
+   * For now, we check a department setting field or default to false
+   */
+  private static async checkSelfEnrollmentAllowed(departmentId: any): Promise<boolean> {
+    // TODO: When Setting model is fully implemented, use:
+    // const setting = await Setting.findOne({
+    //   key: 'allowSelfEnrollment',
+    //   departmentId: departmentId
+    // });
+    // return setting?.value ?? false;
+
+    // For now, check department's allowSelfEnrollment field
+    try {
+      const Department = (await import('@/models/organization/Department.model')).default;
+      const department = await Department.findById(departmentId).select('allowSelfEnrollment');
+
+      // Default to false if setting not found or undefined
+      return department?.allowSelfEnrollment === true;
+    } catch (error) {
+      console.error('Error checking self-enrollment setting:', error);
+      // Default to false for safety
+      return false;
+    }
+  }
+
+  /**
+   * Check if current user is self-enrolling (learner enrolling themselves)
+   *
+   * @param learnerId - The learner being enrolled
+   * @param enrolledBy - The user performing the enrollment
+   * @returns True if this is a self-enrollment
+   */
+  private static isSelfEnrollment(learnerId: string, enrolledBy: string): boolean {
+    return learnerId === enrolledBy;
+  }
+
+  /**
+   * Validate self-enrollment permission
+   *
+   * Checks if a learner is allowed to self-enroll based on department settings.
+   * Throws ApiError.forbidden if self-enrollment is not allowed.
+   *
+   * @param learnerId - The learner being enrolled
+   * @param enrolledBy - The user performing the enrollment
+   * @param departmentId - The department ID to check settings for
+   */
+  private static async validateSelfEnrollment(
+    learnerId: string,
+    enrolledBy: string,
+    departmentId: any
+  ): Promise<void> {
+    // If this is not a self-enrollment, allow it (admin/staff enrollment)
+    if (!this.isSelfEnrollment(learnerId, enrolledBy)) {
+      return;
+    }
+
+    // Check if self-enrollment is allowed for this department
+    const selfEnrollmentAllowed = await this.checkSelfEnrollmentAllowed(departmentId);
+
+    if (!selfEnrollmentAllowed) {
+      throw ApiError.forbidden(
+        'Self-enrollment is not allowed in this department. Please contact your department administrator.'
+      );
+    }
+  }
+
+  /**
    * List enrollments with comprehensive filtering
    */
   static async listEnrollments(filters: ListEnrollmentsFilters, _userId: string): Promise<any> {
@@ -183,6 +255,13 @@ export class EnrollmentsService {
       throw ApiError.notFound('Program not found');
     }
 
+    // Validate self-enrollment permission
+    await this.validateSelfEnrollment(
+      data.learnerId,
+      _userId,
+      (program.departmentId as any)._id
+    );
+
     // Check for existing enrollment
     const existingEnrollment = await Enrollment.findOne({
       learnerId: data.learnerId,
@@ -274,6 +353,13 @@ export class EnrollmentsService {
     if (!course) {
       throw ApiError.notFound('Course not found');
     }
+
+    // Validate self-enrollment permission
+    await this.validateSelfEnrollment(
+      data.learnerId,
+      _userId,
+      (course.departmentId as any)._id
+    );
 
     // For course enrollments, we store in metadata of a generic enrollment
     // Get current academic year
@@ -372,6 +458,19 @@ export class EnrollmentsService {
     if (!classDoc) {
       throw ApiError.notFound('Class not found');
     }
+
+    // Get course with department for self-enrollment check
+    const course = await Course.findById(classDoc.courseId).populate('departmentId');
+    if (!course) {
+      throw ApiError.notFound('Course not found for this class');
+    }
+
+    // Validate self-enrollment permission
+    await this.validateSelfEnrollment(
+      data.learnerId,
+      _userId,
+      (course.departmentId as any)._id
+    );
 
     // Check capacity
     if (classDoc.currentEnrollment >= classDoc.maxEnrollment) {
