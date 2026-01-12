@@ -9,6 +9,7 @@ import Program from '@/models/academic/Program.model';
 import Course from '@/models/academic/Course.model';
 import { hashPassword } from '@/utils/password';
 import { ApiError } from '@/utils/ApiError';
+import { maskLastName, maskUserList } from '@/utils/dataMasking';
 
 interface ListLearnersFilters {
   page?: number;
@@ -59,8 +60,12 @@ interface UpdateLearnerInput {
 export class LearnersService {
   /**
    * List learners with filtering and pagination
+   * Applies FERPA-compliant data masking based on viewer's role
+   *
+   * @param filters - Filtering and pagination options
+   * @param viewer - The user viewing the data (for data masking)
    */
-  static async listLearners(filters: ListLearnersFilters): Promise<any> {
+  static async listLearners(filters: ListLearnersFilters, viewer: any): Promise<any> {
     const page = filters.page || 1;
     const limit = Math.min(filters.limit || 10, 100);
     const skip = (page - 1) * limit;
@@ -246,8 +251,13 @@ export class LearnersService {
 
     const totalPages = Math.ceil(total / limit);
 
+    // Apply FERPA-compliant data masking based on viewer's role
+    // Instructors and department-admin see "FirstName L." format
+    // Enrollment-admin and system-admin see full names
+    const maskedLearners = viewer ? maskUserList(learners, viewer) : learners;
+
     return {
-      learners,
+      learners: maskedLearners,
       pagination: {
         page,
         limit,
@@ -355,8 +365,12 @@ export class LearnersService {
 
   /**
    * Get detailed learner profile by ID
+   * Applies FERPA-compliant data masking based on viewer's role
+   *
+   * @param learnerId - The learner ID to retrieve
+   * @param viewer - The user viewing the data (for data masking)
    */
-  static async getLearnerById(learnerId: string): Promise<any> {
+  static async getLearnerById(learnerId: string, viewer: any): Promise<any> {
     // Validate ObjectId
     if (!mongoose.Types.ObjectId.isValid(learnerId)) {
       throw ApiError.badRequest('Invalid learner ID');
@@ -480,7 +494,7 @@ export class LearnersService {
       }
     }
 
-    return {
+    const learnerData = {
       id: user._id.toString(),
       email: user.email,
       firstName: learner.firstName,
@@ -510,6 +524,9 @@ export class LearnersService {
       createdAt: user.createdAt,
       updatedAt: user.updatedAt
     };
+
+    // Apply FERPA-compliant data masking based on viewer's role
+    return viewer ? maskLastName(learnerData, viewer) : learnerData;
   }
 
   /**

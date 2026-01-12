@@ -4,6 +4,7 @@ import { User } from '@/models/auth/User.model';
 import { Staff } from '@/models/auth/Staff.model';
 import Department from '@/models/organization/Department.model';
 import { ApiError } from '@/utils/ApiError';
+import { getDepartmentAndSubdepartments, isTopLevelDepartmentMember } from '@/utils/departmentHierarchy';
 
 interface DepartmentAssignment {
   departmentId: string;
@@ -62,16 +63,33 @@ export class StaffService {
       throw ApiError.forbidden('Insufficient permissions to view staff');
     }
 
-    // Build department scope
-    let allowedDepartmentIds: mongoose.Types.ObjectId[] = [];
+    // Build department scope with hierarchical access
+    let allowedDepartmentIds: string[] = [];
     if (!isGlobalAdmin) {
       const requesterStaff = await Staff.findById(requesterId);
       if (!requesterStaff) {
         throw ApiError.forbidden('Staff record not found');
       }
-      allowedDepartmentIds = requesterStaff.departmentMemberships
-        .filter((dm) => dm.roles.includes('department-admin'))
-        .map((dm) => dm.departmentId);
+
+      // Get user's department memberships
+      const userDepartmentIds = requesterStaff.departmentMemberships.map((dm) => dm.departmentId);
+
+      // For each department, check if it's top-level and include subdepartments
+      for (const deptId of userDepartmentIds) {
+        const isTopLevel = await isTopLevelDepartmentMember(requesterId, deptId);
+
+        if (isTopLevel) {
+          // Top-level department member sees all subdepartments
+          const allDeptIds = await getDepartmentAndSubdepartments(deptId);
+          allowedDepartmentIds.push(...allDeptIds);
+        } else {
+          // Subdepartment member sees only their own department
+          allowedDepartmentIds.push(deptId.toString());
+        }
+      }
+
+      // Remove duplicates
+      allowedDepartmentIds = [...new Set(allowedDepartmentIds)];
 
       if (allowedDepartmentIds.length === 0) {
         throw ApiError.forbidden('No departments under management');
@@ -111,7 +129,9 @@ export class StaffService {
     if (filters.department) {
       staffQuery['departmentMemberships.departmentId'] = new mongoose.Types.ObjectId(filters.department);
     } else if (!isGlobalAdmin) {
-      staffQuery['departmentMemberships.departmentId'] = { $in: allowedDepartmentIds };
+      // Convert string IDs back to ObjectIds for query
+      const allowedDeptObjectIds = allowedDepartmentIds.map(id => new mongoose.Types.ObjectId(id));
+      staffQuery['departmentMemberships.departmentId'] = { $in: allowedDeptObjectIds };
     }
 
     // Apply search filter

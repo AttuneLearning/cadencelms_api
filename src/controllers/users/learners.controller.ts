@@ -58,7 +58,8 @@ export const listLearners = asyncHandler(async (req: Request, res: Response) => 
     sort
   };
 
-  const result = await LearnersService.listLearners(filters);
+  // Pass authenticated user as viewer for FERPA-compliant data masking
+  const result = await LearnersService.listLearners(filters, req.user);
 
   res.status(200).json({
     success: true,
@@ -207,7 +208,8 @@ export const getLearnerById = asyncHandler(async (req: Request, res: Response) =
     throw ApiError.badRequest('Invalid learner ID format');
   }
 
-  const result = await LearnersService.getLearnerById(id);
+  // Pass authenticated user as viewer for FERPA-compliant data masking
+  const result = await LearnersService.getLearnerById(id, req.user);
 
   res.status(200).json({
     success: true,
