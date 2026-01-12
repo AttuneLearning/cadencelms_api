@@ -1,3 +1,31 @@
+/**
+ * Audit Logs Service
+ *
+ * AUTHORIZATION IMPLEMENTATION NOTES (Phase 2 - Agent 5):
+ *
+ * Business Rules:
+ * - ALL audit log access requires escalation (admin token) - enforced by route middleware
+ * - System-admin: Full access to all audit logs across all departments
+ * - Content-admin: Access to content-related audit logs (entityType: content, courses, modules)
+ * - Enrollment-admin: Access to enrollment-related audit logs (entityType: enrollment, classes)
+ * - Financial-admin: Access to billing-related audit logs (entityType: billing, payments)
+ * - Instructors: NO ACCESS (even for their own content)
+ *
+ * Implementation Required:
+ * 1. All methods receive user with escalation already verified (route middleware)
+ * 2. Department-scoping: Non-system-admins filter to their department logs
+ * 3. Domain-scoping: Domain-specific admins filter to their domain entity types
+ * 4. listAuditLogs(): Apply department/domain filters based on user role
+ * 5. getEntityHistory(): Validate user has permission for that entity type
+ * 6. getUserActivity(): System-admin only for other users, users can see own
+ * 7. exportAuditLogs(): Apply same filtering as listAuditLogs()
+ *
+ * Escalation Enforcement:
+ * - Already enforced at route level via requireEscalation middleware
+ * - Service layer does NOT need additional escalation checks
+ * - Focus on department and domain scoping based on admin role
+ */
+
 import { AuditLog } from '@/models/system/AuditLog.model';
 import { User } from '@/models/auth/User.model';
 import { Staff } from '@/models/auth/Staff.model';

@@ -4,6 +4,25 @@ import { ApiError } from '@/utils/ApiError';
  * Settings Service
  * Implements comprehensive settings management for system configuration
  *
+ * AUTHORIZATION IMPLEMENTATION NOTES (Phase 2 - Agent 5):
+ *
+ * Business Rules:
+ * - GET endpoints: Public settings accessible to all authenticated users
+ * - GET endpoints: Private settings accessible to instructors (read-only), department-admin, system-admin
+ * - PUT/POST endpoints: Only department-admin and system-admin can write
+ * - Instructors have READ-ONLY access to private settings
+ *
+ * Implementation Required:
+ * 1. In getAllSettings(): Check user role - if instructor and includePrivate=true, allow read but track as read-only
+ * 2. In updateSetting(): Verify user has write permissions (not instructor)
+ * 3. In bulkUpdateSettings(): Verify user has write permissions (not instructor)
+ * 4. In resetSettings(): System-admin only (already enforced by route middleware)
+ *
+ * Read-Only Enforcement:
+ * - Instructors can call GET endpoints and receive private settings
+ * - Instructors CANNOT call PUT/POST endpoints (enforced by route middleware requireAccessRight)
+ * - Service layer can add additional checks if needed
+ *
  * TODO: Create Setting model at src/models/system/Setting.model.ts with schema:
  * - key: string (unique, indexed)
  * - value: any
