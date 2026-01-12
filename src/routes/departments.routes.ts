@@ -1,5 +1,8 @@
 import { Router } from 'express';
 import { authenticate } from '@/middlewares/authenticate';
+import { requireAccessRight } from '@/middlewares/require-access-right';
+import { requireEscalation } from '@/middlewares/require-escalation';
+import { requireAdminRole } from '@/middlewares/require-admin-role';
 import * as departmentsController from '@/controllers/departments/departments.controller';
 
 const router = Router();
@@ -8,7 +11,8 @@ const router = Router();
  * Departments Routes
  * Base path: /api/v2/departments
  *
- * All routes require authentication
+ * Some routes are public (no access right required)
+ * Others require specific access rights
  */
 
 // Apply authentication middleware to all routes
@@ -17,55 +21,92 @@ router.use(authenticate);
 /**
  * GET /api/v2/departments
  * List all departments with optional filtering and pagination
+ * Access Right: None (Public - all authenticated users)
  */
 router.get('/', departmentsController.listDepartments);
 
 /**
  * POST /api/v2/departments
  * Create a new department
+ * Access Right: system:department-settings:manage
+ * Middleware: requireEscalation + requireAdminRole(['system-admin'])
  */
-router.post('/', departmentsController.createDepartment);
+router.post('/',
+  requireEscalation,
+  requireAdminRole(['system-admin']),
+  requireAccessRight('system:department-settings:manage'),
+  departmentsController.createDepartment
+);
 
 /**
  * GET /api/v2/departments/:id/hierarchy
  * Get department tree structure including ancestors and descendants
+ * Access Right: None (Public - all authenticated users)
  */
 router.get('/:id/hierarchy', departmentsController.getDepartmentHierarchy);
 
 /**
  * GET /api/v2/departments/:id/programs
  * Get all programs in a department
+ * Access Right: content:programs:manage OR content:courses:read
  */
-router.get('/:id/programs', departmentsController.getDepartmentPrograms);
+router.get('/:id/programs',
+  requireAccessRight(['content:programs:manage', 'content:courses:read']),
+  departmentsController.getDepartmentPrograms
+);
 
 /**
  * GET /api/v2/departments/:id/staff
  * Get all staff members assigned to a department
+ * Access Right: staff:department:read
+ * Service Layer: Hierarchical scoping - Top-level members see all subdepartments
  */
-router.get('/:id/staff', departmentsController.getDepartmentStaff);
+router.get('/:id/staff',
+  requireAccessRight('staff:department:read'),
+  departmentsController.getDepartmentStaff
+);
 
 /**
  * GET /api/v2/departments/:id/stats
  * Get statistical overview of department activity and performance
+ * Access Right: reports:department:read
  */
-router.get('/:id/stats', departmentsController.getDepartmentStats);
+router.get('/:id/stats',
+  requireAccessRight('reports:department:read'),
+  departmentsController.getDepartmentStats
+);
 
 /**
  * GET /api/v2/departments/:id
  * Get detailed information about a specific department
+ * Access Right: None (Public - all authenticated users)
  */
 router.get('/:id', departmentsController.getDepartmentById);
 
 /**
  * PUT /api/v2/departments/:id
  * Update department information
+ * Access Right: system:department-settings:manage
+ * Middleware: requireEscalation
+ * Service Layer: Department-admin can update own dept, system-admin can update all
  */
-router.put('/:id', departmentsController.updateDepartment);
+router.put('/:id',
+  requireEscalation,
+  requireAccessRight('system:department-settings:manage'),
+  departmentsController.updateDepartment
+);
 
 /**
  * DELETE /api/v2/departments/:id
  * Delete a department (soft delete)
+ * Access Right: system:department-settings:manage
+ * Middleware: requireEscalation + requireAdminRole(['system-admin'])
  */
-router.delete('/:id', departmentsController.deleteDepartment);
+router.delete('/:id',
+  requireEscalation,
+  requireAdminRole(['system-admin']),
+  requireAccessRight('system:department-settings:manage'),
+  departmentsController.deleteDepartment
+);
 
 export default router;
