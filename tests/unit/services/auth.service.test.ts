@@ -63,16 +63,16 @@ describe('AuthService', () => {
       expect(result).toHaveProperty('accessToken', 'access_token');
       expect(result).toHaveProperty('refreshToken', 'refresh_token');
       expect(result.user.email).toBe(staffInput.email);
-      expect(result.user.roles).toContain('instructor');
-      expect(result.staff.firstName).toBe('John');
-      expect(result.staff.lastName).toBe('Doe');
+      expect(result.user.userTypes).toContain('staff');
+      expect(result.staff.person.firstName).toBe('John');
+      expect(result.staff.person.lastName).toBe('Doe');
     });
 
     it('should throw conflict error if user already exists', async () => {
       await User.create({
         email: staffInput.email,
         password: 'existing_password',
-        roles: ['instructor'],
+        userTypes: ['staff'],
       });
 
       await expect(AuthService.registerStaff(staffInput)).rejects.toThrow(ApiError);
@@ -178,15 +178,15 @@ describe('AuthService', () => {
       expect(result).toHaveProperty('learner');
       expect(result).toHaveProperty('accessToken', 'access_token');
       expect(result).toHaveProperty('refreshToken', 'refresh_token');
-      expect(result.user.roles).toContain('learner');
-      expect(result.learner.firstName).toBe('Jane');
+      expect(result.user.userTypes).toContain('learner');
+      expect(result.learner.person.firstName).toBe('Jane');
     });
 
     it('should throw conflict error if user already exists', async () => {
       await User.create({
         email: learnerInput.email,
         password: 'existing_password',
-        roles: ['learner'],
+        userTypes: ['learner'],
       });
 
       await expect(AuthService.registerLearner(learnerInput)).rejects.toThrow(ApiError);
@@ -204,7 +204,7 @@ describe('AuthService', () => {
       await AuthService.registerLearner(learnerInput);
 
       const user = await User.findOne({ email: learnerInput.email });
-      expect(user?.roles).toEqual(['learner']);
+      expect(user?.userTypes).toEqual(['learner']);
     });
 
     it('should cleanup User and Learner on error', async () => {
@@ -224,19 +224,32 @@ describe('AuthService', () => {
   describe('login', () => {
     beforeEach(async () => {
       const userId = new mongoose.Types.ObjectId();
-      
+
       await User.create({
         _id: userId,
         email: 'test@example.com',
         password: 'hashed_password',
-        roles: ['learner'],
+        userTypes: ['learner'],
         isActive: true,
       });
 
       await Learner.create({
         _id: userId,
-        firstName: 'Test',
-        lastName: 'User',
+        person: {
+          firstName: 'Test',
+          lastName: 'User',
+          emails: [{
+            email: 'test@example.com',
+            type: 'institutional',
+            isPrimary: true,
+            verified: true,
+            allowNotifications: true
+          }],
+          phones: [],
+          addresses: [],
+          timezone: 'America/New_York',
+          languagePreference: 'en'
+        }
       });
     });
 
@@ -252,9 +265,9 @@ describe('AuthService', () => {
       });
 
       expect(result).toHaveProperty('user');
-      expect(result).toHaveProperty('learner');
-      expect(result).toHaveProperty('accessToken', 'access_token');
-      expect(result).toHaveProperty('refreshToken', 'refresh_token');
+      expect(result).toHaveProperty('session');
+      expect(result.session).toHaveProperty('accessToken', 'access_token');
+      expect(result.session).toHaveProperty('refreshToken', 'refresh_token');
     });
 
     it('should throw unauthorized error for invalid email', async () => {
@@ -313,25 +326,39 @@ describe('AuthService', () => {
         password: 'password123',
       });
 
-      expect(result.learner).toBeDefined();
-      expect(result.learner.firstName).toBe('Test');
+      expect(result.user).toBeDefined();
+      expect(result.user.firstName).toBe('Test');
+      expect(result.userTypes).toContainEqual({ _id: 'learner', displayAs: 'Learner' });
     });
 
     it('should fetch staff data for instructor role', async () => {
       const userId = new mongoose.Types.ObjectId();
-      
+
       await User.create({
         _id: userId,
         email: 'instructor@example.com',
         password: 'hashed_password',
-        roles: ['instructor'],
+        userTypes: ['staff'],
         isActive: true,
       });
 
       await Staff.create({
         _id: userId,
-        firstName: 'Instructor',
-        lastName: 'User',
+        person: {
+          firstName: 'Instructor',
+          lastName: 'User',
+          emails: [{
+            email: 'instructor@example.com',
+            type: 'institutional',
+            isPrimary: true,
+            verified: true,
+            allowNotifications: true
+          }],
+          phones: [],
+          addresses: [],
+          timezone: 'America/New_York',
+          languagePreference: 'en'
+        },
         departmentMemberships: [],
       });
 
@@ -345,8 +372,9 @@ describe('AuthService', () => {
         password: 'password123',
       });
 
-      expect(result.staff).toBeDefined();
-      expect(result.staff.firstName).toBe('Instructor');
+      expect(result.user).toBeDefined();
+      expect(result.user.firstName).toBe('Instructor');
+      expect(result.userTypes).toContainEqual({ _id: 'staff', displayAs: 'Staff' });
     });
 
     it('should not return password in response', async () => {
@@ -374,7 +402,7 @@ describe('AuthService', () => {
         _id: userId,
         email: 'test@example.com',
         password: 'hashed_password',
-        roles: ['learner'],
+        userTypes: ['learner'],
         isActive: true,
       });
     });
@@ -465,14 +493,27 @@ describe('AuthService', () => {
         _id: userId,
         email: 'test@example.com',
         password: 'hashed_password',
-        roles: ['learner'],
+        userTypes: ['learner'],
         isActive: true,
       });
 
       await Learner.create({
         _id: userId,
-        firstName: 'Test',
-        lastName: 'User',
+        person: {
+          firstName: 'Test',
+          lastName: 'User',
+          emails: [{
+            email: 'test@example.com',
+            type: 'institutional',
+            isPrimary: true,
+            verified: true,
+            allowNotifications: true
+          }],
+          phones: [],
+          addresses: [],
+          timezone: 'America/New_York',
+          languagePreference: 'en'
+        }
       });
     });
 
@@ -480,32 +521,46 @@ describe('AuthService', () => {
       const result = await AuthService.getCurrentUser(userId);
 
       expect(result.user).toBeDefined();
-      expect(result.learner).toBeDefined();
-      expect(result.learner.firstName).toBe('Test');
+      expect(result.user.firstName).toBe('Test');
+      expect(result.userTypes).toBeDefined();
     });
 
     it('should return user with staff data for staff roles', async () => {
       const staffUserId = new mongoose.Types.ObjectId().toString();
-      
+
       await User.create({
         _id: staffUserId,
         email: 'staff@example.com',
         password: 'hashed_password',
-        roles: ['instructor'],
+        userTypes: ['staff'],
         isActive: true,
       });
 
       await Staff.create({
         _id: staffUserId,
-        firstName: 'Staff',
-        lastName: 'Member',
+        person: {
+          firstName: 'Staff',
+          lastName: 'Member',
+          emails: [{
+            email: 'staff@example.com',
+            type: 'institutional',
+            isPrimary: true,
+            verified: true,
+            allowNotifications: true
+          }],
+          phones: [],
+          addresses: [],
+          timezone: 'America/New_York',
+          languagePreference: 'en'
+        },
         departmentMemberships: [],
       });
 
       const result = await AuthService.getCurrentUser(staffUserId);
 
-      expect(result.staff).toBeDefined();
-      expect(result.staff.firstName).toBe('Staff');
+      expect(result.user).toBeDefined();
+      expect(result.user.firstName).toBe('Staff');
+      expect(result.userTypes).toBeDefined();
     });
 
     it('should throw not found error for non-existent user', async () => {
@@ -519,11 +574,13 @@ describe('AuthService', () => {
       });
     });
 
-    it('should return empty tokens', async () => {
+    it('should return department memberships and access rights', async () => {
       const result = await AuthService.getCurrentUser(userId);
 
-      expect(result.accessToken).toBe('');
-      expect(result.refreshToken).toBe('');
+      expect(result.departmentMemberships).toBeDefined();
+      expect(result.allAccessRights).toBeDefined();
+      expect(Array.isArray(result.departmentMemberships)).toBe(true);
+      expect(Array.isArray(result.allAccessRights)).toBe(true);
     });
   });
 });
