@@ -1,0 +1,313 @@
+{
+  "team": {
+    "name": "LMS Backend Team - Role System V2 Phases 3-5 Completion",
+    "version": "1.0.0",
+    "description": "Agent team for completing and testing Role System V2 Phases 3-5"
+  },
+  "implementationPlan": {
+    "document": "devdocs/plans/Role_System_V2_Phased_Implementation.md",
+    "phases": "3-5",
+    "status": "Code exists, integration and testing needed"
+  },
+  "agents": [
+    {
+      "id": "agent-phase3-integration",
+      "role": "Phase 3 Integration Specialist",
+      "phase": "3",
+      "description": "Verify and fix Phase 3 authentication services integration",
+      "responsibilities": [
+        "Verify AccessRightsService works correctly",
+        "Verify RoleService works correctly",
+        "Verify AuthService login V2 response format",
+        "Verify EscalationService works correctly",
+        "Verify DepartmentSwitchService works correctly",
+        "Fix any integration issues",
+        "Create comprehensive unit tests",
+        "Ensure all services integrate properly"
+      ],
+      "tasks": {
+        "P3-1": "Verify and test AccessRightsService",
+        "P3-2": "Verify and test RoleService",
+        "P3-3": "Fix AuthService login V2 integration",
+        "P3-4": "Verify and test EscalationService",
+        "P3-5": "Verify and test DepartmentSwitchService"
+      },
+      "workingDirectories": [
+        "src/services/auth/",
+        "tests/unit/services/",
+        "tests/integration/auth/"
+      ],
+      "filesToVerify": [
+        "src/services/auth/access-rights.service.ts",
+        "src/services/auth/role.service.ts",
+        "src/services/auth/auth.service.ts",
+        "src/services/auth/escalation.service.ts",
+        "src/services/auth/department-switch.service.ts"
+      ],
+      "testFiles": [
+        "tests/unit/services/access-rights.service.test.ts",
+        "tests/unit/services/role.service.test.ts",
+        "tests/integration/auth/login-v2.test.ts",
+        "tests/integration/auth/escalation.test.ts",
+        "tests/integration/auth/department-switch.test.ts"
+      ],
+      "dependencies": {
+        "blockedBy": [],
+        "blocks": ["agent-phase4-integration"]
+      },
+      "testCoverage": {
+        "target": 85,
+        "critical": true
+      }
+    },
+    {
+      "id": "agent-phase4-integration",
+      "role": "Phase 4 Integration Specialist",
+      "phase": "4",
+      "description": "Verify and fix Phase 4 controllers and routes",
+      "responsibilities": [
+        "Verify auth controller V2 methods work correctly",
+        "Verify roles controller works correctly",
+        "Verify access-rights controller works correctly",
+        "Fix route integrations",
+        "Create comprehensive integration tests",
+        "Ensure all endpoints match contracts"
+      ],
+      "tasks": {
+        "P4-1": "Verify and test auth.controller.ts",
+        "P4-2": "Verify and test roles.controller.ts",
+        "P4-3": "Verify and test access-rights.controller.ts",
+        "P4-4": "Fix auth routes integration",
+        "P4-5": "Fix roles routes integration",
+        "P4-6": "Fix access-rights routes integration"
+      },
+      "workingDirectories": [
+        "src/controllers/auth/",
+        "src/routes/",
+        "tests/integration/roles/",
+        "tests/integration/auth/"
+      ],
+      "filesToVerify": [
+        "src/controllers/auth/auth.controller.ts",
+        "src/controllers/auth/roles.controller.ts",
+        "src/controllers/auth/access-rights.controller.ts",
+        "src/routes/auth.routes.ts",
+        "src/routes/roles.routes.ts",
+        "src/routes/access-rights.routes.ts"
+      ],
+      "testFiles": [
+        "tests/integration/roles/roles-api.test.ts",
+        "tests/integration/auth/login-v2.test.ts"
+      ],
+      "dependencies": {
+        "blockedBy": ["agent-phase3-integration"],
+        "blocks": ["agent-phase5-integration"]
+      },
+      "testCoverage": {
+        "target": 85,
+        "critical": true
+      }
+    },
+    {
+      "id": "agent-phase5-integration",
+      "role": "Phase 5 Integration Specialist",
+      "phase": "5",
+      "description": "Verify and fix Phase 5 middleware and authorization",
+      "responsibilities": [
+        "Verify all authorization middleware work correctly",
+        "Fix middleware integration issues",
+        "Create comprehensive middleware tests",
+        "Test role cascading",
+        "Test department membership checks",
+        "Test escalation requirements",
+        "Test access right checks"
+      ],
+      "tasks": {
+        "P5-1": "Verify and test require-department-membership.ts",
+        "P5-2": "Verify and test require-department-role.ts",
+        "P5-3": "Verify and test require-escalation.ts",
+        "P5-4": "Verify and test require-admin-role.ts",
+        "P5-5": "Verify and test require-access-right.ts",
+        "P5-6": "Fix isAuthenticated.ts V2 integration"
+      },
+      "workingDirectories": [
+        "src/middlewares/",
+        "tests/integration/middleware/",
+        "tests/integration/auth/"
+      ],
+      "filesToVerify": [
+        "src/middlewares/require-department-membership.ts",
+        "src/middlewares/require-department-role.ts",
+        "src/middlewares/require-escalation.ts",
+        "src/middlewares/require-admin-role.ts",
+        "src/middlewares/require-access-right.ts",
+        "src/middlewares/isAuthenticated.ts"
+      ],
+      "testFiles": [
+        "tests/integration/middleware/authorization.test.ts",
+        "tests/integration/auth/role-cascading.test.ts"
+      ],
+      "dependencies": {
+        "blockedBy": ["agent-phase4-integration"],
+        "blocks": []
+      },
+      "testCoverage": {
+        "target": 85,
+        "critical": true
+      }
+    },
+    {
+      "id": "agent-e2e-integration",
+      "role": "E2E Integration Specialist",
+      "description": "Create end-to-end tests and final integration verification",
+      "responsibilities": [
+        "Create comprehensive E2E tests",
+        "Test complete user flows",
+        "Verify all systems work together",
+        "Create implementation reports",
+        "Document any issues found",
+        "Verify phase gates met"
+      ],
+      "tasks": {
+        "E2E-1": "Fix and run role-system-e2e.test.ts",
+        "E2E-2": "Create E2E test for complete auth flow",
+        "E2E-3": "Create E2E test for role cascading",
+        "E2E-4": "Verify all phase gates met",
+        "E2E-5": "Create comprehensive implementation reports"
+      },
+      "workingDirectories": [
+        "tests/integration/",
+        "tests/e2e/",
+        "devdocs/impl_reports/"
+      ],
+      "testFiles": [
+        "tests/integration/role-system-e2e.test.ts"
+      ],
+      "outputFiles": [
+        "devdocs/impl_reports/ROLE_SYSTEM_V2_Phase_3_Report.md",
+        "devdocs/impl_reports/ROLE_SYSTEM_V2_Phase_4_Report.md",
+        "devdocs/impl_reports/ROLE_SYSTEM_V2_Phase_5_Report.md",
+        "devdocs/impl_reports/ROLE_SYSTEM_V2_Integration_Report.md"
+      ],
+      "dependencies": {
+        "blockedBy": ["agent-phase3-integration", "agent-phase4-integration", "agent-phase5-integration"],
+        "blocks": []
+      },
+      "testCoverage": {
+        "target": 90,
+        "critical": true
+      }
+    }
+  ],
+  "sharedContext": {
+    "currentState": {
+      "phase1": "Complete - Models and schemas exist",
+      "phase2": "Complete - Seed scripts exist",
+      "phase3": "Code exists, needs integration and testing",
+      "phase4": "Code exists, needs integration and testing",
+      "phase5": "Code exists, needs integration and testing",
+      "phase6": "Validators exist, may need verification",
+      "phase7": "Integration tests exist but failing",
+      "phase8": "Not yet started"
+    },
+    "knownIssues": [
+      "login-v2.test.ts: All 19 tests failing",
+      "AccessRight validation errors: missing required fields",
+      "Model import issues in tests",
+      "Integration between services needs verification"
+    ],
+    "conventions": {
+      "naming": {
+        "services": "camelCase.service.ts",
+        "controllers": "camelCase.controller.ts",
+        "middleware": "kebab-case.ts",
+        "tests": "*.test.ts matching source file"
+      }
+    },
+    "testingStrategy": [
+      "Hybrid TDD: Code exists, create/fix tests now",
+      "Target: 85%+ coverage for all phases",
+      "All tests must pass before phase completion",
+      "Integration tests verify cross-service functionality",
+      "E2E tests verify complete user flows"
+    ]
+  },
+  "phaseGates": {
+    "phase3": {
+      "name": "Authentication Services Complete",
+      "criteria": [
+        "AccessRightsService fully functional",
+        "RoleService fully functional",
+        "AuthService returns V2 format",
+        "EscalationService works correctly",
+        "DepartmentSwitchService works correctly",
+        "All unit tests passing",
+        "Integration tests passing",
+        "85%+ test coverage"
+      ]
+    },
+    "phase4": {
+      "name": "Controllers & Routes Complete",
+      "criteria": [
+        "Auth controller V2 methods work",
+        "Roles controller fully functional",
+        "Access-rights controller fully functional",
+        "All routes properly integrated",
+        "API matches contracts",
+        "All integration tests passing",
+        "85%+ test coverage"
+      ]
+    },
+    "phase5": {
+      "name": "Middleware & Authorization Complete",
+      "criteria": [
+        "All authorization middleware work",
+        "Role cascading verified",
+        "Department membership checks work",
+        "Escalation requirements enforced",
+        "Access right checks functional",
+        "All middleware tests passing",
+        "85%+ test coverage"
+      ]
+    },
+    "integration": {
+      "name": "Phases 3-5 Integration Complete",
+      "criteria": [
+        "All E2E tests passing",
+        "Complete user flows verified",
+        "No blocking issues",
+        "Implementation reports created",
+        "Phase gates documented",
+        "90%+ overall coverage"
+      ]
+    }
+  },
+  "workflowRules": {
+    "approachcomitFormat": "feat(role-system): <description>",
+    "minTestCoverage": 85,
+    "fixBeforeNew": true,
+    "testingRequired": true,
+    "sequencing": "Sequential - Phase 3 → Phase 4 → Phase 5 → E2E"
+  },
+  "agentInstructions": {
+    "startup": [
+      "Read devdocs/plans/Role_System_V2_Phased_Implementation.md for your phase",
+      "Review existing code in your assigned files",
+      "Identify integration issues and test failures",
+      "Create plan to fix and test your phase"
+    ],
+    "beforeCoding": [
+      "Read and understand existing code",
+      "Identify what's broken vs what works",
+      "Check existing test files",
+      "Plan minimal changes to fix issues"
+    ],
+    "afterCoding": [
+      "Run all tests for your phase",
+      "Verify 85%+ test coverage",
+      "Fix any failing tests",
+      "Document issues and solutions",
+      "Create implementation report"
+    ]
+  }
+}

@@ -1,0 +1,301 @@
+{
+  "team": {
+    "name": "LMS Frontend Team - Role System V2",
+    "version": "2.0.0",
+    "description": "Frontend development team for LMS UI V2 - Role System Implementation",
+    "activeProject": "Role System V2 Implementation",
+    "planDocument": "devdocs/UI_Implementation_Plan_v2.md"
+  },
+  "agents": [
+    {
+      "id": "auth-agent",
+      "role": "Auth & State Lead",
+      "track": "A",
+      "description": "Implements auth store, types, token management, and admin session handling",
+      "responsibilities": [
+        "Define V2 auth types (UserType, DepartmentMembership, AccessRights)",
+        "Update auth store with V2 fields and actions",
+        "Create navigation store for department selection",
+        "Implement auth API client for V2 endpoints",
+        "Handle token management and refresh logic",
+        "Implement admin session timer with timeout"
+      ],
+      "workingDirectories": [
+        "src/entities/auth/",
+        "src/features/auth/model/",
+        "src/features/auth/lib/",
+        "src/features/auth/api/",
+        "src/shared/stores/",
+        "src/shared/api/"
+      ],
+      "contextFiles": [
+        "../lms_node/1_LMS_Node_V2/contracts/UI_ROLE_SYSTEM_CONTRACTS.md",
+        "../lms_node/1_LMS_Node_V2/devdocs/Role_System_API_Model_Plan_V2.md",
+        "devdocs/Role_System_UI_Implementation_Plan.md"
+      ],
+      "taskFiles": [
+        "src/entities/auth/model/types.ts",
+        "src/features/auth/model/authStore.ts",
+        "src/shared/stores/navigationStore.ts",
+        "src/features/auth/api/authApi.ts",
+        "src/shared/api/interceptors.ts",
+        "src/features/auth/lib/adminSessionTimer.ts"
+      ],
+      "canRunParallel": true,
+      "dependencies": []
+    },
+    {
+      "id": "nav-agent",
+      "role": "Navigation & Routing Lead",
+      "track": "B",
+      "description": "Implements navigation structure, routing, and route guards",
+      "responsibilities": [
+        "Define global and department-scoped navigation items",
+        "Create route definitions for all dashboards",
+        "Implement ProtectedRoute component with V2 permissions",
+        "Build dashboard router with userType logic",
+        "Create route guards for auth, department, admin"
+      ],
+      "workingDirectories": [
+        "src/app/router/",
+        "src/widgets/sidebar/config/",
+        "src/app/routing/"
+      ],
+      "contextFiles": [
+        "../lms_node/1_LMS_Node_V2/contracts/UI_ROLE_SYSTEM_CONTRACTS.md",
+        "devdocs/Role_System_UI_Implementation_Plan.md",
+        "devdocs/Role_System_UI_Plan.md"
+      ],
+      "taskFiles": [
+        "src/widgets/sidebar/config/navItems.ts",
+        "src/app/router/routes.ts",
+        "src/app/router/ProtectedRoute.tsx",
+        "src/app/router/DashboardRouter.tsx",
+        "src/app/router/guards/AuthGuard.tsx",
+        "src/app/router/guards/DepartmentGuard.tsx",
+        "src/app/router/guards/AdminGuard.tsx",
+        "src/app/router/guards/PermissionGuard.tsx"
+      ],
+      "canRunParallel": true,
+      "dependencies": ["auth-agent:types"]
+    },
+    {
+      "id": "ui-agent",
+      "role": "UI Components Lead",
+      "track": "C",
+      "description": "Implements sidebar, modals, and permission-aware UI components",
+      "responsibilities": [
+        "Build two-section sidebar with department selector",
+        "Create department selector component",
+        "Implement PermissionGate component",
+        "Build admin escalation modal",
+        "Create admin session indicator",
+        "Build department required prompt",
+        "Update login form for V2"
+      ],
+      "workingDirectories": [
+        "src/widgets/sidebar/ui/",
+        "src/widgets/header/ui/",
+        "src/features/auth/ui/",
+        "src/shared/ui/"
+      ],
+      "contextFiles": [
+        "../lms_node/1_LMS_Node_V2/contracts/UI_ROLE_SYSTEM_CONTRACTS.md",
+        "devdocs/Role_System_UI_Implementation_Plan.md",
+        "devdocs/Role_System_UI_Plan.md"
+      ],
+      "taskFiles": [
+        "src/widgets/sidebar/ui/Sidebar.tsx",
+        "src/widgets/sidebar/ui/DepartmentSelector.tsx",
+        "src/shared/ui/PermissionGate.tsx",
+        "src/features/auth/ui/AdminEscalationModal.tsx",
+        "src/widgets/header/ui/AdminSessionIndicator.tsx",
+        "src/shared/ui/DepartmentRequiredPrompt.tsx",
+        "src/features/auth/ui/LoginForm.tsx"
+      ],
+      "canRunParallel": true,
+      "dependencies": []
+    },
+    {
+      "id": "entity-agent",
+      "role": "Entity Layer Lead",
+      "track": "D",
+      "description": "Updates entity types and creates access rights utilities",
+      "responsibilities": [
+        "Create role entity with API client",
+        "Update department entity with membership types",
+        "Update user entity with V2 types",
+        "Update staff entity types",
+        "Update learner entity types",
+        "Create access rights utility functions"
+      ],
+      "workingDirectories": [
+        "src/entities/role/",
+        "src/entities/department/",
+        "src/entities/user/",
+        "src/entities/staff/",
+        "src/entities/learner/",
+        "src/shared/lib/"
+      ],
+      "contextFiles": [
+        "../lms_node/1_LMS_Node_V2/contracts/UI_ROLE_SYSTEM_CONTRACTS.md",
+        "../lms_node/1_LMS_Node_V2/devdocs/Role_System_API_Model_Plan_V2.md",
+        "devdocs/Role_System_UI_Implementation_Plan.md"
+      ],
+      "taskFiles": [
+        "src/entities/role/api/roleApi.ts",
+        "src/entities/role/model/types.ts",
+        "src/entities/role/index.ts",
+        "src/entities/department/model/types.ts",
+        "src/entities/user/model/types.ts",
+        "src/entities/staff/model/types.ts",
+        "src/entities/learner/model/types.ts",
+        "src/shared/lib/accessRights.ts"
+      ],
+      "canRunParallel": true,
+      "dependencies": ["auth-agent:types"]
+    },
+    {
+      "id": "qa-agent",
+      "role": "QA & Integration Lead",
+      "track": "E",
+      "description": "Writes tests, validates integration, ensures quality",
+      "responsibilities": [
+        "Write unit tests for auth and navigation stores",
+        "Write unit tests for access rights utilities",
+        "Create integration tests for auth flows",
+        "Build E2E tests for critical user journeys",
+        "Validate accessibility compliance",
+        "Test mobile responsiveness"
+      ],
+      "workingDirectories": [
+        "src/**/__tests__/",
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx"
+      ],
+      "contextFiles": [
+        "../lms_node/1_LMS_Node_V2/contracts/UI_ROLE_SYSTEM_CONTRACTS.md",
+        "devdocs/Role_System_UI_Implementation_Plan.md",
+        "vitest.config.ts"
+      ],
+      "taskFiles": [
+        "src/features/auth/__tests__/authStore.test.ts",
+        "src/shared/stores/__tests__/navigationStore.test.ts",
+        "src/shared/lib/__tests__/accessRights.test.ts",
+        "src/app/router/__tests__/ProtectedRoute.test.tsx",
+        "src/widgets/sidebar/__tests__/Sidebar.test.tsx"
+      ],
+      "canRunParallel": false,
+      "dependencies": ["auth-agent", "nav-agent", "ui-agent", "entity-agent"],
+      "startAfterWeek": 3
+    }
+  ],
+  "parallelizationConfig": {
+    "maxConcurrentAgents": 4,
+    "syncPoints": [
+      {
+        "name": "Type Alignment Check",
+        "timing": "End of Day 2",
+        "participants": ["auth-agent", "nav-agent", "ui-agent", "entity-agent"],
+        "purpose": "Validate type definitions align across all tracks",
+        "deliverables": ["src/entities/auth/model/types.ts"],
+        "gatekeeper": "auth-agent"
+      },
+      {
+        "name": "Mock Data Alignment",
+        "timing": "End of Week 1",
+        "participants": ["auth-agent", "nav-agent", "ui-agent", "entity-agent"],
+        "purpose": "Confirm mock data structure and test basic integration",
+        "deliverables": ["Initial versions of all track files"],
+        "gatekeeper": "auth-agent"
+      },
+      {
+        "name": "Integration Readiness",
+        "timing": "End of Week 2",
+        "participants": ["auth-agent", "nav-agent", "ui-agent", "entity-agent", "qa-agent"],
+        "purpose": "All tracks deliver initial versions for integration testing",
+        "deliverables": ["All task files complete"],
+        "gatekeeper": "qa-agent"
+      },
+      {
+        "name": "Bug Fix Review",
+        "timing": "End of Week 3",
+        "participants": ["all"],
+        "purpose": "Review QA findings and assign fixes",
+        "deliverables": ["Bug fix assignments"],
+        "gatekeeper": "qa-agent"
+      }
+    ],
+    "trackDependencies": {
+      "A": [],
+      "B": ["A:types"],
+      "C": [],
+      "D": ["A:types"],
+      "E": ["A", "B", "C", "D"]
+    }
+  },
+  "sharedContext": {
+    "projectStructure": {
+      "app": "src/app/ - Application setup, providers, routing",
+      "pages": "src/pages/ - Page components (route level)",
+      "widgets": "src/widgets/ - Complex UI blocks composed of features",
+      "features": "src/features/ - Business logic modules",
+      "entities": "src/entities/ - Domain models, API clients, hooks",
+      "shared": "src/shared/ - Shared utilities, UI components, API config"
+    },
+    "conventions": {
+      "naming": {
+        "components": "PascalCase.tsx (e.g., CourseCard.tsx)",
+        "hooks": "useCamelCase.ts (e.g., useCourse.ts)",
+        "types": "camelCase.ts for entity types",
+        "utils": "camelCase.ts",
+        "tests": "*.test.ts or *.test.tsx matching source file"
+      },
+      "architecture": "Feature-Sliced Design (FSD)",
+      "stateManagement": "React Query for server state, Zustand for client state",
+      "styling": "Tailwind CSS + shadcn/ui components"
+    },
+    "v2RoleSystemPatterns": {
+      "userTypes": "Always use UserType[] array, never single role string",
+      "accessRights": "Follow domain:resource:action pattern",
+      "departmentScoping": "All roles are department-scoped, use currentDepartmentId",
+      "adminToken": "NEVER persist adminToken - memory only",
+      "permissionCheck": "Use hasAccessRight() from shared/lib/accessRights.ts"
+    },
+    "contractAlignment": [
+      "1. Check lms_node/contracts/UI_ROLE_SYSTEM_CONTRACTS.md for V2 API contracts",
+      "2. Validate TypeScript types match backend models exactly",
+      "3. Use backend field names (userTypes, departmentMemberships, accessRights)",
+      "4. Match backend enums and status values precisely",
+      "5. Reference lms_node/devdocs/Role_System_API_Model_Plan_V2.md for backend details"
+    ]
+  },
+  "workflowRules": {
+    "branchNaming": "feature/role-v2/<agent-id>/<task-description>",
+    "commitFormat": "feat(role-v2): <description>",
+    "prRequired": true,
+    "minTestCoverage": 80,
+    "contractsFirst": true,
+    "parallelMergeStrategy": "Each track merges independently, then integration branch"
+  },
+  "crossTeamSync": {
+    "backendContractsPath": "../lms_node/1_LMS_Node_V2/contracts/",
+    "backendDevdocsPath": "../lms_node/1_LMS_Node_V2/devdocs/",
+    "primaryContractFile": "UI_ROLE_SYSTEM_CONTRACTS.md",
+    "apiPlanFile": "Role_System_API_Model_Plan_V2.md",
+    "importContracts": "Read UI_ROLE_SYSTEM_CONTRACTS.md before implementing",
+    "validateTypes": "Ensure TypeScript types match backend exactly",
+    "notifyBackendTeam": "On any contract incompatibility or missing endpoint"
+  },
+  "mockingStrategy": {
+    "useMSW": true,
+    "mockDataSource": "lms_node/contracts/UI_ROLE_SYSTEM_CONTRACTS.md Appendix A",
+    "mockEndpoints": [
+      "POST /api/v2/auth/login",
+      "POST /api/v2/auth/refresh",
+      "POST /api/v2/auth/escalate",
+      "POST /api/v2/auth/switch-department",
+      "GET /api/v2/roles/me"
+    ]
+  }
+}

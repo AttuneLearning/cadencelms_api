@@ -1,5 +1,5 @@
 import app from './app';
-import { connectDatabase } from './config/database';
+import { connectDatabase, disconnectDatabase } from './config/database';
 import { config } from './config/environment';
 import { logger } from './config/logger';
 import { RoleRegistry } from './services/role-registry.service';
@@ -40,11 +40,22 @@ async function startServer() {
     });
 
     // Graceful shutdown handler
-    const gracefulShutdown = (signal: string) => {
+    const gracefulShutdown = async (signal: string) => {
       logger.info(`${signal} received. Closing server gracefully...`);
-      server.close(() => {
-        logger.info('Server closed');
-        process.exit(0);
+      
+      // Close all keep-alive connections immediately
+      server.closeAllConnections();
+      
+      server.close(async () => {
+        logger.info('HTTP server closed');
+        try {
+          await disconnectDatabase();
+          logger.info('All connections closed. Exiting.');
+          process.exit(0);
+        } catch (err) {
+          logger.error('Error during cleanup:', err);
+          process.exit(1);
+        }
       });
       
       // Force exit if graceful shutdown takes too long

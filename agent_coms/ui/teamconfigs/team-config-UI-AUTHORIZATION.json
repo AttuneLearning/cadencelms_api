@@ -1,0 +1,417 @@
+{
+  "team": {
+    "name": "LMS Frontend Team - UI Authorization Phase 1+2",
+    "version": "3.0.0",
+    "description": "Frontend development team for UI Authorization compliance - Phases 1 & 2",
+    "activeProject": "UI Authorization Implementation (Critical Security + Core Components)",
+    "planDocument": "devdocs/impl_reports/UI_AUTH_NEW_IMPLEMENTATION_PLAN.md",
+    "quickReference": "devdocs/UI_AUTH_QUICK_REFERENCE.md"
+  },
+  "phases": {
+    "phase1": {
+      "name": "Critical Security",
+      "priority": "P0 - BLOCKS PRODUCTION",
+      "duration": "2 days",
+      "effort": "8-12 hours",
+      "tracks": ["1A", "1B"]
+    },
+    "phase2": {
+      "name": "Core Components",
+      "priority": "P1 - HIGH",
+      "duration": "3 days",
+      "effort": "18-24 hours",
+      "tracks": ["2A", "2B", "2C"]
+    }
+  },
+  "agents": [
+    {
+      "id": "admin-token-agent",
+      "role": "Security Engineer",
+      "track": "1A",
+      "phase": 1,
+      "priority": "P0",
+      "description": "Implements memory-only admin token storage to fix XSS vulnerability",
+      "securityCritical": true,
+      "responsibilities": [
+        "Create adminTokenStorage.ts with memory-only storage",
+        "Implement setAdminToken(), getAdminToken(), clearAdminToken()",
+        "Add auto-expiry with setTimeout",
+        "Integrate with authStore escalateToAdmin/deEscalate",
+        "Update API client to prioritize admin token",
+        "Ensure admin token NEVER touches localStorage",
+        "Add comprehensive unit tests (>90% coverage)"
+      ],
+      "workingDirectories": [
+        "src/shared/utils/",
+        "src/features/auth/model/",
+        "src/shared/api/"
+      ],
+      "contextFiles": [
+        "api_contracts/UI_AUTHORIZATION_IMPLEMENTATION_GUIDE.md",
+        "devdocs/impl_reports/UI_AUTH_NEW_IMPLEMENTATION_PLAN.md",
+        "devdocs/UI_AUTH_QUICK_REFERENCE.md"
+      ],
+      "taskFiles": [
+        "src/shared/utils/adminTokenStorage.ts",
+        "src/features/auth/model/authStore.ts",
+        "src/shared/api/client.ts",
+        "src/shared/utils/__tests__/adminTokenStorage.test.ts"
+      ],
+      "deliverables": [
+        "adminTokenStorage.ts (60-80 lines)",
+        "Updated authStore with escalateToAdmin/deEscalate",
+        "Updated API client with admin token priority",
+        "Unit tests with >90% coverage",
+        "Security validation: admin token never in localStorage"
+      ],
+      "testCriteria": [
+        "Admin token stored only in memory (variable)",
+        "Admin token cleared on page refresh",
+        "Admin token auto-expires after timeout",
+        "API client uses admin token when present",
+        "localStorage check returns null for admin token"
+      ],
+      "estimatedEffort": "4-6 hours",
+      "canRunParallel": true,
+      "dependencies": [],
+      "blocksProduction": true
+    },
+    {
+      "id": "ferpa-warnings-agent",
+      "role": "Compliance Engineer",
+      "track": "1B",
+      "phase": 1,
+      "priority": "P0",
+      "description": "Implements FERPA/sensitive data warnings for compliance",
+      "complianceCritical": true,
+      "responsibilities": [
+        "Create SensitiveDataWarning.tsx component",
+        "Support 4 data types: FERPA, billing, PII, audit",
+        "Implement session-based acknowledgment memory",
+        "Add cancel navigation option",
+        "Integrate with Alert component from shadcn/ui",
+        "Create convenience wrappers (FERPAWarning, BillingWarning, etc.)",
+        "Write comprehensive tests and Storybook stories"
+      ],
+      "workingDirectories": [
+        "src/shared/components/auth/",
+        "src/shared/ui/"
+      ],
+      "contextFiles": [
+        "api_contracts/UI_AUTHORIZATION_IMPLEMENTATION_GUIDE.md",
+        "devdocs/impl_reports/UI_AUTH_NEW_IMPLEMENTATION_PLAN.md",
+        "devdocs/UI_AUTH_QUICK_REFERENCE.md"
+      ],
+      "taskFiles": [
+        "src/shared/components/auth/SensitiveDataWarning.tsx",
+        "src/shared/components/auth/index.ts",
+        "src/shared/components/auth/__tests__/SensitiveDataWarning.test.tsx"
+      ],
+      "deliverables": [
+        "SensitiveDataWarning.tsx (150-200 lines)",
+        "4 convenience wrapper components",
+        "Session-based acknowledgment system",
+        "Unit tests with >85% coverage",
+        "Storybook stories for all 4 types"
+      ],
+      "testCriteria": [
+        "Warning displays before sensitive content",
+        "Acknowledgment button works",
+        "Cancel button prevents access",
+        "Session memory prevents duplicate warnings",
+        "All 4 data types render correctly"
+      ],
+      "estimatedEffort": "4-6 hours",
+      "canRunParallel": true,
+      "dependencies": [],
+      "blocksProduction": true
+    },
+    {
+      "id": "protected-component-agent",
+      "role": "Component Engineer",
+      "track": "2A",
+      "phase": 2,
+      "priority": "P1",
+      "description": "Implements universal ProtectedComponent wrapper for UI elements",
+      "responsibilities": [
+        "Create ProtectedComponent.tsx with permission checking",
+        "Support global and department-scoped permissions",
+        "Handle multiple permissions (requireAll, requireAny)",
+        "Support user type restrictions",
+        "Implement fallback UI (null, custom component, or loading)",
+        "Create convenience wrappers (StaffOnly, LearnerOnly, AdminOnly)",
+        "Integrate with hasPermission from useDepartmentContext",
+        "Write comprehensive tests (>85% coverage)"
+      ],
+      "workingDirectories": [
+        "src/shared/components/auth/",
+        "src/shared/ui/"
+      ],
+      "contextFiles": [
+        "api_contracts/UI_AUTHORIZATION_IMPLEMENTATION_GUIDE.md",
+        "devdocs/impl_reports/UI_AUTH_NEW_IMPLEMENTATION_PLAN.md",
+        "src/shared/hooks/useDepartmentContext.ts",
+        "src/features/auth/model/authStore.ts"
+      ],
+      "taskFiles": [
+        "src/shared/components/auth/ProtectedComponent.tsx",
+        "src/shared/components/auth/index.ts",
+        "src/shared/components/auth/__tests__/ProtectedComponent.test.tsx"
+      ],
+      "deliverables": [
+        "ProtectedComponent.tsx (200-250 lines)",
+        "StaffOnly, LearnerOnly, AdminOnly wrappers",
+        "Unit tests with >85% coverage",
+        "Integration with existing auth system",
+        "Storybook stories"
+      ],
+      "testCriteria": [
+        "Hides content without required permission",
+        "Shows content with required permission",
+        "Handles multiple permissions (requireAll/requireAny)",
+        "Department-scoped permissions work correctly",
+        "User type restrictions enforced",
+        "Fallback UI renders as expected"
+      ],
+      "estimatedEffort": "8-12 hours",
+      "canRunParallel": true,
+      "dependencies": []
+    },
+    {
+      "id": "protected-link-agent",
+      "role": "Navigation Engineer",
+      "track": "2B",
+      "phase": 2,
+      "priority": "P1",
+      "description": "Fixes ProtectedLink limitation and creates ProtectedNavLink",
+      "responsibilities": [
+        "Fix ProtectedLink to check ALL permissions (not just first)",
+        "Implement requireAll and requireAny logic",
+        "Maintain full backward compatibility",
+        "Create ProtectedNavLink wrapper around NavLink",
+        "Add activeClassName support for ProtectedNavLink",
+        "Update existing tests and add new test cases",
+        "Update documentation and migration guide"
+      ],
+      "workingDirectories": [
+        "src/shared/ui/",
+        "src/shared/components/nav/"
+      ],
+      "contextFiles": [
+        "api_contracts/UI_AUTHORIZATION_IMPLEMENTATION_GUIDE.md",
+        "devdocs/impl_reports/UI_AUTH_NEW_IMPLEMENTATION_PLAN.md",
+        "src/shared/ui/ProtectedLink.tsx",
+        "devdocs/impl_reports/integration/CODE_PATH_VERIFICATION.md"
+      ],
+      "taskFiles": [
+        "src/shared/ui/ProtectedLink.tsx",
+        "src/shared/components/nav/ProtectedNavLink.tsx",
+        "src/shared/components/nav/index.ts",
+        "src/shared/ui/__tests__/ProtectedLink.test.tsx",
+        "src/shared/components/nav/__tests__/ProtectedNavLink.test.tsx"
+      ],
+      "deliverables": [
+        "Fixed ProtectedLink with multiple permission support",
+        "ProtectedNavLink.tsx (100-150 lines)",
+        "Updated tests with 15+ new test cases",
+        "Migration guide for existing usage",
+        "Storybook stories"
+      ],
+      "testCriteria": [
+        "ProtectedLink checks ALL permissions",
+        "requireAll logic works correctly",
+        "requireAny logic works correctly",
+        "Backward compatibility maintained",
+        "ProtectedNavLink renders with active styling",
+        "No breaking changes to existing code"
+      ],
+      "estimatedEffort": "6-8 hours",
+      "canRunParallel": true,
+      "dependencies": []
+    },
+    {
+      "id": "feature-access-agent",
+      "role": "DX Engineer",
+      "track": "2C",
+      "phase": 2,
+      "priority": "P1",
+      "description": "Creates useFeatureAccess hook for centralized feature flags",
+      "responsibilities": [
+        "Create useFeatureAccess.ts hook",
+        "Define 20+ boolean feature flags",
+        "Integrate with authStore and useDepartmentContext",
+        "Implement memoization for performance",
+        "Handle department scope properly",
+        "Add comprehensive unit tests",
+        "Create usage documentation with examples"
+      ],
+      "workingDirectories": [
+        "src/shared/hooks/"
+      ],
+      "contextFiles": [
+        "api_contracts/UI_AUTHORIZATION_IMPLEMENTATION_GUIDE.md",
+        "devdocs/impl_reports/UI_AUTH_NEW_IMPLEMENTATION_PLAN.md",
+        "src/shared/hooks/useDepartmentContext.ts",
+        "src/features/auth/model/authStore.ts"
+      ],
+      "taskFiles": [
+        "src/shared/hooks/useFeatureAccess.ts",
+        "src/shared/hooks/__tests__/useFeatureAccess.test.ts"
+      ],
+      "deliverables": [
+        "useFeatureAccess.ts (250-300 lines)",
+        "20+ feature flags covering all domains",
+        "Memoized implementation for performance",
+        "Unit tests with >85% coverage",
+        "Usage documentation with code examples"
+      ],
+      "testCriteria": [
+        "Returns correct boolean for each feature flag",
+        "Handles department-scoped permissions",
+        "Handles global permissions",
+        "Memoization prevents unnecessary re-renders",
+        "All 20+ flags have tests"
+      ],
+      "estimatedEffort": "4-6 hours",
+      "canRunParallel": true,
+      "dependencies": []
+    }
+  ],
+  "parallelizationConfig": {
+    "maxConcurrentAgents": 5,
+    "phasedApproach": true,
+    "syncPoints": [
+      {
+        "name": "Phase 1 Security Review",
+        "timing": "End of Phase 1",
+        "participants": ["admin-token-agent", "ferpa-warnings-agent"],
+        "purpose": "Validate critical security implementations before proceeding",
+        "deliverables": [
+          "adminTokenStorage.ts complete and tested",
+          "SensitiveDataWarning.tsx complete and tested",
+          "Security validation: no localStorage persistence",
+          "Compliance validation: FERPA warnings functional"
+        ],
+        "gatekeeper": "admin-token-agent",
+        "criticalPath": true,
+        "blocksPhase2": true
+      },
+      {
+        "name": "Phase 2 Component Integration",
+        "timing": "End of Phase 2",
+        "participants": ["protected-component-agent", "protected-link-agent", "feature-access-agent"],
+        "purpose": "Validate all core components work together",
+        "deliverables": [
+          "ProtectedComponent.tsx complete and tested",
+          "ProtectedLink fixed and ProtectedNavLink complete",
+          "useFeatureAccess.ts complete and tested",
+          "Integration smoke tests passing"
+        ],
+        "gatekeeper": "protected-component-agent"
+      }
+    ],
+    "trackDependencies": {
+      "1A": [],
+      "1B": [],
+      "2A": [],
+      "2B": [],
+      "2C": []
+    },
+    "executionStrategy": "Phase 1 fully parallel, Phase 2 fully parallel, Phase 2 starts after Phase 1"
+  },
+  "sharedContext": {
+    "projectStructure": {
+      "app": "src/app/ - Application setup, providers, routing",
+      "pages": "src/pages/ - Page components (route level)",
+      "widgets": "src/widgets/ - Complex UI blocks composed of features",
+      "features": "src/features/ - Business logic modules",
+      "entities": "src/entities/ - Domain models, API clients, hooks",
+      "shared": "src/shared/ - Shared utilities, UI components, API config"
+    },
+    "conventions": {
+      "naming": {
+        "components": "PascalCase.tsx (e.g., ProtectedComponent.tsx)",
+        "hooks": "useCamelCase.ts (e.g., useFeatureAccess.ts)",
+        "types": "camelCase.ts for entity types",
+        "utils": "camelCase.ts",
+        "tests": "*.test.ts or *.test.tsx matching source file"
+      },
+      "architecture": "Feature-Sliced Design (FSD)",
+      "stateManagement": "React Query for server state, Zustand for client state",
+      "styling": "Tailwind CSS + shadcn/ui components"
+    },
+    "authorizationPatterns": {
+      "permissionFormat": "domain:resource:action (e.g., content:courses:manage)",
+      "wildcards": "Supported: system:*, content:*, department:*, learners:*",
+      "departmentScope": "All permissions can be global or department-scoped",
+      "adminToken": "NEVER persist - memory only in adminTokenStorage.ts",
+      "ferpaCompliance": "Always show SensitiveDataWarning before student data",
+      "permissionCheck": "Use hasPermission() from useDepartmentContext",
+      "featureAccess": "Use useFeatureAccess() for boolean flags"
+    },
+    "existingComponents": {
+      "ProtectedRoute": "src/app/router/ProtectedRoute.tsx - Route-level protection",
+      "ProtectedLink": "src/shared/ui/ProtectedLink.tsx - Link with permission check (has limitation)",
+      "authStore": "src/features/auth/model/authStore.ts - Auth state management",
+      "useDepartmentContext": "src/shared/hooks/useDepartmentContext.ts - Permission helpers"
+    },
+    "contractAlignment": [
+      "1. Check api_contracts/UI_AUTHORIZATION_IMPLEMENTATION_GUIDE.md for requirements",
+      "2. Validate implementation matches guide exactly",
+      "3. Use existing hasPermission() from useDepartmentContext",
+      "4. Follow three-layer architecture (UX, Security, Controller)",
+      "5. Reference devdocs/UI_AUTH_NEW_IMPLEMENTATION_PLAN.md for full details"
+    ]
+  },
+  "workflowRules": {
+    "branchNaming": "feat/ui-auth-phase<phase>-track<track>/<description>",
+    "commitFormat": "feat(ui-auth): <description>\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>",
+    "prRequired": false,
+    "minTestCoverage": 85,
+    "contractsFirst": true,
+    "parallelMergeStrategy": "Each track commits to feature branch, then merge to develop",
+    "securityReviewRequired": true
+  },
+  "qualityGates": {
+    "phase1": {
+      "required": [
+        "Admin token NEVER in localStorage (manual verification)",
+        "Admin token auto-expires correctly",
+        "FERPA warnings display before sensitive content",
+        "Session acknowledgment memory works",
+        "All tests passing with >90% coverage (Phase 1)",
+        "TypeScript builds with zero errors",
+        "Security review approved"
+      ]
+    },
+    "phase2": {
+      "required": [
+        "ProtectedComponent hides/shows content correctly",
+        "ProtectedLink checks ALL permissions (limitation fixed)",
+        "ProtectedNavLink works with active styling",
+        "useFeatureAccess returns correct boolean flags",
+        "All tests passing with >85% coverage (Phase 2)",
+        "TypeScript builds with zero errors",
+        "No breaking changes to existing code"
+      ]
+    }
+  },
+  "riskMitigation": {
+    "adminTokenBreaksFlow": {
+      "risk": "Admin token memory-only storage breaks existing flows",
+      "mitigation": "Thorough testing of escalation/de-escalation flows, feature flag for gradual rollout"
+    },
+    "ferpaWarningsAnnoying": {
+      "risk": "Users find FERPA warnings repetitive and annoying",
+      "mitigation": "Session-based memory, one-time per resource type, clear acknowledgment button"
+    },
+    "protectedComponentPerformance": {
+      "risk": "Many ProtectedComponents cause performance issues",
+      "mitigation": "Memoization with useMemo, useFeatureAccess hook caches results"
+    },
+    "breakingChanges": {
+      "risk": "ProtectedLink fix breaks existing usage",
+      "mitigation": "Full backward compatibility, comprehensive tests of existing usage patterns"
+    }
+  }
+}

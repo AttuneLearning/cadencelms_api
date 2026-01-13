@@ -218,11 +218,13 @@ Clicking on the "Department" dropdown in the sidebar immediately triggers the sa
 
 ### ISS-004: Sidebar Link Highlighting Inconsistent Across Dashboards
 
-**Priority:** medium  
-**Type:** bug  
-**Status:** pending  
-**Assigned:** UI Agent  
-**Dependencies:** None  
+**Priority:** medium
+**Type:** bug
+**Status:** ✅ completed
+**Assigned:** UI Agent
+**Dependencies:** None
+**Completed:** 2026-01-13
+**Commit:** bf5f104  
 
 **Description:**
 Sidebar navigation link highlighting is inconsistent across different dashboards. The Learner Dashboard properly highlights the active "Dashboard" link when on `/learner/dashboard`, but this highlighting behavior doesn't work consistently on Staff and Admin dashboards. Users cannot easily identify which section/page they're currently viewing.
@@ -296,6 +298,28 @@ Sidebar navigation link highlighting is inconsistent across different dashboards
 - `src/widgets/sidebar/Sidebar.tsx` - Sidebar container
 - `src/widgets/sidebar/config/navItems.ts` - Navigation items configuration
 - `src/shared/lib/utils.ts` - Utility functions (cn helper)
+
+**Resolution:**
+Fixed profile route mismatch and enhanced multi-role user support:
+
+1. **Profile Route Fix:** Changed `/learner/profile` and `/staff/profile` to `/profile`
+   - These routes didn't exist, causing 404 errors that broke navigation context
+   - Profile page is universal for all user types at `/profile`
+
+2. **Multi-Role Filtering:** Updated Sidebar to show nav items for ALL user types
+   - Previously only showed items matching primaryUserType
+   - Now users with multiple roles see all relevant navigation sections
+   - Example: Staff + Global Admin users see both staff AND admin nav items
+
+3. **Comprehensive Testing:** Created NavLink.test.tsx with 10 test cases
+   - Verified highlighting works for learner, staff, and admin dashboards
+   - All tests passing (69 total: 10 NavLink + 34 Sidebar + 25 ProtectedNavLink)
+
+**Impact:**
+- ✅ Navigation context remains consistent across all dashboards
+- ✅ No more 404 errors from profile links
+- ✅ Multi-role users have full navigation access
+- ✅ Highlighting works correctly for all user types
 
 **Implementation Suggestions:**
 1. Ensure `NavLink` component uses React Router's `useLocation()` hook

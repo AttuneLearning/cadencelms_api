@@ -136,8 +136,7 @@ const LookupValueSchema = new Schema<ILookupValue>({
 // Indexes
 // ============================================================================
 
-/** Primary lookup by unique lookupId */
-LookupValueSchema.index({ lookupId: 1 }, { unique: true });
+// lookupId index created by unique: true in schema
 
 /** Find children by parent and active status */
 LookupValueSchema.index({ parentLookupId: 1, isActive: 1 });

@@ -66,23 +66,42 @@ describe('ResolverService', () => {
     testUser = await User.create({
       email: 'john.doe@example.com',
       password: 'hashed_password',
-      roles: ['instructor'],
+      userTypes: ['staff'],
       isActive: true,
     });
 
     testStaff = await Staff.create({
       _id: testUser._id,
-      firstName: 'John',
-      lastName: 'Doe',
-      phoneNumber: '123-456-7890',
+      person: {
+        firstName: 'John',
+        lastName: 'Doe',
+        emails: [{
+          email: 'john.doe@example.com',
+          type: 'institutional',
+          isPrimary: true,
+          verified: true,
+          allowNotifications: true
+        }],
+        phones: [{
+          number: '123-456-7890',
+          type: 'mobile',
+          isPrimary: true,
+          verified: false,
+          allowNotifications: true
+        }],
+        addresses: [],
+        timezone: 'America/New_York',
+        languagePreference: 'en'
+      },
       departmentMemberships: [
         {
           departmentId: testDepartment._id,
           roles: ['instructor'],
           isPrimary: true,
+          isActive: true,
+          joinedAt: new Date()
         },
-      ],
-      isActive: true,
+      ]
     });
 
     testCourse = await Course.create({

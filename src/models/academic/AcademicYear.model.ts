@@ -46,8 +46,7 @@ const academicYearSchema = new Schema<IAcademicYear>(
   }
 );
 
-// Indexes
-academicYearSchema.index({ name: 1 }, { unique: true });
+// Indexes (name index created by unique: true)
 academicYearSchema.index({ isCurrent: 1 });
 academicYearSchema.index({ isActive: 1 });
 academicYearSchema.index({ startDate: 1, endDate: 1 });

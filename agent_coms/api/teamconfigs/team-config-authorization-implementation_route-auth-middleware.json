@@ -1,0 +1,474 @@
+{
+  "team": {
+    "name": "LMS Backend Team - Authorization Implementation",
+    "version": "1.0.0",
+    "description": "Parallel team for implementing Role System V2 authorization middleware across all route files"
+  },
+  "implementationPlan": {
+    "document": "devdocs/authorization/Parallel_Implementation_Plan.md",
+    "reference": "devdocs/authorization/Route_Authorization_Mapping.md",
+    "status": "Ready to execute - 5 agents working in parallel"
+  },
+  "agents": [
+    {
+      "id": "agent-content-courses",
+      "role": "Content & Courses Authorization Specialist",
+      "domain": "Content and Course Management",
+      "description": "Apply authorization middleware to content and courses domain routes",
+      "responsibilities": [
+        "Apply authorization middleware to 4 route files (41 routes total)",
+        "Implement course visibility rules (draft/published/archived)",
+        "Implement creator-based editing logic in service layer",
+        "Create course service scoping utilities",
+        "Test course authorization flows"
+      ],
+      "tasks": {
+        "PHASE1-1": "Apply middleware to content.routes.ts (15 routes)",
+        "PHASE1-2": "Apply middleware to courses.routes.ts (14 routes)",
+        "PHASE1-3": "Apply middleware to course-segments.routes.ts (6 routes)",
+        "PHASE1-4": "Apply middleware to questions.routes.ts (6 routes)",
+        "PHASE2-1": "Implement course visibility rules in courses.service.ts",
+        "PHASE2-2": "Implement creator-based editing in courses.service.ts",
+        "PHASE2-3": "Implement department scoping in content.service.ts",
+        "PHASE2-4": "Test course authorization"
+      },
+      "workingDirectories": [
+        "src/routes/",
+        "src/services/content/",
+        "src/services/academic/",
+        "tests/integration/routes/"
+      ],
+      "filesToModify": [
+        "src/routes/content.routes.ts",
+        "src/routes/courses.routes.ts",
+        "src/routes/course-segments.routes.ts",
+        "src/routes/questions.routes.ts",
+        "src/services/content/content.service.ts",
+        "src/services/academic/courses.service.ts",
+        "src/services/academic/course-segments.service.ts",
+        "src/services/content/questions.service.ts"
+      ],
+      "referenceFiles": [
+        "devdocs/authorization/Route_Authorization_Mapping.md",
+        "devdocs/authorization/Implementation_Summary.md"
+      ],
+      "estimatedTime": "2-3 hours",
+      "dependencies": {
+        "blockedBy": [],
+        "blocks": []
+      }
+    },
+    {
+      "id": "agent-academic-enrollment",
+      "role": "Academic & Enrollment Authorization Specialist",
+      "domain": "Academic Programs and Enrollment Management",
+      "description": "Apply authorization middleware to academic and enrollment domain routes",
+      "responsibilities": [
+        "Apply authorization middleware to 4 route files (39 routes total)",
+        "Implement self-enrollment setting check",
+        "Implement class roster data masking (FirstName L.)",
+        "Create enrollment service scoping utilities",
+        "Test enrollment authorization flows"
+      ],
+      "tasks": {
+        "PHASE1-1": "Apply middleware to classes.routes.ts (10 routes)",
+        "PHASE1-2": "Apply middleware to programs.routes.ts (10 routes)",
+        "PHASE1-3": "Apply middleware to departments.routes.ts (9 routes)",
+        "PHASE1-4": "Apply middleware to enrollments.routes.ts (10 routes)",
+        "PHASE2-1": "Implement self-enrollment check in enrollments.service.ts",
+        "PHASE2-2": "Integrate data masking utility for class rosters",
+        "PHASE2-3": "Implement instructor class scoping in classes.service.ts",
+        "PHASE2-4": "Test enrollment authorization"
+      },
+      "workingDirectories": [
+        "src/routes/",
+        "src/services/academic/",
+        "src/services/enrollment/",
+        "src/services/departments/",
+        "tests/integration/routes/"
+      ],
+      "filesToModify": [
+        "src/routes/classes.routes.ts",
+        "src/routes/programs.routes.ts",
+        "src/routes/departments.routes.ts",
+        "src/routes/enrollments.routes.ts",
+        "src/services/academic/classes.service.ts",
+        "src/services/academic/programs.service.ts",
+        "src/services/departments/departments.service.ts",
+        "src/services/enrollment/enrollments.service.ts"
+      ],
+      "referenceFiles": [
+        "devdocs/authorization/Route_Authorization_Mapping.md",
+        "devdocs/authorization/Implementation_Summary.md"
+      ],
+      "estimatedTime": "2-3 hours",
+      "dependencies": {
+        "blockedBy": [],
+        "blocks": [],
+        "requires": "agent-user-management utilities (data masking)"
+      }
+    },
+    {
+      "id": "agent-user-management",
+      "role": "User Management & Utilities Specialist",
+      "domain": "Staff and Learner Management + Shared Utilities",
+      "description": "Apply authorization middleware to user management routes and create shared utilities",
+      "responsibilities": [
+        "Apply authorization middleware to 3 route files (13 routes total)",
+        "CREATE data masking utility (src/utils/dataMasking.ts)",
+        "CREATE department hierarchy utility (src/utils/departmentHierarchy.ts)",
+        "Implement hierarchical department scoping",
+        "Ensure FERPA compliance for all learner operations",
+        "Test user management authorization flows"
+      ],
+      "tasks": {
+        "PHASE1-1": "Apply middleware to staff.routes.ts (6 routes)",
+        "PHASE1-2": "Apply middleware to learners.routes.ts (5 routes)",
+        "PHASE1-3": "Apply middleware to users.routes.ts (2 routes)",
+        "PHASE2-1": "CREATE src/utils/dataMasking.ts utility",
+        "PHASE2-2": "CREATE src/utils/departmentHierarchy.ts utility",
+        "PHASE2-3": "Implement hierarchical scoping in staff.service.ts",
+        "PHASE2-4": "Integrate data masking in learners.service.ts",
+        "PHASE2-5": "Implement instructor scoping for learner lists",
+        "PHASE2-6": "Test user management authorization",
+        "HANDOFF": "Announce utilities ready for other agents to use"
+      },
+      "workingDirectories": [
+        "src/routes/",
+        "src/services/users/",
+        "src/utils/",
+        "tests/integration/routes/",
+        "tests/unit/utils/"
+      ],
+      "filesToModify": [
+        "src/routes/staff.routes.ts",
+        "src/routes/learners.routes.ts",
+        "src/routes/users.routes.ts",
+        "src/services/users/staff.service.ts",
+        "src/services/users/learners.service.ts",
+        "src/services/users/users.service.ts"
+      ],
+      "filesToCreate": [
+        "src/utils/dataMasking.ts",
+        "src/utils/departmentHierarchy.ts",
+        "tests/unit/utils/dataMasking.test.ts",
+        "tests/unit/utils/departmentHierarchy.test.ts"
+      ],
+      "referenceFiles": [
+        "devdocs/authorization/Route_Authorization_Mapping.md",
+        "devdocs/authorization/Implementation_Summary.md"
+      ],
+      "estimatedTime": "2-3 hours",
+      "priority": "HIGH - Other agents depend on utilities",
+      "dependencies": {
+        "blockedBy": [],
+        "blocks": ["agent-academic-enrollment", "agent-analytics-reporting"]
+      }
+    },
+    {
+      "id": "agent-analytics-reporting",
+      "role": "Analytics & Reporting Authorization Specialist",
+      "domain": "Progress Tracking and Reporting",
+      "description": "Apply authorization middleware to analytics and reporting domain routes",
+      "responsibilities": [
+        "Apply authorization middleware to 2 route files (16 routes total)",
+        "Implement instructor class filtering for progress",
+        "Implement department-scoped transcript filtering",
+        "Create progress/reporting scoping utilities",
+        "Test analytics authorization flows"
+      ],
+      "tasks": {
+        "PHASE1-1": "Apply middleware to progress.routes.ts (8 routes)",
+        "PHASE1-2": "Apply middleware to reports.routes.ts (8 routes)",
+        "PHASE2-1": "Implement instructor class filtering in progress.service.ts",
+        "PHASE2-2": "Implement department transcript filtering in reports.service.ts",
+        "PHASE2-3": "Integrate data masking utility for reports",
+        "PHASE2-4": "Test analytics authorization"
+      },
+      "workingDirectories": [
+        "src/routes/",
+        "src/services/analytics/",
+        "src/services/reporting/",
+        "tests/integration/routes/"
+      ],
+      "filesToModify": [
+        "src/routes/progress.routes.ts",
+        "src/routes/reports.routes.ts",
+        "src/services/analytics/progress.service.ts",
+        "src/services/reporting/reports.service.ts"
+      ],
+      "referenceFiles": [
+        "devdocs/authorization/Route_Authorization_Mapping.md",
+        "devdocs/authorization/Implementation_Summary.md"
+      ],
+      "estimatedTime": "2-3 hours",
+      "dependencies": {
+        "blockedBy": [],
+        "blocks": [],
+        "requires": "agent-user-management utilities (data masking, department hierarchy)"
+      }
+    },
+    {
+      "id": "agent-system-infrastructure",
+      "role": "System & Infrastructure Authorization Specialist",
+      "domain": "System Administration, Role Management, and Integration Testing",
+      "description": "Apply authorization middleware to system routes, create admin role management, and coordinate integration testing",
+      "responsibilities": [
+        "Apply authorization middleware to 3 route files (31 routes total)",
+        "CREATE new admin role management routes (system-admin only)",
+        "Implement settings read-only access for instructors",
+        "Ensure audit log escalation requirements",
+        "CREATE role assignment management service",
+        "CREATE comprehensive integration test suite",
+        "COORDINATE testing across all agents",
+        "Monitor and report test coverage",
+        "Create test helpers for common patterns"
+      ],
+      "tasks": {
+        "PHASE1-1": "Apply middleware to settings.routes.ts (6 routes)",
+        "PHASE1-2": "Apply middleware to audit-logs.routes.ts (5 routes)",
+        "PHASE1-3": "CREATE admin.routes.ts with full middleware (20 routes)",
+        "PHASE2-1": "Implement settings read-only in settings.service.ts",
+        "PHASE2-2": "Ensure audit log escalation in audit-logs.service.ts",
+        "PHASE2-3": "CREATE admin.controller.ts for role management",
+        "PHASE2-4": "CREATE role-management.service.ts",
+        "PHASE2-5": "Implement user role assignment operations",
+        "PHASE2-6": "Implement global admin management operations",
+        "PHASE2-7": "Implement role definition management operations",
+        "PHASE2-8": "Implement bulk role operations",
+        "PHASE2-9": "Implement user search for role assignment",
+        "PHASE3-1": "CREATE tests/integration/middleware/data-masking.test.ts",
+        "PHASE3-2": "CREATE tests/integration/middleware/department-scoping.test.ts",
+        "PHASE3-3": "CREATE tests/integration/middleware/creator-editing.test.ts",
+        "PHASE3-4": "CREATE tests/integration/admin/role-management.test.ts",
+        "PHASE3-5": "EXPAND tests/integration/middleware/authorization.test.ts",
+        "PHASE3-6": "Run full integration test suite",
+        "PHASE3-7": "Coordinate test fixes with other agents",
+        "PHASE3-8": "Generate test coverage report",
+        "PHASE4-1": "Ensure 85%+ authorization test coverage"
+      },
+      "workingDirectories": [
+        "src/routes/",
+        "src/controllers/admin/",
+        "src/services/system/",
+        "src/services/admin/",
+        "contracts/api/",
+        "tests/integration/middleware/",
+        "tests/integration/admin/",
+        "tests/integration/auth/",
+        "tests/helpers/"
+      ],
+      "filesToModify": [
+        "src/routes/settings.routes.ts",
+        "src/routes/audit-logs.routes.ts",
+        "src/services/system/settings.service.ts",
+        "src/services/system/audit-logs.service.ts",
+        "tests/integration/middleware/authorization.test.ts"
+      ],
+      "filesToCreate": [
+        "src/routes/admin.routes.ts",
+        "src/controllers/admin/admin.controller.ts",
+        "src/services/admin/role-management.service.ts",
+        "tests/integration/middleware/data-masking.test.ts",
+        "tests/integration/middleware/department-scoping.test.ts",
+        "tests/integration/middleware/creator-editing.test.ts",
+        "tests/integration/admin/role-management.test.ts",
+        "tests/helpers/authorizationHelpers.ts"
+      ],
+      "referenceFiles": [
+        "devdocs/authorization/Route_Authorization_Mapping.md",
+        "devdocs/authorization/Implementation_Summary.md",
+        "devdocs/authorization/Parallel_Implementation_Plan.md",
+        "contracts/api/admin-roles.contract.ts"
+      ],
+      "estimatedTime": "3-4 hours",
+      "priority": "CRITICAL - Coordinates testing for all agents + creates admin role management",
+      "dependencies": {
+        "blockedBy": [],
+        "blocks": [],
+        "coordinates": "Phase 3 testing for all agents"
+      }
+    }
+  ],
+  "sharedContext": {
+    "implementationPhases": {
+      "phase1": "Route Middleware Application (Parallel - 2 hours)",
+      "phase2": "Service Layer Implementation (Parallel - 1-2 hours)",
+      "phase3": "Integration & Testing (Sequential - 1 hour, led by agent-system-infrastructure)",
+      "phase4": "Documentation & Cleanup (Parallel - 30 min)"
+    },
+    "sharedUtilities": {
+      "dataMasking": {
+        "owner": "agent-user-management",
+        "location": "src/utils/dataMasking.ts",
+        "functions": [
+          "maskLastName(user: IUser, viewer: IUser): IUser",
+          "maskUserList(users: IUser[], viewer: IUser): IUser[]"
+        ],
+        "usedBy": ["agent-academic-enrollment", "agent-analytics-reporting"]
+      },
+      "departmentHierarchy": {
+        "owner": "agent-user-management",
+        "location": "src/utils/departmentHierarchy.ts",
+        "functions": [
+          "getDepartmentAndSubdepartments(deptId: string): Promise<string[]>",
+          "isTopLevelDepartmentMember(userId: string, deptId: string): Promise<boolean>"
+        ],
+        "usedBy": ["agent-content-courses", "agent-academic-enrollment", "agent-analytics-reporting"]
+      }
+    },
+    "keyBusinessRules": [
+      "Draft courses visible to all department members, editable by creator + department-admin only",
+      "Learners NOT department-limited, can see published courses across all departments",
+      "Department hierarchy: Top-level members see all subdepartments",
+      "Data masking: FirstName L. for instructors and department-admin (except enrollment-admin)",
+      "Self-enrollment: Controlled by department setting allowSelfEnrollment",
+      "Instructor scoping: Only see their own classes/enrolled learners",
+      "Creator-based editing: Draft content editable by creator + department-admin",
+      "Audit logs: Admin-only, requires escalation"
+    ],
+    "middlewarePattern": {
+      "imports": [
+        "import { authenticate } from '@/middlewares/authenticate';",
+        "import { requireAccessRight } from '@/middlewares/require-access-right';",
+        "import { requireEscalation } from '@/middlewares/require-escalation';",
+        "import { requireAdminRole } from '@/middlewares/require-admin-role';"
+      ],
+      "standardRoute": "requireAccessRight('domain:resource:action')",
+      "adminOnlyRoute": "requireEscalation + requireAdminRole() + requireAccessRight()",
+      "multipleRights": "requireAccessRight(['right1', 'right2']) // OR logic"
+    }
+  },
+  "syncPoints": {
+    "sync1": {
+      "name": "After Phase 1 - Route Middleware Review",
+      "description": "All agents commit route changes and review middleware application patterns",
+      "participants": "All agents",
+      "duration": "15 minutes"
+    },
+    "sync2": {
+      "name": "After Phase 2 - Service Layer Review",
+      "description": "Agent 3 confirms utilities ready, other agents confirm integration",
+      "participants": "All agents",
+      "duration": "15 minutes",
+      "critical": "agent-user-management must complete utilities first"
+    },
+    "sync3": {
+      "name": "After Phase 3 - Testing Review",
+      "description": "Agent 5 shares test results, all agents review failures in their domain",
+      "participants": "All agents",
+      "duration": "30 minutes",
+      "lead": "agent-system-infrastructure"
+    }
+  },
+  "testingStrategy": {
+    "coverage": {
+      "target": 85,
+      "critical": true
+    },
+    "testTypes": [
+      "Route middleware tests",
+      "Service layer scoping tests",
+      "Data masking tests",
+      "Department hierarchy tests",
+      "Creator-based editing tests",
+      "Self-enrollment setting tests",
+      "Integration tests (all endpoints)",
+      "E2E authorization flows"
+    ],
+    "testCoordinator": "agent-system-infrastructure"
+  },
+  "successCriteria": {
+    "phase1": [
+      "All 25 route files have middleware applied",
+      "All imports added correctly",
+      "All endpoints have requireAccessRight() per mapping",
+      "All sensitive endpoints have requireEscalation",
+      "All admin-only endpoints have requireAdminRole()"
+    ],
+    "phase2": [
+      "Data masking utility created and integrated",
+      "Department hierarchy utility created and integrated",
+      "Course visibility rules implemented",
+      "Creator-based editing implemented",
+      "Self-enrollment setting check implemented",
+      "Instructor class scoping implemented",
+      "Department scoping implemented"
+    ],
+    "phase3": [
+      "85%+ test coverage for authorization",
+      "All integration tests passing",
+      "E2E scenarios validated",
+      "No 403 errors for authorized users",
+      "Consistent 403 errors for unauthorized users"
+    ],
+    "phase4": [
+      "All controller comments updated",
+      "Service layer documentation updated",
+      "API documentation reflects authorization",
+      "Implementation notes in devdocs/"
+    ]
+  },
+  "workflowRules": {
+    "commitFormat": "feat(authorization): <description>",
+    "minTestCoverage": 85,
+    "parallelExecution": true,
+    "sequencing": "Phase 1-2 parallel, Phase 3 sequential, Phase 4 parallel",
+    "coordination": "Sync points required between phases"
+  },
+  "agentInstructions": {
+    "startup": [
+      "Read devdocs/authorization/Parallel_Implementation_Plan.md for overview",
+      "Read devdocs/authorization/Route_Authorization_Mapping.md for your domain",
+      "Read devdocs/authorization/Implementation_Summary.md for code examples",
+      "Identify your assigned route files and service files",
+      "Review middleware patterns and examples"
+    ],
+    "phase1": [
+      "Apply middleware to ALL assigned route files",
+      "Add all required imports",
+      "Use requireAccessRight() per mapping document",
+      "Add requireEscalation for sensitive operations",
+      "Add requireAdminRole() for admin-only operations",
+      "Test locally that routes are protected",
+      "Commit route changes with proper message"
+    ],
+    "phase2": [
+      "If agent-user-management: CREATE utilities FIRST (priority)",
+      "Implement service layer scoping for your domain",
+      "Integrate shared utilities (data masking, dept hierarchy)",
+      "Implement domain-specific business rules",
+      "Test service layer changes",
+      "Commit service changes with proper message"
+    ],
+    "phase3": [
+      "If agent-system-infrastructure: Lead testing coordination",
+      "All agents: Run tests for your domain",
+      "Fix any test failures in your domain",
+      "Support other agents with test issues",
+      "Verify E2E scenarios work correctly"
+    ],
+    "phase4": [
+      "Update controller comments with authorization info",
+      "Update service documentation",
+      "Document any implementation notes",
+      "Create final commit for your domain"
+    ],
+    "handoff": [
+      "agent-user-management: Announce when utilities are ready",
+      "Other agents: Confirm receipt and integration of utilities",
+      "agent-system-infrastructure: Share test results at Sync Point 3"
+    ]
+  },
+  "estimatedTimeline": {
+    "totalParallelTime": "2-4 hours",
+    "totalSequentialTime": "12-18 hours",
+    "efficiencyGain": "3-4.5x faster",
+    "breakdown": {
+      "phase1": "2 hours (parallel)",
+      "phase2": "1-2 hours (parallel)",
+      "phase3": "1 hour (sequential)",
+      "phase4": "30 min (parallel)"
+    }
+  }
+}

@@ -89,7 +89,7 @@ const cohortSchema = new Schema<ICohort>(
 );
 
 // Indexes
-cohortSchema.index({ code: 1 }, { unique: true });
+// code index created by unique: true in schema
 cohortSchema.index({ academicYearId: 1 });
 cohortSchema.index({ programId: 1 });
 cohortSchema.index({ status: 1 });

@@ -136,7 +136,7 @@ const RoleDefinitionSchema = new Schema<IRoleDefinition>({
 
 // Indexes
 RoleDefinitionSchema.index({ userType: 1, isActive: 1 });
-RoleDefinitionSchema.index({ name: 1 }, { unique: true });
+// name index created by unique: true in schema
 
 /**
  * Static: Get roles by userType

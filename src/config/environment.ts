@@ -77,7 +77,9 @@ const getEnvConfig = (): Config => {
       refreshExpiry: env === 'production' ? '7d' : '30d'
     },
     cors: {
-      origin: process.env.CORS_ORIGIN || '*',
+      origin: process.env.CORS_ORIGIN
+        ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
+        : '*',
       credentials: true
     },
     rateLimit: {
