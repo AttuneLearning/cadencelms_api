@@ -287,13 +287,21 @@ describe('Auth V2 Login Integration Tests', () => {
 
       const staff = await Staff.create({
         _id: user._id,
-        firstName: 'Jane',
-        lastName: 'Instructor',
+        person: {
+          firstName: 'Jane',
+          lastName: 'Instructor',
+          emails: [{ email: user.email, type: 'institutional', isPrimary: true, verified: true, allowNotifications: true }],
+          phones: [],
+          addresses: [],
+          timezone: 'America/New_York',
+          languagePreference: 'en'
+        },
         departmentMemberships: [{
           departmentId: testDepartment1._id,
           roles: ['instructor', 'content-admin'],
           isPrimary: true,
-          isActive: true
+          isActive: true,
+          joinedAt: new Date()
         }]
       });
 
@@ -328,13 +336,21 @@ describe('Auth V2 Login Integration Tests', () => {
 
       const staff = await Staff.create({
         _id: user._id,
-        firstName: 'Jane',
-        lastName: 'Instructor',
+        person: {
+          firstName: 'Jane',
+          lastName: 'Instructor',
+          emails: [{ email: user.email, type: 'institutional', isPrimary: true, verified: true, allowNotifications: true }],
+          phones: [],
+          addresses: [],
+          timezone: 'America/New_York',
+          languagePreference: 'en'
+        },
         departmentMemberships: [{
           departmentId: testDepartment1._id,
           roles: ['instructor', 'content-admin'],
           isPrimary: true,
-          isActive: true
+          isActive: true,
+          joinedAt: new Date()
         }]
       });
 
@@ -370,20 +386,29 @@ describe('Auth V2 Login Integration Tests', () => {
 
       const staff = await Staff.create({
         _id: user._id,
-        firstName: 'Multi',
-        lastName: 'Department',
+        person: {
+          firstName: 'Multi',
+          lastName: 'Department',
+          emails: [{ email: user.email, type: 'institutional', isPrimary: true, verified: true, allowNotifications: true }],
+          phones: [],
+          addresses: [],
+          timezone: 'America/New_York',
+          languagePreference: 'en'
+        },
         departmentMemberships: [
           {
             departmentId: testDepartment1._id,
             roles: ['instructor'],
             isPrimary: true,
-            isActive: true
+            isActive: true,
+            joinedAt: new Date()
           },
           {
             departmentId: testDepartment2._id,
             roles: ['content-admin'],
             isPrimary: false,
-            isActive: true
+            isActive: true,
+            joinedAt: new Date()
           }
         ]
       });
@@ -427,20 +452,29 @@ describe('Auth V2 Login Integration Tests', () => {
 
       const staff = await Staff.create({
         _id: user._id,
-        firstName: 'Multi',
-        lastName: 'Department',
+        person: {
+          firstName: 'Multi',
+          lastName: 'Department',
+          emails: [{ email: user.email, type: 'institutional', isPrimary: true, verified: true, allowNotifications: true }],
+          phones: [],
+          addresses: [],
+          timezone: 'America/New_York',
+          languagePreference: 'en'
+        },
         departmentMemberships: [
           {
             departmentId: testDepartment1._id,
             roles: ['instructor'],
             isPrimary: true,
-            isActive: true
+            isActive: true,
+            joinedAt: new Date()
           },
           {
             departmentId: testDepartment2._id,
             roles: ['content-admin'],
             isPrimary: false,
-            isActive: true
+            isActive: true,
+            joinedAt: new Date()
           }
         ]
       });
@@ -728,25 +762,41 @@ describe('Auth V2 Login Integration Tests', () => {
 
       const learner = await Learner.create({
         _id: user._id,
-        firstName: 'Hybrid',
-        lastName: 'User',
+        person: {
+          firstName: 'Hybrid',
+          lastName: 'User',
+          emails: [{ email: user.email, type: 'institutional', isPrimary: true, verified: true, allowNotifications: true }],
+          phones: [],
+          addresses: [],
+          timezone: 'America/New_York',
+          languagePreference: 'en'
+        },
         departmentMemberships: [{
           departmentId: testDepartment1._id,
           roles: ['course-taker'],
           isPrimary: true,
-          isActive: true
+          isActive: true,
+          joinedAt: new Date()
         }]
       });
 
       const staff = await Staff.create({
         _id: user._id,
-        firstName: 'Hybrid',
-        lastName: 'User',
+        person: {
+          firstName: 'Hybrid',
+          lastName: 'User',
+          emails: [{ email: user.email, type: 'institutional', isPrimary: true, verified: true, allowNotifications: true }],
+          phones: [],
+          addresses: [],
+          timezone: 'America/New_York',
+          languagePreference: 'en'
+        },
         departmentMemberships: [{
           departmentId: testDepartment1._id,
           roles: ['instructor'],
           isPrimary: true,
-          isActive: true
+          isActive: true,
+          joinedAt: new Date()
         }]
       });
 
@@ -774,13 +824,21 @@ describe('Auth V2 Login Integration Tests', () => {
 
       const staff = await Staff.create({
         _id: user._id,
-        firstName: 'New',
-        lastName: 'User',
+        person: {
+          firstName: 'New',
+          lastName: 'User',
+          emails: [{ email: user.email, type: 'institutional', isPrimary: true, verified: true, allowNotifications: true }],
+          phones: [],
+          addresses: [],
+          timezone: 'America/New_York',
+          languagePreference: 'en'
+        },
         departmentMemberships: [{
           departmentId: testDepartment1._id,
           roles: ['instructor'],
           isPrimary: true,
-          isActive: true
+          isActive: true,
+          joinedAt: new Date()
         }]
       });
 
@@ -807,20 +865,29 @@ describe('Auth V2 Login Integration Tests', () => {
 
       const staff = await Staff.create({
         _id: user._id,
-        firstName: 'Existing',
-        lastName: 'User',
+        person: {
+          firstName: 'Existing',
+          lastName: 'User',
+          emails: [{ email: user.email, type: 'institutional', isPrimary: true, verified: true, allowNotifications: true }],
+          phones: [],
+          addresses: [],
+          timezone: 'America/New_York',
+          languagePreference: 'en'
+        },
         departmentMemberships: [
           {
             departmentId: testDepartment1._id,
             roles: ['instructor'],
             isPrimary: true,
-            isActive: true
+            isActive: true,
+            joinedAt: new Date()
           },
           {
             departmentId: testDepartment2._id,
             roles: ['content-admin'],
             isPrimary: false,
-            isActive: true
+            isActive: true,
+            joinedAt: new Date()
           }
         ]
       });
@@ -890,13 +957,21 @@ describe('Auth V2 Login Integration Tests', () => {
 
       const staff = await Staff.create({
         _id: user._id,
-        firstName: 'Test',
-        lastName: 'User',
+        person: {
+          firstName: 'Test',
+          lastName: 'User',
+          emails: [{ email: user.email, type: 'institutional', isPrimary: true, verified: true, allowNotifications: true }],
+          phones: [],
+          addresses: [],
+          timezone: 'America/New_York',
+          languagePreference: 'en'
+        },
         departmentMemberships: [{
           departmentId: testDepartment1._id,
           roles: ['instructor'],
           isPrimary: true,
-          isActive: true
+          isActive: true,
+          joinedAt: new Date()
         }]
       });
 
