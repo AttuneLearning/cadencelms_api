@@ -255,13 +255,27 @@ describe('Roles API Integration Tests', () => {
 
     await Staff.create({
       _id: staffUser._id,
-      firstName: 'Test',
-      lastName: 'Staff',
+      person: {
+        firstName: 'Test',
+        lastName: 'Staff',
+        emails: [{
+          email: staffUser.email,
+          type: 'institutional',
+          isPrimary: true,
+          verified: true,
+          allowNotifications: true
+        }],
+        phones: [],
+        addresses: [],
+        timezone: 'America/New_York',
+        languagePreference: 'en'
+      },
       departmentMemberships: [{
         departmentId: testDepartment1._id,
         roles: ['instructor', 'content-admin'],
         isPrimary: true,
-        isActive: true
+        isActive: true,
+        joinedAt: new Date()
       }]
     });
 
@@ -286,33 +300,62 @@ describe('Roles API Integration Tests', () => {
 
     await Staff.create({
       _id: multiDeptUser._id,
-      firstName: 'Multi',
-      lastName: 'Dept',
+      person: {
+        firstName: 'Multi',
+        lastName: 'Dept',
+        emails: [{
+          email: multiDeptUser.email,
+          type: 'institutional',
+          isPrimary: true,
+          verified: true,
+          allowNotifications: true
+        }],
+        phones: [],
+        addresses: [],
+        timezone: 'America/New_York',
+        languagePreference: 'en'
+      },
       departmentMemberships: [
         {
           departmentId: testDepartment1._id,
           roles: ['instructor'],
           isPrimary: true,
-          isActive: true
+          isActive: true,
+          joinedAt: new Date()
         },
         {
           departmentId: testDepartment2._id,
           roles: ['department-admin'],
           isPrimary: false,
-          isActive: true
+          isActive: true,
+          joinedAt: new Date()
         }
       ]
     });
 
     await Learner.create({
       _id: multiDeptUser._id,
-      firstName: 'Multi',
-      lastName: 'Dept',
+      person: {
+        firstName: 'Multi',
+        lastName: 'Dept',
+        emails: [{
+          email: multiDeptUser.email,
+          type: 'institutional',
+          isPrimary: true,
+          verified: true,
+          allowNotifications: true
+        }],
+        phones: [],
+        addresses: [],
+        timezone: 'America/New_York',
+        languagePreference: 'en'
+      },
       departmentMemberships: [{
         departmentId: testDepartment1._id,
         roles: ['course-taker'],
         isPrimary: true,
-        isActive: true
+        isActive: true,
+        joinedAt: new Date()
       }]
     });
 
@@ -337,13 +380,27 @@ describe('Roles API Integration Tests', () => {
 
     await Staff.create({
       _id: globalAdminUser._id,
-      firstName: 'Global',
-      lastName: 'Admin',
+      person: {
+        firstName: 'Global',
+        lastName: 'Admin',
+        emails: [{
+          email: globalAdminUser.email,
+          type: 'institutional',
+          isPrimary: true,
+          verified: true,
+          allowNotifications: true
+        }],
+        phones: [],
+        addresses: [],
+        timezone: 'America/New_York',
+        languagePreference: 'en'
+      },
       departmentMemberships: [{
         departmentId: testDepartment1._id,
         roles: ['instructor'],
         isPrimary: true,
-        isActive: true
+        isActive: true,
+        joinedAt: new Date()
       }]
     });
 
@@ -888,8 +945,21 @@ describe('Roles API Integration Tests', () => {
 
       await Staff.create({
         _id: noMemberUser._id,
-        firstName: 'No',
-        lastName: 'Member',
+        person: {
+          firstName: 'No',
+          lastName: 'Member',
+          emails: [{
+            email: noMemberUser.email,
+            type: 'institutional',
+            isPrimary: true,
+            verified: true,
+            allowNotifications: true
+          }],
+          phones: [],
+          addresses: [],
+          timezone: 'America/New_York',
+          languagePreference: 'en'
+        },
         departmentMemberships: []
       });
 

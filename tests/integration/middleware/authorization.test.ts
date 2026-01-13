@@ -145,13 +145,27 @@ describe('Authorization Middleware Integration Tests', () => {
 
     await Staff.create({
       _id: instructorUser._id,
-      firstName: 'Test',
-      lastName: 'Instructor',
+      person: {
+        firstName: 'Test',
+        lastName: 'Instructor',
+        emails: [{
+          email: instructorUser.email,
+          type: 'institutional',
+          isPrimary: true,
+          verified: true,
+          allowNotifications: true
+        }],
+        phones: [],
+        addresses: [],
+        timezone: 'America/New_York',
+        languagePreference: 'en'
+      },
       departmentMemberships: [{
         departmentId: testDepartment1._id,
         roles: ['instructor'],
         isPrimary: true,
-        isActive: true
+        isActive: true,
+        joinedAt: new Date()
       }]
     });
 
@@ -171,13 +185,27 @@ describe('Authorization Middleware Integration Tests', () => {
 
     await Staff.create({
       _id: contentAdminUser._id,
-      firstName: 'Content',
-      lastName: 'Admin',
+      person: {
+        firstName: 'Content',
+        lastName: 'Admin',
+        emails: [{
+          email: contentAdminUser.email,
+          type: 'institutional',
+          isPrimary: true,
+          verified: true,
+          allowNotifications: true
+        }],
+        phones: [],
+        addresses: [],
+        timezone: 'America/New_York',
+        languagePreference: 'en'
+      },
       departmentMemberships: [{
         departmentId: testDepartment1._id,
         roles: ['content-admin'],
         isPrimary: true,
-        isActive: true
+        isActive: true,
+        joinedAt: new Date()
       }]
     });
 
@@ -197,13 +225,27 @@ describe('Authorization Middleware Integration Tests', () => {
 
     await Staff.create({
       _id: deptAdminUser._id,
-      firstName: 'Dept',
-      lastName: 'Admin',
+      person: {
+        firstName: 'Dept',
+        lastName: 'Admin',
+        emails: [{
+          email: deptAdminUser.email,
+          type: 'institutional',
+          isPrimary: true,
+          verified: true,
+          allowNotifications: true
+        }],
+        phones: [],
+        addresses: [],
+        timezone: 'America/New_York',
+        languagePreference: 'en'
+      },
       departmentMemberships: [{
         departmentId: testDepartment1._id,
         roles: ['department-admin'],
         isPrimary: true,
-        isActive: true
+        isActive: true,
+        joinedAt: new Date()
       }]
     });
 
@@ -223,13 +265,27 @@ describe('Authorization Middleware Integration Tests', () => {
 
     await Staff.create({
       _id: nonMemberUser._id,
-      firstName: 'Non',
-      lastName: 'Member',
+      person: {
+        firstName: 'Non',
+        lastName: 'Member',
+        emails: [{
+          email: nonMemberUser.email,
+          type: 'institutional',
+          isPrimary: true,
+          verified: true,
+          allowNotifications: true
+        }],
+        phones: [],
+        addresses: [],
+        timezone: 'America/New_York',
+        languagePreference: 'en'
+      },
       departmentMemberships: [{
         departmentId: testDepartment2._id,
         roles: ['instructor'],
         isPrimary: true,
-        isActive: true
+        isActive: true,
+        joinedAt: new Date()
       }]
     });
 
@@ -249,13 +305,27 @@ describe('Authorization Middleware Integration Tests', () => {
 
     await Staff.create({
       _id: globalAdminUser._id,
-      firstName: 'Global',
-      lastName: 'Admin',
+      person: {
+        firstName: 'Global',
+        lastName: 'Admin',
+        emails: [{
+          email: globalAdminUser.email,
+          type: 'institutional',
+          isPrimary: true,
+          verified: true,
+          allowNotifications: true
+        }],
+        phones: [],
+        addresses: [],
+        timezone: 'America/New_York',
+        languagePreference: 'en'
+      },
       departmentMemberships: [{
         departmentId: testDepartment1._id,
         roles: ['instructor'],
         isPrimary: true,
-        isActive: true
+        isActive: true,
+        joinedAt: new Date()
       }]
     });
 
