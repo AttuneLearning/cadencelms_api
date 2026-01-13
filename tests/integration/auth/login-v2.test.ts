@@ -174,7 +174,7 @@ describe('Auth V2 Login Integration Tests', () => {
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.data.userTypes).toEqual(['learner']);
+      expect(response.body.data.userTypes).toEqual([{ _id: 'learner', displayAs: 'Learner' }]);
       expect(response.body.data.userTypes).toBeInstanceOf(Array);
     });
 
@@ -216,7 +216,7 @@ describe('Auth V2 Login Integration Tests', () => {
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.data.userTypes).toEqual(['staff']);
+      expect(response.body.data.userTypes).toEqual([{ _id: 'staff', displayAs: 'Staff' }]);
     });
 
     it('should return userTypes array for multi-type user (staff + global-admin)', async () => {
@@ -269,8 +269,10 @@ describe('Auth V2 Login Integration Tests', () => {
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.data.userTypes).toContain('staff');
-      expect(response.body.data.userTypes).toContain('global-admin');
+      expect(response.body.data.userTypes).toEqual([
+        { _id: 'staff', displayAs: 'Staff' },
+        { _id: 'global-admin', displayAs: 'System Admin' }
+      ]);
       expect(response.body.data.userTypes).toHaveLength(2);
     });
   });
