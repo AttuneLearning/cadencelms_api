@@ -340,23 +340,42 @@ describe('ResolverService', () => {
       const otherUser = await User.create({
         email: 'jane.smith@example.com',
         password: 'hashed_password',
-        roles: ['instructor'],
+        userTypes: ['staff'],
         isActive: true,
       });
 
       await Staff.create({
         _id: otherUser._id,
-        firstName: 'Jane',
-        lastName: 'Smith',
-        phoneNumber: '987-654-3210',
+        person: {
+          firstName: 'Jane',
+          lastName: 'Smith',
+          emails: [{
+            email: 'jane.smith@example.com',
+            type: 'institutional',
+            isPrimary: true,
+            verified: true,
+            allowNotifications: true
+          }],
+          phones: [{
+            number: '987-654-3210',
+            type: 'mobile',
+            isPrimary: true,
+            verified: false,
+            allowNotifications: true
+          }],
+          addresses: [],
+          timezone: 'America/New_York',
+          languagePreference: 'en'
+        },
         departmentMemberships: [
           {
             departmentId: otherDept._id,
             roles: ['instructor'],
             isPrimary: true,
+            isActive: true,
+            joinedAt: new Date()
           },
-        ],
-        isActive: true,
+        ]
       });
 
       const result = await ResolverService.resolveInstructor('John Doe', testDepartment._id.toString());
@@ -365,11 +384,11 @@ describe('ResolverService', () => {
       expect(result.objectId?.toString()).toBe(testUser._id.toString());
     });
 
-    it('should only match users with instructor role', async () => {
+    it('should only match users with staff userType', async () => {
       const learnerUser = await User.create({
         email: 'student@example.com',
         password: 'hashed_password',
-        roles: ['learner'],
+        userTypes: ['learner'],
         isActive: true,
       });
 

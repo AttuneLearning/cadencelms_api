@@ -353,7 +353,7 @@ export class ResolverService {
     if (this.isValidObjectId(trimmedInput)) {
       const user = await User.findOne({
         _id: trimmedInput,
-        roles: 'instructor',
+        userTypes: 'staff',
         isActive: true,
       });
       if (user) {
@@ -367,7 +367,7 @@ export class ResolverService {
     // Try exact email match
     const userByEmail = await User.findOne({
       email: trimmedInput.toLowerCase(),
-      roles: 'instructor',
+      userTypes: 'staff',
       isActive: true,
     });
     if (userByEmail) {
@@ -393,10 +393,10 @@ export class ResolverService {
     // Get all staff user IDs
     const staffUserIds = staffMembers.map((s) => s._id);
 
-    // Get users with instructor role
+    // Get users with staff userType
     const instructorUsers = await User.find({
       _id: { $in: staffUserIds },
-      roles: 'instructor',
+      userTypes: 'staff',
       isActive: true,
     }).lean();
 
@@ -440,7 +440,7 @@ export class ResolverService {
     const fuzzyMatches = fuzzyMatch(
       trimmedInput,
       instructorStaff,
-      [(item) => `${item.firstName} ${item.lastName}`],
+      [(item) => `${item.person.firstName} ${item.person.lastName}`],
       fuzzyThreshold,
       1
     );
@@ -461,7 +461,7 @@ export class ResolverService {
     const suggestions = getSuggestions(
       trimmedInput,
       instructorStaff,
-      [(item) => `${item.firstName} ${item.lastName}`],
+      [(item) => `${item.person.firstName} ${item.person.lastName}`],
       0.5,
       this.MAX_SUGGESTIONS
     );
@@ -469,7 +469,7 @@ export class ResolverService {
     return {
       success: false,
       error: `No match found for "${nameOrEmail}"`,
-      suggestions: suggestions.map((s) => `${s.item.firstName} ${s.item.lastName}`),
+      suggestions: suggestions.map((s) => `${s.item.person.firstName} ${s.item.person.lastName}`),
     };
   }
 
