@@ -19,30 +19,48 @@ describe('AuditLog Model', () => {
     await AuditLog.deleteMany({});
   });
 
+  // Helper to create minimal audit log with required fields
+  const createLog = (overrides: any = {}) => {
+    return AuditLog.create({
+      action: 'create',
+      entityType: 'user',
+      description: 'Test action',
+      ipAddress: '192.168.1.1',
+      userAgent: 'Test Agent',
+      request: {
+        method: 'POST',
+        path: '/api/test'
+      },
+      ...overrides
+    });
+  };
+
   describe('Audit Log Creation', () => {
     it('should create a create action audit log', async () => {
-      const log = await AuditLog.create({
+      const log = await createLog({
         action: 'create',
-        entityType: 'User',
+        entityType: 'user',
         entityId: new mongoose.Types.ObjectId(),
-        performedBy: new mongoose.Types.ObjectId(),
+        userId: new mongoose.Types.ObjectId(),
         changes: {
-          email: 'newuser@example.com',
-          roles: ['learner'],
+          after: {
+            email: 'newuser@example.com',
+            userTypes: ['learner'],
+          }
         },
       });
 
       expect(log).toBeDefined();
       expect(log.action).toBe('create');
-      expect(log.entityType).toBe('User');
+      expect(log.entityType).toBe('user');
     });
 
     it('should create an update action audit log', async () => {
-      const log = await AuditLog.create({
+      const log = await createLog({
         action: 'update',
-        entityType: 'Course',
+        entityType: 'course',
         entityId: new mongoose.Types.ObjectId(),
-        performedBy: new mongoose.Types.ObjectId(),
+        userId: new mongoose.Types.ObjectId(),
         changes: {
           before: { title: 'Old Title' },
           after: { title: 'New Title' },
@@ -55,13 +73,13 @@ describe('AuditLog Model', () => {
     });
 
     it('should create a delete action audit log', async () => {
-      const log = await AuditLog.create({
+      const log = await createLog({
         action: 'delete',
-        entityType: 'Enrollment',
+        entityType: 'enrollment',
         entityId: new mongoose.Types.ObjectId(),
-        performedBy: new mongoose.Types.ObjectId(),
+        userId: new mongoose.Types.ObjectId(),
         changes: {
-          deletedData: {
+          before: {
             learnerId: new mongoose.Types.ObjectId(),
             status: 'withdrawn',
           },
@@ -69,15 +87,15 @@ describe('AuditLog Model', () => {
       });
 
       expect(log.action).toBe('delete');
-      expect(log.entityType).toBe('Enrollment');
+      expect(log.entityType).toBe('enrollment');
     });
 
     it('should create a login action audit log', async () => {
-      const log = await AuditLog.create({
+      const log = await createLog({
         action: 'login',
-        entityType: 'User',
+        entityType: 'user',
         entityId: new mongoose.Types.ObjectId(),
-        performedBy: new mongoose.Types.ObjectId(),
+        userId: new mongoose.Types.ObjectId(),
         ipAddress: '192.168.1.100',
         userAgent: 'Mozilla/5.0...',
       });
@@ -87,11 +105,11 @@ describe('AuditLog Model', () => {
     });
 
     it('should create a logout action audit log', async () => {
-      const log = await AuditLog.create({
+      const log = await createLog({
         action: 'logout',
-        entityType: 'User',
+        entityType: 'user',
         entityId: new mongoose.Types.ObjectId(),
-        performedBy: new mongoose.Types.ObjectId(),
+        userId: new mongoose.Types.ObjectId(),
       });
 
       expect(log.action).toBe('logout');
@@ -103,11 +121,11 @@ describe('AuditLog Model', () => {
       const actions = ['create', 'update', 'delete', 'login', 'logout'];
 
       for (const action of actions) {
-        const log = await AuditLog.create({
+        const log = await createLog({
           action,
-          entityType: 'User',
+          entityType: 'user',
           entityId: new mongoose.Types.ObjectId(),
-          performedBy: new mongoose.Types.ObjectId(),
+          userId: new mongoose.Types.ObjectId(),
         });
 
         expect(log.action).toBe(action);
@@ -120,44 +138,44 @@ describe('AuditLog Model', () => {
 
   describe('Entity Types', () => {
     it('should log User entity changes', async () => {
-      const log = await AuditLog.create({
+      const log = await createLog({
         action: 'update',
-        entityType: 'User',
+        entityType: 'user',
         entityId: new mongoose.Types.ObjectId(),
-        performedBy: new mongoose.Types.ObjectId(),
+        userId: new mongoose.Types.ObjectId(),
       });
 
-      expect(log.entityType).toBe('User');
+      expect(log.entityType).toBe('user');
     });
 
     it('should log Course entity changes', async () => {
-      const log = await AuditLog.create({
+      const log = await createLog({
         action: 'update',
-        entityType: 'Course',
+        entityType: 'course',
         entityId: new mongoose.Types.ObjectId(),
-        performedBy: new mongoose.Types.ObjectId(),
+        userId: new mongoose.Types.ObjectId(),
       });
 
       expect(log.entityType).toBe('Course');
     });
 
     it('should log Enrollment entity changes', async () => {
-      const log = await AuditLog.create({
+      const log = await createLog({
         action: 'create',
-        entityType: 'Enrollment',
+        entityType: 'enrollment',
         entityId: new mongoose.Types.ObjectId(),
-        performedBy: new mongoose.Types.ObjectId(),
+        userId: new mongoose.Types.ObjectId(),
       });
 
       expect(log.entityType).toBe('Enrollment');
     });
 
     it('should support custom entity types', async () => {
-      const log = await AuditLog.create({
+      const log = await createLog({
         action: 'update',
         entityType: 'Setting',
         entityId: new mongoose.Types.ObjectId(),
-        performedBy: new mongoose.Types.ObjectId(),
+        userId: new mongoose.Types.ObjectId(),
       });
 
       expect(log.entityType).toBe('Setting');
@@ -166,11 +184,11 @@ describe('AuditLog Model', () => {
 
   describe('Change Tracking', () => {
     it('should track before and after values for updates', async () => {
-      const log = await AuditLog.create({
+      const log = await createLog({
         action: 'update',
-        entityType: 'User',
+        entityType: 'user',
         entityId: new mongoose.Types.ObjectId(),
-        performedBy: new mongoose.Types.ObjectId(),
+        userId: new mongoose.Types.ObjectId(),
         changes: {
           before: {
             email: 'old@example.com',
@@ -190,11 +208,11 @@ describe('AuditLog Model', () => {
     });
 
     it('should store full object for create actions', async () => {
-      const log = await AuditLog.create({
+      const log = await createLog({
         action: 'create',
-        entityType: 'Course',
+        entityType: 'course',
         entityId: new mongoose.Types.ObjectId(),
-        performedBy: new mongoose.Types.ObjectId(),
+        userId: new mongoose.Types.ObjectId(),
         changes: {
           title: 'Introduction to Programming',
           code: 'CS101',
@@ -208,11 +226,11 @@ describe('AuditLog Model', () => {
     });
 
     it('should store deleted data for delete actions', async () => {
-      const log = await AuditLog.create({
+      const log = await createLog({
         action: 'delete',
         entityType: 'Content',
         entityId: new mongoose.Types.ObjectId(),
-        performedBy: new mongoose.Types.ObjectId(),
+        userId: new mongoose.Types.ObjectId(),
         changes: {
           title: 'Deleted Content',
           contentType: 'video',
@@ -227,11 +245,11 @@ describe('AuditLog Model', () => {
 
   describe('Request Context', () => {
     it('should capture IP address', async () => {
-      const log = await AuditLog.create({
+      const log = await createLog({
         action: 'login',
-        entityType: 'User',
+        entityType: 'user',
         entityId: new mongoose.Types.ObjectId(),
-        performedBy: new mongoose.Types.ObjectId(),
+        userId: new mongoose.Types.ObjectId(),
         ipAddress: '10.0.0.15',
       });
 
@@ -240,11 +258,11 @@ describe('AuditLog Model', () => {
 
     it('should capture user agent', async () => {
       const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
-      const log = await AuditLog.create({
+      const log = await createLog({
         action: 'update',
-        entityType: 'User',
+        entityType: 'user',
         entityId: new mongoose.Types.ObjectId(),
-        performedBy: new mongoose.Types.ObjectId(),
+        userId: new mongoose.Types.ObjectId(),
         userAgent,
       });
 
@@ -252,11 +270,11 @@ describe('AuditLog Model', () => {
     });
 
     it('should capture request method', async () => {
-      const log = await AuditLog.create({
+      const log = await createLog({
         action: 'update',
-        entityType: 'Course',
+        entityType: 'course',
         entityId: new mongoose.Types.ObjectId(),
-        performedBy: new mongoose.Types.ObjectId(),
+        userId: new mongoose.Types.ObjectId(),
         method: 'PUT',
       });
 
@@ -264,11 +282,11 @@ describe('AuditLog Model', () => {
     });
 
     it('should capture request path', async () => {
-      const log = await AuditLog.create({
+      const log = await createLog({
         action: 'update',
-        entityType: 'Course',
+        entityType: 'course',
         entityId: new mongoose.Types.ObjectId(),
-        performedBy: new mongoose.Types.ObjectId(),
+        userId: new mongoose.Types.ObjectId(),
         path: '/api/v2/courses/123',
       });
 
@@ -276,11 +294,11 @@ describe('AuditLog Model', () => {
     });
 
     it('should capture all request context', async () => {
-      const log = await AuditLog.create({
+      const log = await createLog({
         action: 'delete',
-        entityType: 'Enrollment',
+        entityType: 'enrollment',
         entityId: new mongoose.Types.ObjectId(),
-        performedBy: new mongoose.Types.ObjectId(),
+        userId: new mongoose.Types.ObjectId(),
         ipAddress: '192.168.1.50',
         userAgent: 'Mozilla/5.0...',
         method: 'DELETE',
@@ -296,11 +314,11 @@ describe('AuditLog Model', () => {
 
   describe('Metadata and Additional Info', () => {
     it('should store additional metadata', async () => {
-      const log = await AuditLog.create({
+      const log = await createLog({
         action: 'update',
         entityType: 'Class',
         entityId: new mongoose.Types.ObjectId(),
-        performedBy: new mongoose.Types.ObjectId(),
+        userId: new mongoose.Types.ObjectId(),
         metadata: {
           reason: 'Class cancelled due to instructor unavailability',
           notificationSent: true,
@@ -314,11 +332,11 @@ describe('AuditLog Model', () => {
     });
 
     it('should store error information for failed actions', async () => {
-      const log = await AuditLog.create({
+      const log = await createLog({
         action: 'update',
-        entityType: 'Enrollment',
+        entityType: 'enrollment',
         entityId: new mongoose.Types.ObjectId(),
-        performedBy: new mongoose.Types.ObjectId(),
+        userId: new mongoose.Types.ObjectId(),
         metadata: {
           error: 'Validation failed',
           errorCode: 'INVALID_STATUS',
@@ -332,9 +350,9 @@ describe('AuditLog Model', () => {
 
   describe('System Actions', () => {
     it('should support system-initiated actions without performedBy', async () => {
-      const log = await AuditLog.create({
+      const log = await createLog({
         action: 'update',
-        entityType: 'Enrollment',
+        entityType: 'enrollment',
         entityId: new mongoose.Types.ObjectId(),
         changes: {
           before: { status: 'active' },
@@ -346,12 +364,12 @@ describe('AuditLog Model', () => {
         },
       });
 
-      expect(log.performedBy).toBeUndefined();
+      expect(log.userId).toBeNull();
       expect(log.metadata.source).toBe('system');
     });
 
     it('should track scheduled task actions', async () => {
-      const log = await AuditLog.create({
+      const log = await createLog({
         action: 'update',
         entityType: 'Report',
         entityId: new mongoose.Types.ObjectId(),
@@ -370,9 +388,9 @@ describe('AuditLog Model', () => {
     it('should require action', async () => {
       await expect(
         AuditLog.create({
-          entityType: 'User',
+          entityType: 'user',
           entityId: new mongoose.Types.ObjectId(),
-          performedBy: new mongoose.Types.ObjectId(),
+          userId: new mongoose.Types.ObjectId(),
         })
       ).rejects.toThrow();
     });
@@ -382,7 +400,7 @@ describe('AuditLog Model', () => {
         AuditLog.create({
           action: 'update',
           entityId: new mongoose.Types.ObjectId(),
-          performedBy: new mongoose.Types.ObjectId(),
+          userId: new mongoose.Types.ObjectId(),
         })
       ).rejects.toThrow();
     });
@@ -391,32 +409,32 @@ describe('AuditLog Model', () => {
       await expect(
         AuditLog.create({
           action: 'update',
-          entityType: 'User',
-          performedBy: new mongoose.Types.ObjectId(),
+          entityType: 'user',
+          userId: new mongoose.Types.ObjectId(),
         })
       ).rejects.toThrow();
     });
 
     it('should allow missing performedBy for system actions', async () => {
-      const log = await AuditLog.create({
+      const log = await createLog({
         action: 'update',
-        entityType: 'User',
+        entityType: 'user',
         entityId: new mongoose.Types.ObjectId(),
         metadata: { source: 'system' },
       });
 
       expect(log).toBeDefined();
-      expect(log.performedBy).toBeUndefined();
+      expect(log.userId).toBeNull();
     });
   });
 
   describe('Timestamp Tracking', () => {
     it('should automatically set createdAt timestamp', async () => {
-      const log = await AuditLog.create({
+      const log = await createLog({
         action: 'create',
-        entityType: 'User',
+        entityType: 'user',
         entityId: new mongoose.Types.ObjectId(),
-        performedBy: new mongoose.Types.ObjectId(),
+        userId: new mongoose.Types.ObjectId(),
       });
 
       expect(log.createdAt).toBeDefined();
@@ -425,11 +443,11 @@ describe('AuditLog Model', () => {
 
     it('should have timestamps close to current time', async () => {
       const before = new Date();
-      const log = await AuditLog.create({
+      const log = await createLog({
         action: 'login',
-        entityType: 'User',
+        entityType: 'user',
         entityId: new mongoose.Types.ObjectId(),
-        performedBy: new mongoose.Types.ObjectId(),
+        userId: new mongoose.Types.ObjectId(),
       });
       const after = new Date();
 
@@ -444,19 +462,19 @@ describe('AuditLog Model', () => {
 
       await AuditLog.create({
         action: 'update',
-        entityType: 'Course',
+        entityType: 'course',
         entityId: new mongoose.Types.ObjectId(),
-        performedBy: userId,
+        userId: userId,
       });
 
       await AuditLog.create({
         action: 'delete',
         entityType: 'Content',
         entityId: new mongoose.Types.ObjectId(),
-        performedBy: userId,
+        userId: userId,
       });
 
-      const userLogs = await AuditLog.find({ performedBy: userId });
+      const userLogs = await AuditLog.find({ userId: userId });
       expect(userLogs).toHaveLength(2);
     });
 
@@ -465,19 +483,19 @@ describe('AuditLog Model', () => {
 
       await AuditLog.create({
         action: 'create',
-        entityType: 'User',
+        entityType: 'user',
         entityId,
-        performedBy: new mongoose.Types.ObjectId(),
+        userId: new mongoose.Types.ObjectId(),
       });
 
       await AuditLog.create({
         action: 'update',
-        entityType: 'User',
+        entityType: 'user',
         entityId,
-        performedBy: new mongoose.Types.ObjectId(),
+        userId: new mongoose.Types.ObjectId(),
       });
 
-      const entityLogs = await AuditLog.find({ entityType: 'User', entityId });
+      const entityLogs = await AuditLog.find({ entityType: 'user', entityId });
       expect(entityLogs).toHaveLength(2);
     });
 
@@ -487,9 +505,9 @@ describe('AuditLog Model', () => {
 
       await AuditLog.create({
         action: 'login',
-        entityType: 'User',
+        entityType: 'user',
         entityId: new mongoose.Types.ObjectId(),
-        performedBy: new mongoose.Types.ObjectId(),
+        userId: new mongoose.Types.ObjectId(),
         createdAt: new Date('2026-01-15'),
       });
 
