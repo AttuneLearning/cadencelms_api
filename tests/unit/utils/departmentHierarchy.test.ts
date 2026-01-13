@@ -50,28 +50,33 @@ jest.mock('@/models/organization/Department.model', () => {
     parentDepartmentId: new Types.ObjectId('111111111111111111111111')
   });
 
+  const mockFind = jest.fn((query: any) => ({
+    select: jest.fn(() => {
+      const parentId = query.parentDepartmentId?.toString();
+      const results: any[] = [];
+
+      mockDepartments.forEach((dept) => {
+        if (dept.parentDepartmentId?.toString() === parentId) {
+          results.push(dept);
+        }
+      });
+
+      return Promise.resolve(results);
+    })
+  }));
+
+  const mockFindById = jest.fn((id: any) => ({
+    select: jest.fn(() => {
+      const dept = mockDepartments.get(id.toString());
+      return Promise.resolve(dept || null);
+    })
+  }));
+
   return {
+    __esModule: true,
     default: {
-      find: jest.fn((query: any) => ({
-        select: jest.fn(() => {
-          const parentId = query.parentDepartmentId?.toString();
-          const results: any[] = [];
-
-          mockDepartments.forEach((dept) => {
-            if (dept.parentDepartmentId?.toString() === parentId) {
-              results.push(dept);
-            }
-          });
-
-          return Promise.resolve(results);
-        })
-      })),
-      findById: jest.fn((id: any) => ({
-        select: jest.fn(() => {
-          const dept = mockDepartments.get(id.toString());
-          return Promise.resolve(dept || null);
-        })
-      }))
+      find: mockFind,
+      findById: mockFindById
     }
   };
 });
