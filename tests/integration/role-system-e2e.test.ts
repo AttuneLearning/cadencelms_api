@@ -14,12 +14,12 @@
 
 import request from 'supertest';
 import mongoose from 'mongoose';
-import { app } from '../../src/app';
+import app from '../../src/app';
 import { User } from '../../src/models/auth/User.model';
 import { Staff } from '../../src/models/auth/Staff.model';
 import { Learner } from '../../src/models/auth/Learner.model';
 import { GlobalAdmin } from '../../src/models/GlobalAdmin.model';
-import { Department } from '../../src/models/organization/Department.model';
+import Department from '../../src/models/organization/Department.model';
 import { RoleDefinition } from '../../src/models/RoleDefinition.model';
 import { AccessRight } from '../../src/models/AccessRight.model';
 
@@ -48,13 +48,23 @@ describe('Role System V2 - End-to-End Tests', () => {
 
     // Clean up test data
     await User.deleteMany({ email: TEST_USER_EMAIL });
-    await Department.deleteMany({ slug: { $in: ['test-dept-1', 'test-dept-2', 'test-child'] } });
+    await Department.deleteMany({
+      $or: [
+        { slug: { $in: ['test-dept-1', 'test-dept-2', 'test-child', 'non-member-dept', 'strict-child'] } },
+        { slug: { $regex: /^perf-test-dept-/ } }
+      ]
+    });
   });
 
   afterAll(async () => {
     // Clean up and disconnect
     await User.deleteMany({ email: TEST_USER_EMAIL });
-    await Department.deleteMany({ slug: { $in: ['test-dept-1', 'test-dept-2', 'test-child'] } });
+    await Department.deleteMany({
+      $or: [
+        { slug: { $in: ['test-dept-1', 'test-dept-2', 'test-child', 'non-member-dept', 'strict-child'] } },
+        { slug: { $regex: /^perf-test-dept-/ } }
+      ]
+    });
     await mongoose.connection.close();
   });
 
@@ -67,6 +77,7 @@ describe('Role System V2 - End-to-End Tests', () => {
       // Create parent department
       testDepartment1 = await Department.create({
         name: 'Test Department 1',
+        code: 'TEST-DEPT-1',
         slug: 'test-dept-1',
         description: 'First test department',
         isActive: true
@@ -75,6 +86,7 @@ describe('Role System V2 - End-to-End Tests', () => {
       // Create second department
       testDepartment2 = await Department.create({
         name: 'Test Department 2',
+        code: 'TEST-DEPT-2',
         slug: 'test-dept-2',
         description: 'Second test department',
         isActive: true
@@ -83,6 +95,7 @@ describe('Role System V2 - End-to-End Tests', () => {
       // Create child department
       childDepartment = await Department.create({
         name: 'Test Child Department',
+        code: 'TEST-CHILD',
         slug: 'test-child',
         description: 'Child department for role cascading tests',
         parentDepartmentId: testDepartment1._id,
@@ -112,7 +125,16 @@ describe('Role System V2 - End-to-End Tests', () => {
 
     it('should create Staff record with department memberships', async () => {
       const staff = await Staff.create({
-        userId: testUser._id,
+        _id: testUser._id,
+        person: {
+          firstName: 'Test',
+          lastName: 'User',
+          emails: [{ email: testUser.email, type: 'institutional', isPrimary: true, verified: true, allowNotifications: true }],
+          phones: [],
+          addresses: [],
+          timezone: 'America/New_York',
+          languagePreference: 'en'
+        },
         departmentMemberships: [
           {
             departmentId: testDepartment1._id,
@@ -137,7 +159,16 @@ describe('Role System V2 - End-to-End Tests', () => {
 
     it('should create Learner record with department membership', async () => {
       const learner = await Learner.create({
-        userId: testUser._id,
+        _id: testUser._id,
+        person: {
+          firstName: 'Test',
+          lastName: 'User',
+          emails: [{ email: testUser.email, type: 'institutional', isPrimary: true, verified: true, allowNotifications: true }],
+          phones: [],
+          addresses: [],
+          timezone: 'America/New_York',
+          languagePreference: 'en'
+        },
         departmentMemberships: [
           {
             departmentId: testDepartment1._id,
@@ -347,6 +378,7 @@ describe('Role System V2 - End-to-End Tests', () => {
       // Create another department
       const nonMemberDept = await Department.create({
         name: 'Non-Member Department',
+        code: 'NON-MEMBER',
         slug: 'non-member-dept',
         isActive: true
       });
@@ -475,6 +507,7 @@ describe('Role System V2 - End-to-End Tests', () => {
       // Create department with requireExplicitMembership
       const strictDept = await Department.create({
         name: 'Strict Child Department',
+        code: 'STRICT-CHILD',
         slug: 'strict-child',
         parentDepartmentId: testDepartment1._id,
         requireExplicitMembership: true, // Disable cascading
@@ -508,6 +541,7 @@ describe('Role System V2 - End-to-End Tests', () => {
         deptPromises.push(
           Department.create({
             name: `Performance Test Dept ${i}`,
+            code: `PERF-TEST-${i}`,
             slug: `perf-test-dept-${i}`,
             isActive: true
           })
@@ -516,7 +550,7 @@ describe('Role System V2 - End-to-End Tests', () => {
       largeDepartmentSet = await Promise.all(deptPromises);
 
       // Add user to all departments
-      const staff = await Staff.findOne({ userId: testUser._id });
+      const staff = await Staff.findOne({ _id: testUser._id });
       if (staff) {
         const newMemberships = largeDepartmentSet.map(dept => ({
           departmentId: dept._id,
@@ -598,7 +632,7 @@ describe('Role System V2 - End-to-End Tests', () => {
 
     it('should detect changes in roles', async () => {
       // Add a new role to staff
-      const staff = await Staff.findOne({ userId: testUser._id });
+      const staff = await Staff.findOne({ _id: testUser._id });
       if (staff && staff.departmentMemberships.length > 0) {
         staff.departmentMemberships[0].roles.push('department-admin');
         await staff.save();
