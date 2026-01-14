@@ -8,6 +8,7 @@
 
 | Thread ID     | Resolved   | Topic                          | Resolution  |
 |---------------|------------|--------------------------------|-------------|
+| ISS-021       | 2026-01-14 | Grade Override & Role Updates  | Complete - Grade override system, billing-admin course access, enrollment-admin role (all features implemented) |
 | THR-DATA-001  | 2026-01-14 | ISS-011: Encrypt ID Numbers    | Complete - AES-256-GCM encryption for idNumber & alienRegistrationNumber (66/66 tests passing) |
 | THR-UI-002    | 2026-01-12 | Dashboard tabs normalization   | Fixed - tab-based switcher with displayAs labels + active highlighting |
 | THR-UI-001    | 2026-01-12 | Profile dropdown userType/roles | Fixed - context-aware userType + role badges |
