@@ -1,0 +1,486 @@
+{
+  "team": {
+    "name": "ISS-010: PersonExtended & Demographics Profile Forms Team",
+    "version": "1.0.0",
+    "description": "Specialized team for implementing comprehensive staff and learner profile extended forms with demographics",
+    "activeProject": "ISS-010 - Context-Specific Profile Forms",
+    "issueReference": "api/agent_coms/ui/ISSUE_QUEUE.md (ISS-010)",
+    "specification": "api/agent_coms/ui/specs/ISS-010_PERSON_EXTENDED_FORMS.md",
+    "messageLogPath": "api/agent_coms/ui/MESSAGE_LOG.md",
+    "workingDirectory": "/home/adam/github/cadencelms_ui",
+    "workingDirectoryEnforcement": "STRICT - All file operations MUST be within /home/adam/github/cadencelms_ui"
+  },
+  "scope": {
+    "focus": "Profile forms implementation only - Staff and Learner extended profiles + demographics",
+    "outOfScope": [
+      "Bug fixes unrelated to profile forms",
+      "General feature development",
+      "API endpoint implementation (coordination only)",
+      "Other issues in queue"
+    ],
+    "deliverables": [
+      "Staff profile extended sections (7 sections)",
+      "Staff demographics sections (7 sections)",
+      "Learner profile extended sections (7 sections)",
+      "Learner demographics sections (10 sections)",
+      "Shared form components (CollapsibleSection, VoluntaryBadge, ConsentToggle)",
+      "API integration with /users/me/person/extended and /users/me/demographics",
+      "Comprehensive test coverage (70% minimum)",
+      "Mobile responsive design",
+      "WCAG 2.1 AA accessibility compliance"
+    ]
+  },
+  "workflow": {
+    "approach": "Three-phase parallel development after foundation",
+    "phases": [
+      {
+        "phase": 1,
+        "name": "Foundation & Shared Components",
+        "duration": "5 hours estimated",
+        "agent": "infrastructure-specialist",
+        "parallel": false,
+        "deliverables": [
+          "TypeScript types for IStaffPersonExtended, ILearnerPersonExtended, IDemographics",
+          "API client functions for GET/PUT extended and demographics endpoints",
+          "React Query hooks (useStaffExtended, useLearnerExtended, useDemographics)",
+          "CollapsibleSection component with badge support",
+          "VoluntaryBadge component for demographics",
+          "ConsentToggle component with explanations",
+          "Array field manager (add/edit/remove utilities)",
+          "Form validation utilities (phone, URL, ORCID, etc.)",
+          "Tests for all shared components and utilities"
+        ]
+      },
+      {
+        "phase": 2,
+        "name": "Parallel Profile Development",
+        "duration": "6-7 hours estimated (parallel)",
+        "agents": ["staff-profile-specialist", "learner-profile-specialist"],
+        "parallel": true,
+        "blockedUntil": "Phase 1 complete",
+        "deliverables": [
+          "STAFF: 7 extended sections + 7 demographics sections (14 total)",
+          "LEARNER: 7 extended sections + 10 demographics sections (17 total)",
+          "All sections with validation, error handling, and tests",
+          "Conditional field visibility logic",
+          "Readonly field handling",
+          "Sensitive data masking (ID numbers)"
+        ]
+      },
+      {
+        "phase": 3,
+        "name": "Integration & Polish",
+        "duration": "2 hours estimated",
+        "agent": "infrastructure-specialist",
+        "parallel": false,
+        "blockedUntil": "Phase 2 complete",
+        "deliverables": [
+          "Integration into ProfilePage with tabs/sections",
+          "Loading and error states for all forms",
+          "Mobile responsive testing and fixes",
+          "Accessibility review and ARIA labels",
+          "Cross-browser testing",
+          "Final test suite run and coverage report"
+        ]
+      }
+    ],
+    "estimatedTotal": "9 hours (with parallelization) vs 21 hours (sequential)",
+    "coordinationPoints": [
+      "Phase 1 completion → notify parallel agents to start Phase 2",
+      "Phase 2 completion → infrastructure agent returns for Phase 3",
+      "API coordination via MESSAGE_LOG.md if endpoints missing"
+    ]
+  },
+  "agents": [
+    {
+      "id": "infrastructure-specialist",
+      "role": "Foundation & Integration Lead",
+      "phase": "1 and 3",
+      "description": "Builds shared components, types, API integration, then integrates final solution",
+      "responsibilities": [
+        "PHASE 1: Foundation Building",
+        "- Define TypeScript types matching api_contracts/types/person-types.ts",
+        "- Create API client functions for extended and demographics endpoints",
+        "- Implement React Query hooks with proper caching and error handling",
+        "- Build CollapsibleSection wrapper component (supports badges, expand/collapse)",
+        "- Build VoluntaryBadge component for demographics sections",
+        "- Build ConsentToggle component with explanation text",
+        "- Create reusable array field manager utilities",
+        "- Implement form validation utilities (phone, URL, email, ORCID, DOI)",
+        "- Write comprehensive tests for all shared code",
+        "- Document component APIs and usage patterns",
+        "",
+        "PHASE 3: Integration & Polish",
+        "- Integrate staff and learner forms into ProfilePage",
+        "- Add loading states with skeleton screens",
+        "- Add error boundaries and user-friendly error messages",
+        "- Implement mobile responsive layout (test at 320px, 768px, 1024px)",
+        "- Add ARIA labels, roles, and keyboard navigation",
+        "- Run accessibility audit (WCAG 2.1 AA)",
+        "- Cross-browser testing (Chrome, Firefox, Safari, Edge)",
+        "- Final test coverage report (ensure 70%+ coverage)",
+        "- Update MESSAGE_LOG.md with completion details"
+      ],
+      "workingDirectories": [
+        "/home/adam/github/cadencelms_ui/src/entities/user-profile/",
+        "/home/adam/github/cadencelms_ui/src/shared/ui/",
+        "/home/adam/github/cadencelms_ui/src/shared/lib/",
+        "/home/adam/github/cadencelms_ui/src/pages/profile/"
+      ],
+      "contextFiles": [
+        "/home/adam/github/cadencelms_ui/api/agent_coms/ui/specs/ISS-010_PERSON_EXTENDED_FORMS.md",
+        "/home/adam/github/cadencelms_ui/api_contracts/types/person-types.ts",
+        "/home/adam/github/cadencelms_ui/src/entities/user-profile/model/types.ts",
+        "/home/adam/github/cadencelms_ui/src/shared/ui/form/",
+        "/home/adam/github/cadencelms_ui/devdocs/**/*.md"
+      ],
+      "deliverables": {
+        "phase1": [
+          "src/entities/user-profile/model/types.ts (add extended types)",
+          "src/entities/user-profile/api/userProfileApi.ts (add extended endpoints)",
+          "src/entities/user-profile/model/useStaffExtended.ts (hook)",
+          "src/entities/user-profile/model/useLearnerExtended.ts (hook)",
+          "src/entities/user-profile/model/useDemographics.ts (hook)",
+          "src/pages/profile/components/shared/CollapsibleSection.tsx",
+          "src/pages/profile/components/shared/VoluntaryBadge.tsx",
+          "src/pages/profile/components/shared/ConsentToggle.tsx",
+          "src/shared/lib/validators/profileValidators.ts",
+          "Tests for all above components"
+        ],
+        "phase3": [
+          "src/pages/profile/ProfilePage.tsx (integrate tabs/sections)",
+          "Mobile responsive CSS adjustments",
+          "Accessibility improvements (ARIA, keyboard nav)",
+          "Final test suite and coverage report"
+        ]
+      },
+      "notificationRequired": "Must notify parallel agents when Phase 1 complete",
+      "canRunParallel": false,
+      "runsInPhases": [1, 3]
+    },
+    {
+      "id": "staff-profile-specialist",
+      "role": "Staff Profile Forms Developer",
+      "phase": "2",
+      "description": "Implements all staff extended profile sections and staff demographics",
+      "responsibilities": [
+        "STAFF EXTENDED PROFILE (7 sections):",
+        "- 1.1: Professional Information (title, headline, rank, contract)",
+        "- 1.2: Employment Details (employeeId, hireDate, office - readonly fields)",
+        "- 1.3: Credentials & Certifications (array with add/edit/remove)",
+        "- 1.4: Office Hours (array with weekly schedule display)",
+        "- 1.5: Research & Publications (interests tags + publications array)",
+        "- 1.6: Professional Links (LinkedIn, ORCID, Google Scholar, website)",
+        "- 1.7: Professional Memberships (array with active status)",
+        "",
+        "STAFF DEMOGRAPHICS (7 sections):",
+        "- 1.8: Identity & Gender (EEO voluntary)",
+        "- 1.9: Race & Ethnicity (EEO-1 reporting)",
+        "- 1.10: Veteran Status (VEVRAA compliance)",
+        "- 1.11: Work Authorization (citizenship, visa)",
+        "- 1.12: Disability (ADA/Section 503 voluntary)",
+        "- 1.13: Language (primary, proficiency, other)",
+        "- 1.14: Reporting Consent (allowReporting, allowResearch toggles)",
+        "",
+        "QUALITY REQUIREMENTS:",
+        "- Use shared components from Phase 1 (CollapsibleSection, badges, etc.)",
+        "- Implement all validation rules per spec",
+        "- Handle conditional field visibility (visa fields, etc.)",
+        "- Readonly field display (employeeId, hireDate)",
+        "- Array field management (add/edit/delete for credentials, publications)",
+        "- Write tests for each section",
+        "- Ensure mobile responsive",
+        "- Add ARIA labels for accessibility"
+      ],
+      "workingDirectories": [
+        "/home/adam/github/cadencelms_ui/src/pages/profile/components/",
+        "/home/adam/github/cadencelms_ui/src/pages/profile/components/staff/",
+        "/home/adam/github/cadencelms_ui/src/pages/profile/components/demographics/"
+      ],
+      "contextFiles": [
+        "/home/adam/github/cadencelms_ui/api/agent_coms/ui/specs/ISS-010_PERSON_EXTENDED_FORMS.md",
+        "/home/adam/github/cadencelms_ui/src/entities/user-profile/model/types.ts",
+        "/home/adam/github/cadencelms_ui/src/pages/profile/components/shared/"
+      ],
+      "deliverables": [
+        "src/pages/profile/components/StaffProfileExtended.tsx (container)",
+        "src/pages/profile/components/StaffDemographics.tsx (container)",
+        "src/pages/profile/components/staff/ProfessionalInfoSection.tsx",
+        "src/pages/profile/components/staff/EmploymentSection.tsx",
+        "src/pages/profile/components/staff/CredentialsSection.tsx",
+        "src/pages/profile/components/staff/OfficeHoursSection.tsx",
+        "src/pages/profile/components/staff/ResearchSection.tsx",
+        "src/pages/profile/components/staff/ProfessionalLinksSection.tsx",
+        "src/pages/profile/components/staff/MembershipsSection.tsx",
+        "src/pages/profile/components/demographics/IdentityGenderSection.tsx (staff context)",
+        "src/pages/profile/components/demographics/RaceEthnicitySection.tsx (EEO)",
+        "src/pages/profile/components/demographics/VeteranStatusSection.tsx",
+        "src/pages/profile/components/demographics/CitizenshipSection.tsx (work auth)",
+        "src/pages/profile/components/demographics/DisabilitySection.tsx (ADA)",
+        "src/pages/profile/components/demographics/LanguageSection.tsx",
+        "src/pages/profile/components/demographics/ReportingConsentSection.tsx",
+        "Tests for all above sections"
+      ],
+      "blockedUntil": "infrastructure-specialist completes Phase 1",
+      "canRunParallel": true,
+      "parallelWith": "learner-profile-specialist",
+      "runsInPhases": [2]
+    },
+    {
+      "id": "learner-profile-specialist",
+      "role": "Learner Profile Forms Developer",
+      "phase": "2",
+      "description": "Implements all learner extended profile sections and learner demographics",
+      "responsibilities": [
+        "LEARNER EXTENDED PROFILE (7 sections):",
+        "- 2.1: Student Information (studentId, enrollmentStatus - readonly, graduation dates)",
+        "- 2.2: Emergency Contacts (array, min 1 required, priority ordering)",
+        "- 2.3: Parent/Guardian Information (array with FERPA access)",
+        "- 2.4: Identification Documents (array with masking - show last 4 digits)",
+        "- 2.5: Prior Education (array with GPA, transcript status)",
+        "- 2.6: Accommodations (array, ADA protected)",
+        "- 2.7: Housing & Parking (conditional fields for on-campus housing)",
+        "",
+        "LEARNER DEMOGRAPHICS (10 sections):",
+        "- 2.8: Identity & Gender (Title IX voluntary)",
+        "- 2.9: Race & Ethnicity (IPEDS reporting)",
+        "- 2.10: Citizenship & Visa (international students)",
+        "- 2.11: First Generation Student (parent education levels)",
+        "- 2.12: Veteran Status (GI Bill eligibility)",
+        "- 2.13: Disability (Section 504 voluntary)",
+        "- 2.14: Language (ESL services)",
+        "- 2.15: Personal & Family Status (financial aid eligibility)",
+        "- 2.16: Religious Accommodations (voluntary)",
+        "- 2.17: Reporting Consent (allowReporting, allowResearch toggles)",
+        "",
+        "QUALITY REQUIREMENTS:",
+        "- Use shared components from Phase 1 (CollapsibleSection, badges, etc.)",
+        "- Implement all validation rules per spec",
+        "- Emergency contacts: minimum 1 required, drag-to-reorder priority",
+        "- ID number masking: show only last 4 digits after save",
+        "- Conditional visibility (housing fields, visa fields, veteran details)",
+        "- Readonly field display (studentId, enrollmentStatus, calculated fields)",
+        "- Array field management with priority ordering",
+        "- Write tests for each section",
+        "- Ensure mobile responsive",
+        "- Add ARIA labels for accessibility"
+      ],
+      "workingDirectories": [
+        "/home/adam/github/cadencelms_ui/src/pages/profile/components/",
+        "/home/adam/github/cadencelms_ui/src/pages/profile/components/learner/",
+        "/home/adam/github/cadencelms_ui/src/pages/profile/components/demographics/"
+      ],
+      "contextFiles": [
+        "/home/adam/github/cadencelms_ui/api/agent_coms/ui/specs/ISS-010_PERSON_EXTENDED_FORMS.md",
+        "/home/adam/github/cadencelms_ui/src/entities/user-profile/model/types.ts",
+        "/home/adam/github/cadencelms_ui/src/pages/profile/components/shared/"
+      ],
+      "deliverables": [
+        "src/pages/profile/components/LearnerProfileExtended.tsx (container)",
+        "src/pages/profile/components/LearnerDemographics.tsx (container)",
+        "src/pages/profile/components/learner/StudentInfoSection.tsx",
+        "src/pages/profile/components/learner/EmergencyContactsSection.tsx",
+        "src/pages/profile/components/learner/ParentGuardiansSection.tsx",
+        "src/pages/profile/components/learner/IdentificationsSection.tsx",
+        "src/pages/profile/components/learner/PriorEducationSection.tsx",
+        "src/pages/profile/components/learner/AccommodationsSection.tsx",
+        "src/pages/profile/components/learner/HousingParkingSection.tsx",
+        "src/pages/profile/components/demographics/IdentityGenderSection.tsx (learner context)",
+        "src/pages/profile/components/demographics/RaceEthnicitySection.tsx (IPEDS)",
+        "src/pages/profile/components/demographics/CitizenshipSection.tsx (international)",
+        "src/pages/profile/components/demographics/FirstGenerationSection.tsx",
+        "src/pages/profile/components/demographics/VeteranStatusSection.tsx (GI Bill)",
+        "src/pages/profile/components/demographics/DisabilitySection.tsx (Section 504)",
+        "src/pages/profile/components/demographics/LanguageSection.tsx (ESL)",
+        "src/pages/profile/components/demographics/FinancialStatusSection.tsx",
+        "src/pages/profile/components/demographics/ReligiousSection.tsx",
+        "src/pages/profile/components/demographics/ReportingConsentSection.tsx",
+        "Tests for all above sections"
+      ],
+      "blockedUntil": "infrastructure-specialist completes Phase 1",
+      "canRunParallel": true,
+      "parallelWith": "staff-profile-specialist",
+      "runsInPhases": [2]
+    }
+  ],
+  "parallelizationConfig": {
+    "maxConcurrentAgents": 2,
+    "parallelStrategy": {
+      "phase1": "Sequential - infrastructure-specialist builds foundation alone",
+      "phase2": "Parallel - staff-profile-specialist + learner-profile-specialist work simultaneously",
+      "phase3": "Sequential - infrastructure-specialist integrates and polishes"
+    },
+    "syncPoints": [
+      {
+        "name": "Phase 1 Complete - Foundation Ready",
+        "timing": "After infrastructure-specialist finishes shared components",
+        "participants": ["infrastructure-specialist"],
+        "purpose": "Ensure shared components, types, and API integration ready",
+        "deliverables": [
+          "All TypeScript types defined",
+          "API hooks implemented and tested",
+          "Shared components (CollapsibleSection, badges, toggles) ready",
+          "Validation utilities available",
+          "Tests passing for all shared code"
+        ],
+        "nextAction": "Notify staff-profile-specialist and learner-profile-specialist to begin Phase 2",
+        "gatekeeper": "infrastructure-specialist"
+      },
+      {
+        "name": "Phase 2 Complete - All Sections Implemented",
+        "timing": "After both parallel agents finish their sections",
+        "participants": ["staff-profile-specialist", "learner-profile-specialist"],
+        "purpose": "Verify all 31 sections implemented with tests",
+        "deliverables": [
+          "Staff: 14 sections complete (7 extended + 7 demographics)",
+          "Learner: 17 sections complete (7 extended + 10 demographics)",
+          "All sections have validation and error handling",
+          "Tests written for each section",
+          "No merge conflicts between parallel work"
+        ],
+        "nextAction": "Notify infrastructure-specialist to begin Phase 3 integration",
+        "gatekeeper": "Human or infrastructure-specialist"
+      },
+      {
+        "name": "Phase 3 Complete - Integration Done",
+        "timing": "After infrastructure-specialist completes integration",
+        "participants": ["infrastructure-specialist"],
+        "purpose": "Final integration, testing, and polish",
+        "deliverables": [
+          "ProfilePage integrated with staff/learner forms",
+          "Loading and error states implemented",
+          "Mobile responsive (tested at all breakpoints)",
+          "Accessibility compliant (WCAG 2.1 AA)",
+          "Test coverage ≥70%",
+          "All tests passing"
+        ],
+        "nextAction": "Mark ISS-010 complete in ISSUE_QUEUE.md",
+        "gatekeeper": "Human"
+      }
+    ]
+  },
+  "sharedContext": {
+    "workingDirectory": "/home/adam/github/cadencelms_ui",
+    "workingDirectoryConstraint": "MANDATORY - All file operations MUST be within this directory. Never access parent directories or sibling projects.",
+    "architecture": "Feature-Sliced Design (FSD)",
+    "uiFramework": "React 18+ with TypeScript",
+    "stateManagement": "React Query for server state, React hooks for form state",
+    "styling": "Tailwind CSS + shadcn/ui components",
+    "validation": "Zod schemas for form validation",
+    "accessibility": "WCAG 2.1 AA compliance required",
+    "mobileFirst": "Test at 320px, 768px, 1024px, 1440px",
+    "apiEndpoints": {
+      "staffExtended": "GET/PUT /api/v2/users/me/person/extended (X-User-Type-Context: staff)",
+      "learnerExtended": "GET/PUT /api/v2/users/me/person/extended (X-User-Type-Context: learner)",
+      "demographics": "GET/PUT /api/v2/users/me/demographics"
+    },
+    "conventions": {
+      "components": "PascalCase.tsx (e.g., CollapsibleSection.tsx)",
+      "hooks": "useCamelCase.ts (e.g., useStaffExtended.ts)",
+      "types": "Interfaces with I prefix (e.g., IStaffPersonExtended, IDemographics)",
+      "tests": "*.test.tsx alongside source files"
+    },
+    "testingStandards": {
+      "framework": "Vitest + React Testing Library",
+      "coverage": "Minimum 70% overall",
+      "strategy": "Test user interactions, validation, conditional rendering, API integration",
+      "commands": {
+        "watch": "npm run test -- --watch",
+        "coverage": "npm run test:coverage"
+      }
+    },
+    "formPatterns": {
+      "collapsibleSections": "Each section is collapsible with expand/collapse state",
+      "voluntaryFields": "Demographics sections display 'Voluntary' badge",
+      "readonlyFields": "Display-only (no input), styled distinctly",
+      "arrayFields": "Add/edit/remove with confirmation dialogs",
+      "validation": "Inline errors on blur, clear on change",
+      "conditionalDisplay": "Show/hide fields based on other field values (e.g., visa fields when not US citizen)"
+    },
+    "validationRules": {
+      "phone": "US format: +1 (XXX) XXX-XXXX",
+      "email": "RFC 5322 compliant",
+      "url": "Valid https:// URL",
+      "linkedIn": "Must contain 'linkedin.com'",
+      "googleScholar": "Must contain 'scholar.google'",
+      "orcid": "Format: 0000-0000-0000-0000",
+      "doi": "Valid DOI format",
+      "zipCode": "5 digits or 5+4 format",
+      "state": "2-letter US state code"
+    },
+    "accessibilityRequirements": [
+      "All form inputs must have associated labels (visible or aria-label)",
+      "Collapsible sections use aria-expanded attribute",
+      "Error messages associated with inputs via aria-describedby",
+      "Keyboard navigation: Tab, Shift+Tab, Enter, Space",
+      "Focus indicators visible on all interactive elements",
+      "Color contrast ratio ≥4.5:1 for normal text, ≥3:1 for large text",
+      "Screen reader announcements for add/remove array items"
+    ]
+  },
+  "coordinationProtocol": {
+    "apiCoordination": {
+      "if": "API endpoints /users/me/person/extended or /users/me/demographics are missing",
+      "then": "Create coordination thread in api/agent_coms/messages/ using COORDINATION_STANDARD.md",
+      "updateMessageLog": "Log thread creation in MESSAGE_LOG.md",
+      "monitorActiveThreads": "Check ACTIVE_THREADS.md for API team responses"
+    },
+    "phaseTransitions": {
+      "phase1Complete": "infrastructure-specialist updates MESSAGE_LOG.md with 'Phase 1 Complete' notification",
+      "phase2Start": "Parallel agents acknowledge and begin work",
+      "phase2Complete": "Both parallel agents update MESSAGE_LOG.md with 'Phase 2 Complete'",
+      "phase3Start": "infrastructure-specialist acknowledges and begins integration"
+    },
+    "conflictResolution": {
+      "fileConflicts": "Parallel agents work in separate directories - no conflicts expected",
+      "sharedComponentChanges": "Only infrastructure-specialist modifies shared components",
+      "typeChanges": "Only infrastructure-specialist modifies type definitions"
+    }
+  },
+  "qualityChecks": {
+    "beforePhase1Complete": [
+      "All shared components render without errors",
+      "API hooks successfully fetch and update data (mocked)",
+      "Validation utilities correctly validate all field types",
+      "Tests passing for all shared code",
+      "TypeScript compiles with no errors"
+    ],
+    "beforePhase2Complete": [
+      "All 31 sections implemented and rendering",
+      "Form validation working for all fields",
+      "Array fields support add/edit/remove",
+      "Conditional field visibility working",
+      "Readonly fields displayed correctly",
+      "Tests written for each section",
+      "No TypeScript errors"
+    ],
+    "beforePhase3Complete": [
+      "ProfilePage successfully integrates all sections",
+      "Tab/accordion navigation working smoothly",
+      "Loading states show skeleton screens",
+      "Error states show user-friendly messages",
+      "Mobile responsive at all breakpoints",
+      "Keyboard navigation works throughout",
+      "Screen reader announces all changes",
+      "Test coverage ≥70%",
+      "All tests passing (no regressions)"
+    ]
+  },
+  "deliveryChecklist": [
+    "[ ] All 31 sections implemented (14 staff + 17 learner)",
+    "[ ] Shared components reusable and tested",
+    "[ ] API integration with proper error handling",
+    "[ ] Form validation on all required fields",
+    "[ ] Conditional field visibility working",
+    "[ ] Array field management (add/edit/remove)",
+    "[ ] Readonly field handling",
+    "[ ] Sensitive data masking (ID numbers)",
+    "[ ] Mobile responsive (320px - 1440px)",
+    "[ ] Accessibility compliant (WCAG 2.1 AA)",
+    "[ ] Test coverage ≥70%",
+    "[ ] All tests passing",
+    "[ ] No TypeScript errors",
+    "[ ] MESSAGE_LOG.md updated with completion",
+    "[ ] ISS-010 marked complete in ISSUE_QUEUE.md"
+  ]
+}

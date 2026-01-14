@@ -139,7 +139,18 @@ export interface IDemographics {
   /** Visa expiration date */
   visaExpirationDate?: Date;
 
-  /** Alien registration number (A-number) */
+  /**
+   * Alien registration number (A-number)
+   *
+   * **SECURITY: ENCRYPTED AT REST** (ISS-011)
+   *
+   * This field contains sensitive immigration identification and is
+   * automatically encrypted using AES-256-GCM. Access the decrypted value
+   * using the `getDecryptedAlienRegistrationNumber()` method on Staff or
+   * Learner models.
+   *
+   * Format: A012345678 (9 digits after 'A')
+   */
   alienRegistrationNumber?: string;
 
   // ========================================
@@ -371,7 +382,9 @@ export const DemographicsSchema = new Schema<IDemographics>(
     alienRegistrationNumber: {
       type: String,
       trim: true
-      // NOTE: Should be encrypted in storage
+      // SECURITY: ENCRYPTED AT REST using AES-256-GCM (ISS-011)
+      // This field is automatically encrypted on save
+      // Use getDecryptedAlienRegistrationNumber() method to access plaintext
     },
 
     // Personal Status
@@ -492,6 +505,25 @@ DemographicsSchema.pre('save', function(next) {
   this.lastUpdated = new Date();
   next();
 });
+
+// ============================================================================
+// ENCRYPTION HOOKS (ISS-011)
+// ============================================================================
+
+import { encryptFieldIfModified } from '@/utils/encryption/EncryptionFactory';
+
+/**
+ * Pre-save hook: Automatically encrypts alienRegistrationNumber if modified
+ *
+ * The alienRegistrationNumber (A-number) is sensitive immigration identification
+ * that must be encrypted at rest for compliance (FERPA, immigration law).
+ *
+ * Encryption:
+ * - Algorithm: AES-256-GCM with authenticated encryption
+ * - Format: version:iv:authTag:ciphertext
+ * - Idempotent: Safe to save multiple times (won't double-encrypt)
+ */
+DemographicsSchema.pre('save', encryptFieldIfModified('alienRegistrationNumber'));
 
 // ============================================================================
 // HELPER FUNCTIONS

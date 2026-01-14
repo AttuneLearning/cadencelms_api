@@ -215,7 +215,7 @@ export interface IParentGuardian {
 }
 
 export interface IIdentification {
-  idNumber: string; // Will be encrypted by API
+  idNumber: string; // ENCRYPTED AT REST (ISS-011) - Passport, DL, State ID numbers are PII
   idType: 'passport' | 'drivers-license' | 'state-id' | 'student-id' | 'visa' | 'birth-certificate' | 'other';
   issuingAuthority?: string;
   issueDate?: string;
@@ -362,7 +362,7 @@ export interface IDemographics {
   countryOfBirth?: string;
   visaType?: VisaType;
   visaExpirationDate?: string;
-  alienRegistrationNumber?: string;
+  alienRegistrationNumber?: string; // ENCRYPTED AT REST (ISS-011) - A-numbers are sensitive immigration IDs
 
   // Personal Status
   maritalStatus?: MaritalStatus;

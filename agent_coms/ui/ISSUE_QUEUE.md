@@ -50,6 +50,1113 @@ Any additional context
 
 <!-- Add new issues here in priority order -->
 
+### ISS-014: Dashboard Navigation Consistency - Complete Navigation Structure
+
+**Priority:** high
+**Type:** feature
+**Status:** pending
+**Assigned:** UI Agent
+**Dependencies:** None
+**API Status:** ✅ Most endpoints exist - see API Analysis below
+
+**Description:**
+Standardize and complete the navigation structure across all three dashboards (Learner, Staff, Admin). Currently navigation is inconsistent: some items are greyed out incorrectly, some are missing entirely, and the scoping rules differ unexpectedly between dashboards.
+
+**Current Problems:**
+1. Analytics, Reports, Grading greyed out on Staff Dashboard (permission issues when no department selected)
+2. Admin Dashboard is missing Analytics/Reports entirely (should have system-wide versions)
+3. Staff Dashboard missing "My Classes" (classes I'm teaching)
+4. Learner Dashboard missing Course Catalog
+5. No Calendar view on any dashboard
+6. Inconsistent scoping: Staff items require department but Admin versions should be global
+
+---
+
+## Proposed Navigation Structure
+
+### 📚 Learner Dashboard (`/learner/*`)
+
+| Section | Item | Path | Dept-Scoped | Notes |
+|---------|------|------|-------------|-------|
+| **Base** | Dashboard | `/learner/dashboard` | No | Primary landing |
+| **Base** | My Profile | `/learner/profile` | No | Personal info |
+| **Base** | My Progress | `/learner/progress` | No | Overall progress |
+| **Base** | Certificates | `/learner/certificates` | No | Earned certs |
+| **Context** | My Classes | `/learner/classes` | No | Current enrollments |
+| **Context** | Course Catalog | `/learner/catalog` | No | Browse/enroll *(NEW)* |
+| **Context** | Calendar | `/learner/calendar` | No | Deadlines *(NEW)* |
+| **Dept** | Browse Courses | `/learner/departments/:id/courses` | Yes | |
+| **Dept** | My Enrollments | `/learner/departments/:id/enrollments` | Yes | |
+| **Dept** | Dept Progress | `/learner/departments/:id/progress` | Yes | |
+
+### 👨‍🏫 Staff Dashboard (`/staff/*`)
+
+| Section | Item | Path | Dept-Scoped | Notes |
+|---------|------|------|-------------|-------|
+| **Base** | Dashboard | `/staff/dashboard` | No | Primary landing |
+| **Base** | My Profile | `/staff/profile` | No | Professional info |
+| **Base** | My Progress | `/learner/progress` | No | ⚪ Grayed if no learner role |
+| **Base** | Certificates | `/learner/certificates` | No | ⚪ Grayed if no learner role |
+| **Context** | My Classes | `/staff/classes` | No | Classes I'm teaching *(NEW)* |
+| **Context** | Course Builder | `/staff/courses` | No | My courses *(NEW)* |
+| **Context** | My Reports | `/staff/reports` | No | My class reports (user-scoped) |
+| **Context** | Grading | `/staff/grading` | No | Grade submissions *(FIX: remove dept-scope)* |
+| **Context** | Calendar | `/staff/calendar` | No | Schedule *(NEW)* |
+| **Dept** | Analytics | `/staff/departments/:id/analytics` | Yes | Dept analytics (was at root) |
+| **Dept** | Dept Reports | `/staff/departments/:id/reports` | Yes | Dept-wide reports |
+| **Dept** | Create Course | `/staff/departments/:id/courses/create` | Yes | |
+| **Dept** | Manage Courses | `/staff/departments/:id/courses` | Yes | |
+| **Dept** | Manage Classes | `/staff/departments/:id/classes` | Yes | |
+| **Dept** | Student Progress | `/staff/departments/:id/students` | Yes | |
+| **Dept** | Dept Settings | `/staff/departments/:id/settings` | Yes | |
+
+### 🔧 Admin Dashboard (`/admin/*`)
+
+| Section | Item | Path | Dept-Scoped | Notes |
+|---------|------|------|-------------|-------|
+| **Base** | Dashboard | `/admin/dashboard` | No | Primary landing |
+| **Base** | My Profile | `/staff/profile` | No | Uses staff profile |
+| **Base** | My Progress | `/learner/progress` | No | ⚪ Grayed if no learner role |
+| **Base** | Certificates | `/learner/certificates` | No | ⚪ Grayed if no learner role |
+| **Context** | User Management | `/admin/users` | No | CRUD users |
+| **Context** | Department Management | `/admin/departments` | No | CRUD depts |
+| **Context** | Role Management | `/admin/roles` | No | Configure roles/perms *(NEW)* |
+| **Context** | System Analytics | `/admin/analytics` | No | Platform-wide stats *(NEW)* |
+| **Context** | System Reports | `/admin/reports` | No | Platform-wide reports *(NEW)* |
+| **Context** | Audit Logs | `/admin/audit` | No | Activity logging *(NEW)* |
+| **Context** | System Settings | `/admin/settings` | No | Config |
+
+---
+
+## Scoping Rules
+
+### Staff Dashboard Scoping:
+| Scope | Behavior | Example |
+|-------|----------|---------|
+| **User-scoped** (no dept) | Shows MY data regardless of department | "My Classes" = classes where I'm instructor |
+| **Dept-scoped** (dept selected) | Shows department-wide data | "Dept Reports" = all reports for selected dept |
+
+### Admin Dashboard Scoping:
+| Scope | Behavior | Example |
+|-------|----------|---------|
+| **Global** (no dept) | Shows system-wide data | "System Reports" = all reports platform-wide |
+| **Dept-scoped** (dept selected) | Shows specific department | "Dept Analytics" = selected dept only |
+
+---
+
+## Changes Required
+
+### 1. navItems.ts Updates
+
+**LEARNER_CONTEXT_NAV additions:**
+```typescript
+{ label: 'Course Catalog', path: '/learner/catalog', icon: Search },
+{ label: 'Calendar', path: '/learner/calendar', icon: Calendar },
+```
+
+**STAFF_CONTEXT_NAV changes:**
+```typescript
+// NEW items
+{ label: 'My Classes', path: '/staff/classes', icon: Calendar },
+{ label: 'Course Builder', path: '/staff/courses', icon: BookOpen },
+{ label: 'Calendar', path: '/staff/calendar', icon: Calendar },
+
+// MODIFIED items - remove departmentScoped
+{ label: 'My Reports', path: '/staff/reports', icon: FileText },  // no longer dept-scoped
+{ label: 'Grading', path: '/staff/grading', icon: CheckSquare },  // no longer dept-scoped
+
+// REMOVE from context (move to DEPARTMENT_NAV_ITEMS)
+// Analytics → /staff/departments/:id/analytics
+```
+
+**ADMIN_CONTEXT_NAV additions:**
+```typescript
+{ label: 'Role Management', path: '/admin/roles', icon: Shield },
+{ label: 'System Analytics', path: '/admin/analytics', icon: BarChart },
+{ label: 'System Reports', path: '/admin/reports', icon: FileText },
+{ label: 'Audit Logs', path: '/admin/audit', icon: ClipboardList },
+```
+
+**DEPARTMENT_NAV_ITEMS additions for Staff:**
+```typescript
+{ label: 'Department Analytics', pathTemplate: '/staff/departments/:deptId/analytics', ... },
+{ label: 'Department Reports', pathTemplate: '/staff/departments/:deptId/reports', ... },
+```
+
+---
+
+## API Analysis
+
+### ✅ Endpoints That EXIST (ready for UI):
+
+| Endpoint | Contract | Notes |
+|----------|----------|-------|
+| `GET /api/v2/reports/completion` | reports.contract.ts | Has `departmentId` filter |
+| `GET /api/v2/reports/performance` | reports.contract.ts | Has `departmentId` filter |
+| `GET /api/v2/audit-logs` | audit-logs.contract.ts | Has `departmentId` filter |
+| `GET /api/v2/classes?instructor=:userId` | classes.contract.ts | Filter for "my classes" |
+| `GET /api/v2/courses` | courses.contract.ts | For course builder |
+| `GET /api/v2/roles` | roles.contract.ts | Role definitions |
+| `GET /api/v2/departments/:id/roles` | roles.contract.ts | Dept role management |
+
+### ✅ Endpoints CLARIFIED (Verified 2026-01-13):
+
+| Endpoint | Status | Answer |
+|----------|--------|--------|
+| `GET /api/v2/reports/*` | ✅ Works | Omitting filters returns user-scoped data for staff, global for admins |
+| `GET /api/v2/admin/analytics` | ❌ N/A | Use `/api/v2/reports/*` and `/api/v2/progress/reports/*` instead |
+| `GET /api/v2/calendar/*` | ✅ Exists | Academic calendar (years/terms/cohorts), not personal schedule |
+| `GET /api/v2/courses?status=published` | ✅ Works | Use this for learner catalog (no dedicated catalog endpoint) |
+
+### ✅ API Answers (2026-01-13):
+
+1. **Reports scoping:** ✅ CONFIRMED - User-scoped + Global behavior implemented
+   - **For instructors:** `applyInstructorClassScoping()` filters to ONLY their assigned classes
+   - **For department-admin:** `applyDepartmentScoping()` filters to their departments + subdepartments  
+   - **For system-admin/enrollment-admin:** NO filtering - sees ALL data (global)
+   - See: [reports.service.ts#L1983-L2066](../../../src/services/reporting/reports.service.ts#L1983-L2066)
+   
+2. **Analytics endpoint:** ⚠️ NO dedicated analytics endpoint
+   - Analytics are integrated into reports endpoints (`/api/v2/reports/*`)
+   - Progress analytics via `/api/v2/progress/reports/summary` and `/api/v2/progress/reports/detailed`
+   - Class analytics via `GET /api/v2/classes/:id/progress-stats`
+   - **Recommendation:** UI should use existing reports endpoints for analytics dashboards
+
+3. **Calendar/Schedule:** ✅ EXISTS - Academic Calendar
+   - Base path: `/api/v2/calendar/*`
+   - Endpoints: `/years`, `/terms`, `/cohorts` (CRUD for each)
+   - **NOT a personal schedule** - this is institutional calendar (academic years, terms, cohorts)
+   - **Personal schedule:** ❌ Does NOT exist - would need to be built from class schedules + enrollment data
+   - See: [academic-years.routes.ts](../../../src/routes/academic-years.routes.ts)
+
+4. **Course Catalog:** ⚠️ NO dedicated catalog endpoint
+   - Use `GET /api/v2/courses` with `status=published` filter
+   - Service layer already handles visibility: "Learners see published courses across ALL departments"
+   - See: [courses.routes.ts#L22-L27](../../../src/routes/courses.routes.ts#L22-L27)
+   - **Recommendation:** Create UI catalog page using courses endpoint with filters
+
+### 📋 API Work Needed (If Requested):
+
+| Feature | Status | Work Needed |
+|---------|--------|-------------|
+| Report scoping | ✅ Complete | None - already user+role scoped |
+| Analytics dashboard | ⚠️ Composite | UI aggregates from multiple report endpoints |
+| Academic calendar | ✅ Complete | None - use `/api/v2/calendar/*` |
+| Personal schedule | ❌ Missing | Build from enrollments + class schedules (API-ISS-001) |
+| Course catalog | ⚠️ Works | Use courses endpoint with `?status=published` |
+
+---
+
+## Acceptance Criteria
+
+### Learner Dashboard:
+- [ ] My Classes shows enrolled classes
+- [ ] Course Catalog shows browse-able courses ✅ **Use `GET /api/v2/courses?status=published`**
+- [ ] Calendar shows academic calendar ✅ **Use `GET /api/v2/calendar/terms`** *(personal schedule requires API-ISS-001)*
+
+### Staff Dashboard:
+- [ ] My Classes shows classes I'm teaching (uses `?instructor=me`)
+- [ ] Course Builder shows courses I've created/can edit
+- [ ] My Reports shows my class reports ✅ **Automatic - service layer scopes to instructor's classes**
+- [ ] Grading shows submissions I need to grade (not dept-scoped)
+- [ ] Calendar shows academic calendar ✅ **Use `/api/v2/calendar/*`** *(personal schedule requires API-ISS-001)*
+- [ ] Department Analytics only appears when dept is selected ✅ **Use reports endpoints with `departmentId` filter**
+- [ ] Department Reports only appears when dept is selected ✅ **Use reports endpoints with `departmentId` filter**
+- [ ] No items greyed out unless user lacks required userType
+
+### Admin Dashboard:
+- [ ] Role Management links to `/admin/roles`
+- [ ] System Analytics shows platform-wide stats ✅ **Use reports endpoints without filters - returns all data for admins**
+- [ ] System Reports shows platform-wide reports ✅ **Use reports endpoints without filters - returns all data for admins**
+- [ ] Audit Logs links to `/admin/audit`
+- [ ] All items accessible without department selection
+- [ ] Escalation modal still required for admin access (ISS-013)
+
+### General:
+- [ ] Visual consistency across all dashboards
+- [ ] No unexpected greyed-out items
+- [ ] Context-specific nav updates immediately on dashboard switch
+- [ ] Department nav items only visible when in department context
+
+---
+
+## Related Files
+
+**UI Changes:**
+- `src/widgets/sidebar/config/navItems.ts` - Add/modify nav items
+- `src/widgets/sidebar/Sidebar.tsx` - May need scoping logic updates
+- `src/pages/staff/classes/` - New "My Classes" page (if not exists)
+- `src/pages/admin/analytics/` - New System Analytics page
+- `src/pages/admin/reports/` - New System Reports page
+- `src/pages/admin/audit/` - New Audit Logs page
+- `src/pages/admin/roles/` - New Role Management page
+- `src/pages/learner/catalog/` - New Course Catalog page (if not exists)
+
+**API Contracts (reference):**
+- `api/contracts/api/reports.contract.ts`
+- `api/contracts/api/audit-logs.contract.ts`
+- `api/contracts/api/roles.contract.ts`
+- `api/contracts/api/classes.contract.ts`
+
+---
+
+## Notes
+- This is a UX-critical issue affecting daily navigation
+- Prioritize fixing greyed-out items first, then add new items
+- New pages may need placeholder content until full implementation
+- Calendar feature depends on API availability
+- Course Catalog for learners may need separate design discussion
+
+---
+
+### ISS-015: Dashboard NavItem Not Dynamic - Hardcoded to Learner Dashboard
+
+**Priority:** high
+**Type:** bug
+**Status:** pending
+**Assigned:** UI Agent
+**Dependencies:** None
+
+**Description:**
+The "Dashboard" navigation item in the sidebar is currently hardcoded to `/learner/dashboard` instead of being dynamic based on the user's current dashboard context and userTypes. This causes the Dashboard link to always navigate to the Learner Dashboard regardless of which dashboard the user is currently viewing.
+
+**Current Behavior:**
+1. User is on Staff Dashboard (`/staff/dashboard`)
+2. User clicks "Dashboard" link in sidebar
+3. ❌ User is navigated to `/learner/dashboard` instead of staying on staff dashboard
+4. Same issue occurs from Admin Dashboard
+
+**Expected Behavior:**
+
+1. **Dynamic Path Resolution:**
+   - If currently on `/learner/*` routes → Dashboard links to `/learner/dashboard`
+   - If currently on `/staff/*` routes → Dashboard links to `/staff/dashboard`
+   - If currently on `/admin/*` routes → Dashboard links to `/admin/dashboard`
+
+2. **Default Dashboard (on login/initial load):**
+   - If user has `staff` in userTypes → default to `/staff/dashboard`
+   - If user has `global-admin` in userTypes → default to `/staff/dashboard` (admin requires escalation)
+   - If user ONLY has `learner` in userTypes → default to `/learner/dashboard`
+
+**Priority Order for Default:**
+```
+1. staff → /staff/dashboard
+2. global-admin → /staff/dashboard (not admin, requires escalation per ISS-013)
+3. learner → /learner/dashboard
+```
+
+**Root Cause:**
+In [navItems.ts](src/widgets/sidebar/config/navItems.ts), the `getPrimaryDashboardPath()` function or the Dashboard BASE_NAV_ITEM is likely using `primaryUserType` incorrectly or is hardcoded.
+
+**Current Code (likely issue):**
+```typescript
+// navItems.ts - getPrimaryDashboardPath
+export const getPrimaryDashboardPath = (primaryUserType: UserType): string => {
+  switch (primaryUserType) {
+    case 'learner':
+      return '/learner/dashboard';
+    case 'staff':
+      return '/staff/dashboard';
+    case 'global-admin':
+      return '/admin/dashboard';  // ← This is wrong - should be /staff/dashboard
+    default:
+      return '/learner/dashboard'; // ← Wrong default
+  }
+};
+```
+
+**Expected Code:**
+```typescript
+// Two separate functions needed:
+
+// 1. Get CURRENT dashboard based on route (for nav highlighting)
+export const getCurrentDashboardPath = (currentDashboard: DashboardContext): string => {
+  switch (currentDashboard) {
+    case 'learner': return '/learner/dashboard';
+    case 'staff': return '/staff/dashboard';
+    case 'admin': return '/admin/dashboard';
+    default: return '/staff/dashboard';
+  }
+};
+
+// 2. Get DEFAULT dashboard based on userTypes (for login redirect)
+export const getDefaultDashboardPath = (userTypes: UserType[]): string => {
+  // Priority: staff > global-admin > learner
+  if (userTypes.includes('staff')) return '/staff/dashboard';
+  if (userTypes.includes('global-admin')) return '/staff/dashboard'; // Admin requires escalation
+  if (userTypes.includes('learner')) return '/learner/dashboard';
+  return '/staff/dashboard'; // Fallback
+};
+```
+
+**Dashboard NavItem Fix:**
+```typescript
+// BASE_NAV_ITEMS
+{
+  label: 'Dashboard',
+  path: (_primaryUserType, currentDashboard) => {
+    // Use current dashboard context, not primaryUserType
+    return getCurrentDashboardPath(currentDashboard);
+  },
+  icon: Home,
+},
+```
+
+---
+
+## Acceptance Criteria
+
+**Dynamic Navigation:**
+- [ ] Dashboard link goes to `/learner/dashboard` when on learner routes
+- [ ] Dashboard link goes to `/staff/dashboard` when on staff routes
+- [ ] Dashboard link goes to `/admin/dashboard` when on admin routes
+- [ ] Dashboard link is highlighted correctly on each dashboard
+
+**Default Dashboard (login/refresh):**
+- [ ] Staff users default to Staff Dashboard
+- [ ] Global-admin users default to Staff Dashboard (not Admin)
+- [ ] Learner-only users default to Learner Dashboard
+- [ ] Multi-role users (staff+learner) default to Staff Dashboard
+
+**Edge Cases:**
+- [ ] Page refresh maintains current dashboard context
+- [ ] Direct URL navigation works correctly
+- [ ] Browser back/forward maintains correct context
+- [ ] Sidebar highlighting matches current dashboard
+
+---
+
+## Related Files
+
+- `src/widgets/sidebar/config/navItems.ts` - `getPrimaryDashboardPath()` and BASE_NAV_ITEMS
+- `src/widgets/sidebar/Sidebar.tsx` - Dashboard context detection
+- `src/app/router/index.tsx` - Login redirect logic
+- `src/features/auth/model/authStore.ts` - User types access
+
+---
+
+## Notes
+- This is a regression from ISS-007 sidebar consolidation
+- Quick fix - only requires changes to navItems.ts
+- Should be resolved before ISS-014 navigation updates
+- Affects all users with multiple userTypes
+
+---
+
+### ISS-016: Certificates Link Label Shows "test-certificates" Instead of "Certificates"
+
+**Priority:** low
+**Type:** bug
+**Status:** pending
+**Assigned:** UI Agent
+**Dependencies:** None
+
+**Description:**
+The "Certificates" navigation link in the sidebar BASE_NAV_ITEMS is incorrectly labeled as "test-certificates" instead of "Certificates". This appears to be a debugging artifact that was not reverted. The link path (`/learner/certificates`) is correct and should remain in the learner context.
+
+**Current Behavior:**
+1. User views sidebar navigation
+2. ❌ Link displays as "test-certificates"
+3. Link correctly navigates to `/learner/certificates`
+
+**Expected Behavior:**
+1. User views sidebar navigation
+2. ✅ Link displays as "Certificates"
+3. Link navigates to `/learner/certificates` (unchanged)
+
+**Root Cause:**
+In [navItems.ts](src/widgets/sidebar/config/navItems.ts#L107), the label was changed from `'Certificates'` to `'test-certificates'`:
+
+```typescript
+// Current (incorrect):
+{
+  label: 'test-certificates',
+  path: '/learner/certificates',
+  icon: Award,
+},
+
+// Expected (correct):
+{
+  label: 'Certificates',
+  path: '/learner/certificates',
+  icon: Award,
+},
+```
+
+**Fix Required:**
+Single line change in `navItems.ts` - change `label: 'test-certificates'` to `label: 'Certificates'`.
+
+---
+
+## Acceptance Criteria
+
+- [ ] Certificates link displays as "Certificates" in sidebar
+- [ ] Link path remains `/learner/certificates`
+- [ ] Link remains in BASE_NAV_ITEMS (visible on all dashboards)
+- [ ] Link continues to work correctly for learner users
+- [ ] Link continues to be disabled for non-learner users (if applicable)
+
+---
+
+## Related Files
+
+- `src/widgets/sidebar/config/navItems.ts` - Line 107, BASE_NAV_ITEMS
+
+---
+
+## Notes
+- Quick one-line fix
+- Likely a debugging artifact that wasn't reverted
+- No functional change needed, just label restoration
+
+---
+
+### ISS-018: Add Password Visibility Toggle to All Password Fields
+
+**Priority:** low
+**Type:** polish
+**Status:** pending
+**Assigned:** UI Agent
+**Dependencies:** None
+
+**Description:**
+All password input fields in the application should have a "reveal password" toggle button (eye icon) that allows users to temporarily view the password they're typing. This is a standard UX pattern that improves accessibility and reduces input errors.
+
+**Current Behavior:**
+1. User types password in a password field
+2. Characters are masked as dots/bullets
+3. ❌ No way to verify what was typed
+
+**Expected Behavior:**
+1. User types password in a password field
+2. Characters are masked as dots/bullets by default
+3. ✅ Eye icon button appears at right edge of input
+4. Clicking eye icon reveals password text
+5. Icon changes to "eye-off" when password is visible
+6. Clicking again hides password
+
+---
+
+## Password Fields to Update
+
+| Location | Component/Field | File |
+|----------|-----------------|------|
+| **Login Page** | Password field | `src/pages/auth/LoginPage.tsx` |
+| **Register Page** | Password field | `src/pages/auth/RegisterPage.tsx` |
+| **Register Page** | Confirm Password field | `src/pages/auth/RegisterPage.tsx` |
+| **Change Password** | Current Password | `src/pages/profile/ChangePasswordForm.tsx` |
+| **Change Password** | New Password | `src/pages/profile/ChangePasswordForm.tsx` |
+| **Change Password** | Confirm New Password | `src/pages/profile/ChangePasswordForm.tsx` |
+| **Admin Escalation** | Escalation Password | `src/features/auth/ui/EscalationModal.tsx` (ISS-013) |
+| **Reset Password** | New Password fields | `src/pages/auth/ResetPasswordPage.tsx` |
+
+---
+
+## Implementation Options
+
+### Option A: Create Reusable PasswordInput Component (Recommended)
+
+```tsx
+// src/shared/ui/PasswordInput.tsx
+import { useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+
+interface PasswordInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  // Inherits all standard input props
+}
+
+export function PasswordInput({ className, ...props }: PasswordInputProps) {
+  const [showPassword, setShowPassword] = useState(false);
+
+  return (
+    <div className="relative">
+      <Input
+        type={showPassword ? 'text' : 'password'}
+        className={cn('pr-10', className)}
+        {...props}
+      />
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+        onClick={() => setShowPassword(!showPassword)}
+        aria-label={showPassword ? 'Hide password' : 'Show password'}
+      >
+        {showPassword ? (
+          <EyeOff className="h-4 w-4 text-muted-foreground" />
+        ) : (
+          <Eye className="h-4 w-4 text-muted-foreground" />
+        )}
+      </Button>
+    </div>
+  );
+}
+```
+
+### Option B: Add Toggle to Existing shadcn Input
+
+Extend the existing Input component to support a `type="password"` variant with built-in toggle.
+
+---
+
+## Visual Design
+
+```
+┌─────────────────────────────────────────┐
+│ ••••••••••••                        👁  │  ← Password hidden (Eye icon)
+└─────────────────────────────────────────┘
+
+┌─────────────────────────────────────────┐
+│ MySecretPass123                     👁‍🗨  │  ← Password visible (EyeOff icon)
+└─────────────────────────────────────────┘
+```
+
+**Icon States:**
+- `Eye` (lucide-react) - Password is hidden, click to reveal
+- `EyeOff` (lucide-react) - Password is visible, click to hide
+
+---
+
+## Acceptance Criteria
+
+**Functionality:**
+- [ ] All password fields have a toggle button
+- [ ] Toggle reveals/hides password text
+- [ ] Icon changes based on visibility state
+- [ ] Toggle is keyboard accessible (Tab + Enter/Space)
+- [ ] Screen reader announces state ("Show password" / "Hide password")
+
+**Visual:**
+- [ ] Icon positioned inside input on right edge
+- [ ] Icon has hover/focus states
+- [ ] Icon doesn't overlap with text
+- [ ] Works with various input widths
+- [ ] Matches existing design system styling
+
+**Security:**
+- [ ] Password defaults to hidden state
+- [ ] Visibility resets to hidden on form submit
+- [ ] Visibility resets to hidden on blur (optional - discuss)
+- [ ] No password exposed in DOM when hidden
+
+**Accessibility:**
+- [ ] Button has `aria-label` describing action
+- [ ] Button is focusable via keyboard
+- [ ] Works with password managers (no interference)
+- [ ] Color contrast meets WCAG guidelines
+
+---
+
+## Related Files
+
+**New File:**
+- `src/shared/ui/PasswordInput.tsx` - Reusable password input component
+
+**Files to Update:**
+- `src/pages/auth/LoginPage.tsx`
+- `src/pages/auth/RegisterPage.tsx`
+- `src/pages/auth/ResetPasswordPage.tsx`
+- `src/pages/profile/ChangePasswordForm.tsx` (if exists)
+- `src/features/auth/ui/EscalationModal.tsx` (when ISS-013 is implemented)
+
+**Component Library:**
+- Uses `lucide-react` icons (Eye, EyeOff)
+- Uses existing shadcn/ui Input and Button components
+
+---
+
+## Notes
+- This is a standard UX pattern expected by users
+- Improves accessibility for users with motor difficulties
+- Reduces password entry errors
+- Should be implemented as a reusable component for consistency
+- Consider auto-hiding after a timeout (e.g., 30 seconds) for security
+- Mobile: ensure touch target is large enough (44x44px minimum)
+
+---
+
+### ISS-017: Department Management - Create Department & Staff Assignment UI
+
+**Priority:** high
+**Type:** feature
+**Status:** pending
+**Assigned:** UI Agent
+**Dependencies:** ISS-013 (Admin escalation required for admin features)
+
+**Description:**
+Admin users need comprehensive department management capabilities including creating new departments, assigning staff to departments, and managing department-specific role assignments. Currently there's no "Create Department" action available and no UI for managing department memberships.
+
+---
+
+## 🏗️ Architecture: Two-Level Permission Model
+
+The system uses a **strict two-level hierarchy**. There are NO free-floating roles.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ LEVEL 1: userTypes (authentication level)                      │
+│   • learner - Can take courses                                  │
+│   • staff - Can teach/manage courses                            │
+│   • global-admin - Has staff userType + access to admin UI      │
+├─────────────────────────────────────────────────────────────────┤
+│ LEVEL 2: Department-Based Roles (authorization level)          │
+│   • ALL roles are scoped to a specific department               │
+│   • Users must be a MEMBER of a department to have roles in it  │
+│   • Even global-admins get their permissions via the            │
+│     "Master Department" membership                              │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Key Principles:**
+1. **userTypes** grant access to dashboards (learner/staff/admin)
+2. **Departments** are organizational units - every user belongs to 1+ departments
+3. **Department Roles** define what a user can DO within a specific department
+4. **Master Department** - Global admins are members with `system-admin` role
+5. **No global roles** - Every permission is tied to a department membership
+
+**Examples:**
+| User | userTypes | Department Memberships |
+|------|-----------|------------------------|
+| Jane (Prof) | `staff` | CS Dept → `instructor`, `department-head` |
+| Bob (TA) | `staff`, `learner` | CS Dept → `teaching-assistant`; Math Dept → `grader` |
+| Admin Alice | `staff`, `global-admin` | Master Dept → `system-admin` |
+
+---
+
+## ⚠️ Clarification: Roles vs Role Assignments
+
+This issue handles **Role Assignments** (who has what role in which department), NOT **Role Definitions** (what roles exist in the system).
+
+| Concern | Location | Issue | Description |
+|---------|----------|-------|-------------|
+| **Role Definitions** | `/admin/roles` | ISS-014 | System-wide: Define what roles exist (Instructor, TA, Grader), their permissions, display names. Rarely changed. |
+| **Role Assignments** | `/admin/departments/:id/staff` | ISS-017 (this) | Per-department: Assign existing roles to users within a specific department. Day-to-day operation. |
+
+**This issue (ISS-017) focuses on:**
+- Department CRUD (create, edit, delete departments)
+- Staff assignment to departments
+- Assigning pre-defined department-based roles to staff within departments
+
+**ISS-014 separately covers:**
+- Role definitions and permissions at `/admin/roles`
+
+---
+
+## Features Required
+
+### 1. Create Department Action
+
+**Location:** `/admin/departments` (Department Management page)
+- Add "Create Department" button at top of department list
+- Prominent placement for easy access
+- Note: "Master Department" is a system department and cannot be deleted
+
+**Recommended Flow:**
+```
+Admin Dashboard → Department Management → [+ Create Department] button
+                                        → Department List with edit/manage actions
+```
+
+### 2. Create Department Form
+
+**Route:** `/admin/departments/create`
+
+**Fields:**
+| Field | Type | Required | Notes |
+|-------|------|----------|-------|
+| `name` | string | ✅ | Department name |
+| `code` | string | ✅ | Short code (e.g., "CS", "MATH") |
+| `description` | textarea | No | Department description |
+| `parentDepartmentId` | select | No | For hierarchical departments |
+| `isActive` | boolean | No | Default: true |
+
+**Form Actions:**
+- Save → Creates department, redirects to department detail
+- Cancel → Returns to department list
+
+### 3. Department Detail/Edit Page
+
+**Route:** `/admin/departments/:departmentId`
+
+**Tabs/Sections:**
+1. **Overview** - Edit department info (name, code, description, status)
+2. **Staff** - Manage staff assignments and role assignments
+3. **Courses** - View courses in department
+4. **Settings** - Department-specific settings
+
+### 4. Staff Assignment UI (Primary Feature)
+
+**Route:** `/admin/departments/:departmentId/staff`
+
+**Capabilities:**
+
+**A. View Current Staff:**
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│ Department Staff - Computer Science                                 │
+├─────────────────────────────────────────────────────────────────────┤
+│ [+ Add Staff Member]                           [Search staff...]    │
+├─────────────────────────────────────────────────────────────────────┤
+│ Name              │ Email              │ Role(s)        │ Actions   │
+├───────────────────┼────────────────────┼────────────────┼───────────┤
+│ Dr. Jane Smith    │ jsmith@lms.edu     │ Department Head│ [Edit][⋮] │
+│ Prof. John Doe    │ jdoe@lms.edu       │ Instructor     │ [Edit][⋮] │
+│ Mary Johnson      │ mjohnson@lms.edu   │ TA, Grader     │ [Edit][⋮] │
+└───────────────────┴────────────────────┴────────────────┴───────────┘
+```
+
+**B. Add Staff to Department:**
+- Modal or slide-over panel
+- Search/select existing staff users
+- Assign one or more department roles (from pre-defined roles)
+- Bulk add capability
+
+**C. Edit Staff Role Assignments:**
+```
+┌────────────────────────────────────────────────┐
+│ Edit Role Assignments - Dr. Jane Smith         │
+├────────────────────────────────────────────────┤
+│ Department: Computer Science                   │
+│                                                │
+│ Assigned Roles:                                │
+│ ☑ Department Head                              │
+│ ☑ Instructor                                   │
+│ ☐ Teaching Assistant                           │
+│ ☐ Grader                                       │
+│ ☐ Course Coordinator                           │
+│ ☐ Department Admin                             │
+│                                                │
+│ Primary Role: [Department Head ▼]              │
+│                                                │
+│         [Cancel]  [Save Changes]               │
+└────────────────────────────────────────────────┘
+```
+
+**D. Remove Staff from Department:**
+- Confirmation modal
+- Option to reassign their courses/responsibilities first
+
+### 5. Role Assignment Rules
+
+**Note:** The available roles are defined in `/admin/roles` (ISS-014). This feature only handles assigning those roles to users within departments.
+
+**Core Architecture (Two-Level Model):**
+- **Level 1:** userTypes (learner, staff, global-admin) → Dashboard access
+- **Level 2:** Department-based roles → What you can DO in that department
+- **No Level 3:** There are NO global/floating roles - all permissions are department-scoped
+
+**Assignment Rules:**
+- Users can have multiple roles per department
+- Users can be in multiple departments with different roles
+- Primary role determines default permissions within that department
+- **ALL roles are department-scoped** (even system-admin is tied to Master Department)
+
+**Department-Based Roles (examples, defined in ISS-014):**
+- `system-admin` - Full system control (Master Department only)
+- `department-head` - Full department control
+- `department-admin` - Administrative access within department
+- `instructor` - Can teach courses in department
+- `teaching-assistant` - TA privileges in department
+- `grader` - Grading access in department
+- `course-coordinator` - Course management in department
+- `advisor` - Student advising in department
+
+---
+
+## API Endpoints Required
+
+### ✅ Likely Exist (verify):
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /api/v2/departments` | List all departments |
+| `POST /api/v2/departments` | Create department |
+| `GET /api/v2/departments/:id` | Get department details |
+| `PUT /api/v2/departments/:id` | Update department |
+| `DELETE /api/v2/departments/:id` | Delete department |
+
+### ⚠️ May Need (verify with API team):
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /api/v2/departments/:id/members` | Get department staff list |
+| `POST /api/v2/departments/:id/members` | Add staff to department |
+| `PUT /api/v2/departments/:id/members/:userId` | Update staff role assignments |
+| `DELETE /api/v2/departments/:id/members/:userId` | Remove staff from dept |
+| `GET /api/v2/roles` | Get available roles (for dropdown) |
+
+---
+
+## UI Components Needed
+
+### New Pages:
+- `src/pages/admin/departments/DepartmentListPage.tsx` - List with create button
+- `src/pages/admin/departments/CreateDepartmentPage.tsx` - Create form
+- `src/pages/admin/departments/DepartmentDetailPage.tsx` - Edit/manage tabs
+- `src/pages/admin/departments/DepartmentStaffPage.tsx` - Staff management
+
+### New Components:
+- `src/features/departments/ui/CreateDepartmentForm.tsx`
+- `src/features/departments/ui/DepartmentStaffTable.tsx`
+- `src/features/departments/ui/AddStaffModal.tsx`
+- `src/features/departments/ui/EditStaffRolesModal.tsx`
+- `src/features/departments/ui/RemoveStaffConfirmModal.tsx`
+
+### Navigation Updates:
+- Add route `/admin/departments/create`
+- Add route `/admin/departments/:id`
+- Add route `/admin/departments/:id/staff`
+- Update `ADMIN_CONTEXT_NAV` if adding quick-create action
+
+---
+
+## Acceptance Criteria
+
+### Create Department:
+- [ ] "Create Department" button visible on Department Management page
+- [ ] Create form validates required fields (name, code)
+- [ ] Successful creation redirects to department detail
+- [ ] Error handling for duplicate codes
+- [ ] Admin escalation required (ISS-013)
+
+### Department Detail:
+- [ ] Can edit department name, code, description
+- [ ] Can activate/deactivate department
+- [ ] Can view department statistics (staff count, course count)
+- [ ] Tabbed interface for Overview/Staff/Courses/Settings
+
+### Staff Assignment:
+- [ ] View list of current department staff with roles
+- [ ] Search and add existing staff users to department
+- [ ] Assign multiple roles to a staff member
+- [ ] Edit staff member's department roles
+- [ ] Remove staff from department (with confirmation)
+- [ ] Bulk operations for adding multiple staff
+
+### Role Management:
+- [ ] Display available department roles
+- [ ] Allow multi-select for role assignment
+- [ ] Set primary role for user in department
+- [ ] Roles are scoped to specific department
+- [ ] Changes take effect immediately
+
+### Permissions:
+- [ ] Only global-admin can access these features
+- [ ] Requires admin escalation (ISS-013)
+- [ ] Department-admins can manage their own department staff (future)
+
+---
+
+## Related Files
+
+**New Files:**
+- `src/pages/admin/departments/` - Department management pages
+- `src/features/departments/` - Department-related features
+
+**Existing Files to Update:**
+- `src/app/router/index.tsx` - Add new routes
+- `src/widgets/sidebar/config/navItems.ts` - Verify Department Management link exists
+
+**API Contracts:**
+- `api/contracts/api/departments.contract.ts` - Verify endpoints
+- `api/contracts/api/roles.contract.ts` - Department role definitions
+
+---
+
+## Notes
+- This is a foundational admin feature for organizational structure
+- Staff assignment is critical for course/permission management
+- **Separation of Concerns:**
+  - ISS-014 → `/admin/roles` = Define what roles exist (system-level, rarely changed)
+  - ISS-017 → `/admin/departments/:id/staff` = Assign roles to users (per-dept, day-to-day)
+- Consider bulk import (CSV) for large-scale staff assignment (future enhancement)
+- Mobile-responsive design needed for admin on-the-go
+- Audit logging for all department membership changes
+- Department hierarchy support (parent/child) is optional for v1
+
+---
+
+### ISS-013: Admin Tab Requires Escalation Password Modal
+
+**Priority:** high
+**Type:** feature
+**Status:** pending
+**Assigned:** UI Agent
+**Dependencies:** None
+
+**Description:**
+Clicking on the "Admin" tab in the navigation does not prompt for an escalation password. The Admin Dashboard requires a separate password entry to enable "admin mode" before granting access. This is a security feature to prevent accidental admin actions and ensure elevated privileges are explicitly requested.
+
+**Current Behavior:**
+1. User with `global-admin` userType is logged in
+2. User clicks "Admin" tab in sidebar/header navigation
+3. ❌ User is taken directly to Admin Dashboard (no password prompt)
+4. Admin mode is not properly activated
+
+**Expected Behavior:**
+1. User with `global-admin` userType is logged in
+2. User clicks "Admin" tab in sidebar/header navigation
+3. ✅ Modal appears prompting for **escalation password**
+4. User enters escalation password
+5. API call to `POST /api/v2/auth/escalate` with `{ escalationPassword: string }`
+6. On success:
+   - Store `adminToken` in **memory only** (never localStorage/sessionStorage)
+   - Set `isAdminSessionActive = true` in auth store
+   - Navigate to `/admin/dashboard`
+   - Show admin session indicator (badge/timer)
+7. On failure:
+   - Show error message ("Incorrect escalation password")
+   - Keep user on current page
+   - Allow retry
+
+**API Contract (already exists):**
+```typescript
+// POST /api/v2/auth/escalate
+Request: { escalationPassword: string }
+
+Response (success):
+{
+  success: true,
+  data: {
+    adminSession: {
+      adminToken: string,
+      expiresIn: 900,  // 15 minutes
+      adminRoles: string[],
+      adminAccessRights: string[]
+    },
+    sessionTimeoutMinutes: 15
+  }
+}
+
+Errors:
+- 401 INVALID_ESCALATION_PASSWORD - Incorrect password
+- 403 NOT_ADMIN - User doesn't have global-admin userType
+- 403 ADMIN_DISABLED - Admin access disabled for user
+```
+
+**UI Requirements:**
+
+**1. Escalation Modal Component:**
+- Password input field (masked)
+- "Enter Admin Mode" button (primary)
+- "Cancel" button (secondary)
+- Error message display area
+- Loading state during API call
+- Focus trap within modal
+- Escape key closes modal
+
+**2. Modal Triggers:**
+- Clicking "Admin" nav item when `isAdminSessionActive = false`
+- Direct URL navigation to `/admin/*` routes when not escalated
+- Admin-only actions that require escalation
+
+**3. Visual Design:**
+```
+┌──────────────────────────────────────────┐
+│  🔒 Enter Admin Mode                     │
+├──────────────────────────────────────────┤
+│                                          │
+│  Admin access requires your escalation   │
+│  password. This is separate from your    │
+│  login password.                         │
+│                                          │
+│  ┌────────────────────────────────────┐  │
+│  │ ••••••••••                         │  │
+│  │ Escalation Password                │  │
+│  └────────────────────────────────────┘  │
+│                                          │
+│  [Incorrect password - try again]        │  ← Error (hidden by default)
+│                                          │
+│       [ Cancel ]    [ Enter Admin Mode ] │
+│                                          │
+└──────────────────────────────────────────┘
+```
+
+**4. Session Management After Escalation:**
+- Admin token stored in memory only (security requirement)
+- Session timeout: 15 minutes of inactivity
+- Show countdown warning at 2 minutes remaining
+- On timeout: 
+  - Clear admin token
+  - Set `isAdminSessionActive = false`
+  - Redirect to Staff Dashboard
+  - Show "Admin session expired" toast
+- Activity resets timeout (API calls, mouse movement, key presses)
+
+**5. Admin Session Indicator:**
+- Show badge/indicator when admin mode active
+- Display remaining time or "Admin Mode" label
+- Click to de-escalate (with confirmation)
+
+**Acceptance Criteria:**
+
+**Modal Behavior:**
+- [ ] Clicking Admin tab when not escalated shows password modal
+- [ ] Modal has password input with masked text
+- [ ] Modal has Enter Admin Mode and Cancel buttons
+- [ ] Cancel closes modal, user stays on current page
+- [ ] Escape key closes modal
+- [ ] Clicking outside modal closes it
+- [ ] Loading spinner shown during API call
+- [ ] Error message shown for wrong password
+- [ ] Multiple retry attempts allowed
+
+**Escalation Success:**
+- [ ] Admin token stored in memory only (verify not in storage)
+- [ ] `isAdminSessionActive` set to `true`
+- [ ] User navigated to `/admin/dashboard`
+- [ ] Admin session indicator appears in header
+- [ ] Admin nav items become accessible
+
+**Route Protection:**
+- [ ] Direct navigation to `/admin/*` shows modal if not escalated
+- [ ] Admin routes inaccessible without escalation
+- [ ] Staff/Learner routes remain accessible without escalation
+
+**Session Timeout:**
+- [ ] Session expires after 15 minutes of inactivity
+- [ ] Warning shown at 2 minutes remaining
+- [ ] On timeout: de-escalate and redirect to Staff Dashboard
+- [ ] Activity resets timeout counter
+- [ ] Session indicator updates remaining time
+
+**De-escalation:**
+- [ ] "Exit Admin Mode" option available in header
+- [ ] Confirmation prompt before de-escalating
+- [ ] On de-escalate: clear token, redirect to Staff Dashboard
+- [ ] Admin nav items become inaccessible
+
+**Security:**
+- [ ] Admin token NEVER persisted to localStorage
+- [ ] Admin token NEVER persisted to sessionStorage
+- [ ] Admin token NEVER in cookies
+- [ ] Page refresh requires re-escalation
+- [ ] Browser close clears admin session
+
+**Related Files:**
+- `src/features/auth/ui/EscalationModal.tsx` (new)
+- `src/features/auth/model/authStore.ts` (add escalation state)
+- `src/entities/auth/api/authApi.ts` (escalateToAdmin already exists)
+- `src/widgets/sidebar/Sidebar.tsx` (trigger modal on admin click)
+- `src/widgets/header/Header.tsx` (admin session indicator)
+- `src/app/router/guards/AdminOnlyRoute.tsx` (check escalation)
+- `api/contracts/api/auth-v2.contract.ts` (escalate/deescalate contracts)
+
+**Existing Code Reference:**
+- `escalateToAdmin()` function exists in `src/entities/auth/api/authApi.ts:172`
+- `isAdminSessionActive` state exists in auth store
+- Auth store has escalation actions per `TRACK_1A_STATUS.md`
+
+**Notes:**
+- This is a security-critical feature to prevent accidental admin actions
+- Admin password is SEPARATE from login password
+- Similar to sudo pattern in Unix systems
+- Consider biometric option for future enhancement
+- API contract already defined in `auth-v2.contract.ts`
+
+---
+
 ### ISS-012: Financial Aid Fields Integration - Learner Demographics
 
 **Priority:** low

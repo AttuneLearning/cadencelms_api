@@ -810,7 +810,9 @@ export const IdentificationSchema = new Schema<IIdentification>(
       type: String,
       required: true,
       trim: true
-      // NOTE: Should be encrypted before storage
+      // SECURITY: ENCRYPTED AT REST using AES-256-GCM (ISS-011)
+      // This field is automatically encrypted on save and must be decrypted to read
+      // Use .getDecryptedIdNumber() method to access plaintext value
     },
     idType: {
       type: String,
@@ -830,6 +832,42 @@ export const IdentificationSchema = new Schema<IIdentification>(
   },
   { _id: false }
 );
+
+// ============================================================================
+// ENCRYPTION HOOKS (ISS-011)
+// ============================================================================
+
+import { encryptFieldIfModified, createDecryptMethod } from '@/utils/encryption/EncryptionFactory';
+
+/**
+ * Pre-save hook: Automatically encrypts idNumber if modified
+ *
+ * The idNumber field contains sensitive PII (passport numbers, driver's license
+ * numbers, state IDs) that must be encrypted at rest for FERPA/GDPR compliance.
+ *
+ * Encryption:
+ * - Algorithm: AES-256-GCM with authenticated encryption
+ * - Format: version:iv:authTag:ciphertext
+ * - Idempotent: Safe to save multiple times (won't double-encrypt)
+ */
+IdentificationSchema.pre('save', encryptFieldIfModified('idNumber'));
+
+/**
+ * Method: Get decrypted ID number
+ *
+ * Returns the plaintext ID number. Automatically decrypts if encrypted,
+ * returns as-is if already plaintext (during migration phase).
+ *
+ * @returns Decrypted ID number
+ *
+ * @example
+ * ```typescript
+ * const identification = learner.identifications[0];
+ * const idNumber = identification.getDecryptedIdNumber();
+ * // Returns: "P1234567" (passport) or "DL-123-456" (driver's license)
+ * ```
+ */
+IdentificationSchema.methods.getDecryptedIdNumber = createDecryptMethod('idNumber');
 
 export const PriorEducationSchema = new Schema<IPriorEducation>(
   {

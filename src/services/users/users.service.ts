@@ -861,9 +861,23 @@ export class UsersService {
         throw ApiError.notFound('Learner record not found');
       }
 
+      // Decrypt identification numbers for authorized user (ISS-011)
+      const personExtended = learner.personExtended?.toObject() || {};
+      if (personExtended.identifications && Array.isArray(personExtended.identifications)) {
+        personExtended.identifications = personExtended.identifications.map((id: any, index: number) => {
+          if (id.idNumber && learner.personExtended?.identifications?.[index]?.getDecryptedIdNumber) {
+            return {
+              ...id,
+              idNumber: learner.personExtended.identifications[index].getDecryptedIdNumber()
+            };
+          }
+          return id;
+        });
+      }
+
       return {
         role: 'learner',
-        learner: learner.personExtended || {}
+        learner: personExtended
       };
     }
 
@@ -939,7 +953,15 @@ export class UsersService {
       if (!staff) {
         throw ApiError.notFound('Staff record not found');
       }
-      return staff.demographics || {} as IDemographics;
+
+      // Decrypt alienRegistrationNumber for authorized user (ISS-011)
+      const demographics = staff.demographics?.toObject() || {} as IDemographics;
+      if (demographics.alienRegistrationNumber) {
+        const { decrypt } = require('@/utils/encryption/EncryptionFactory');
+        demographics.alienRegistrationNumber = decrypt(demographics.alienRegistrationNumber);
+      }
+
+      return demographics;
     }
 
     if (user.userTypes.includes('learner')) {
@@ -947,7 +969,15 @@ export class UsersService {
       if (!learner) {
         throw ApiError.notFound('Learner record not found');
       }
-      return learner.demographics || {} as IDemographics;
+
+      // Decrypt alienRegistrationNumber for authorized user (ISS-011)
+      const demographics = learner.demographics?.toObject() || {} as IDemographics;
+      if (demographics.alienRegistrationNumber) {
+        const { decrypt } = require('@/utils/encryption/EncryptionFactory');
+        demographics.alienRegistrationNumber = decrypt(demographics.alienRegistrationNumber);
+      }
+
+      return demographics;
     }
 
     throw ApiError.notFound('Demographics data not found');

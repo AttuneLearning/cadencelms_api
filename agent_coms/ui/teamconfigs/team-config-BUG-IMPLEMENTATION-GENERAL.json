@@ -1,0 +1,546 @@
+{
+  "team": {
+    "name": "LMS Frontend Team - Bug Resolution & Implementation",
+    "version": "1.0.0",
+    "description": "Dual-purpose team for systematic bug fixing and feature implementation from issue queue",
+    "activeProject": "Issue Queue - Bug Fixes and UI Features",
+    "issueQueuePath": "api/agent_coms/ui/ISSUE_QUEUE.md",
+    "messageLogPath": "api/agent_coms/ui/MESSAGE_LOG.md",
+    "coordinationStandard": "api/agent_coms/messages/COORDINATION_STANDARD.md"
+  },
+  "workflow": {
+    "issueSource": "api/agent_coms/ui/ISSUE_QUEUE.md",
+    "issueFormat": "Uses ISS-XXX identifiers with priority levels P0-P3",
+    "agentCommunication": "Markdown-based messaging in api/agent_coms/messages/",
+    "threadNaming": "THR-{CATEGORY}-XXX (e.g., THR-AUTH-001, THR-UI-002)",
+    "developmentApproach": "Test-Driven Development (TDD)",
+    "workCycle": [
+      "1. Human adds issue to ISSUE_QUEUE.md",
+      "2. Issue coordinator reviews queue and checks for blockers",
+      "3. Coordinator assigns issue to appropriate agent or marks as blocked",
+      "4. Coordinator monitors ACTIVE_THREADS.md for API responses",
+      "5. When API delivers, coordinator updates blocked issues to 'ready'",
+      "6. Agent picks assigned issue and begins TDD CYCLE:",
+      "   a. Write failing test first (RED)",
+      "   b. Implement minimal code to pass test (GREEN)",
+      "   c. Refactor while keeping tests green (REFACTOR)",
+      "   d. Check test coverage (vitest --coverage)",
+      "   e. Run full test suite to catch regressions",
+      "7. Agent validates all tests pass with no regressions",
+      "8. Agent updates MESSAGE_LOG.md with test coverage report",
+      "9. Agent marks issue complete in ISSUE_QUEUE.md",
+      "10. Coordinator reviews completion and closes coordination threads if applicable",
+      "11. Human validates and provides final approval"
+    ],
+    "testingCadence": {
+      "duringDevelopment": "Run tests after each TDD cycle (npm run test -- --watch)",
+      "beforeCompletion": "Run full suite with coverage (npm run test:coverage)",
+      "regressionCheck": "Run all tests to ensure no existing functionality broken",
+      "coverageThreshold": "Minimum 70% overall, 80% for critical paths"
+    }
+  },
+  "agents": [
+    {
+      "id": "issue-coordinator",
+      "role": "Issue Coordinator & Supervisor",
+      "priority": "All issues - coordination and unblocking",
+      "description": "Monitors issue queue, coordinates team work, unblocks development when API team delivers",
+      "responsibilities": [
+        "Monitor api/agent_coms/ui/ISSUE_QUEUE.md for new issues and blocked tasks",
+        "Review api/agent_coms/messages/ACTIVE_THREADS.md for API team responses",
+        "Check MESSAGE_LOG.md for team progress and blockers",
+        "Identify when blocked issues can be unblocked (API work complete)",
+        "Reassign or reprioritize issues based on dependencies",
+        "Create coordination threads when cross-team work needed",
+        "Verify API contract completeness before unblocking UI work",
+        "Track issue dependencies and update blocking status",
+        "Coordinate parallel work assignments to avoid conflicts",
+        "Escalate blockers that require human intervention",
+        "Monitor test coverage trends and quality metrics",
+        "Ensure TDD practices followed across all implementations"
+      ],
+      "workingDirectories": [
+        "api/agent_coms/ui/",
+        "api/agent_coms/messages/",
+        "api_contracts/"
+      ],
+      "contextFiles": [
+        "api/agent_coms/ui/ISSUE_QUEUE.md",
+        "api/agent_coms/ui/MESSAGE_LOG.md",
+        "api/agent_coms/messages/ACTIVE_THREADS.md",
+        "api/agent_coms/messages/COORDINATION_STANDARD.md",
+        "api_contracts/**/*.md"
+      ],
+      "monitoringPatterns": {
+        "issueQueueChecks": [
+          "Scan for new issues requiring assignment",
+          "Identify blocked issues (status: blocked)",
+          "Check if blocked issues have resolved dependencies",
+          "Verify priority ordering is correct"
+        ],
+        "activeThreadChecks": [
+          "Review threads for API team responses",
+          "Identify completed API deliverables",
+          "Update issue queue when blockers resolved",
+          "Close completed coordination threads"
+        ],
+        "dependencyTracking": [
+          "Map UI issues to API requirements",
+          "Track API contract availability",
+          "Monitor backend implementation status",
+          "Validate contract completeness before unblocking"
+        ],
+        "teamCoordination": [
+          "Prevent duplicate work on same issue",
+          "Balance workload across agents",
+          "Identify issues suitable for parallel work",
+          "Escalate conflicts or ambiguities"
+        ]
+      },
+      "unblockingCriteria": {
+        "apiEndpointDelivered": "Check api_contracts/ for new endpoint documentation",
+        "contractComplete": "Validate request/response schemas documented",
+        "errorHandling": "Ensure error codes and edge cases documented",
+        "authRequirements": "Verify permission requirements specified",
+        "testability": "Confirm endpoint can be mocked for testing"
+      },
+      "coordinationActions": {
+        "newIssue": "Assign to appropriate agent based on priority and type",
+        "blockedIssue": "Create thread if not exists, monitor for API response",
+        "apiDelivered": "Update issue status to 'ready', notify assigned agent",
+        "contractGap": "Post clarification request in existing thread",
+        "priorityChange": "Reassign agents if critical work emerges"
+      },
+      "reportingDuties": [
+        "Update ISSUE_QUEUE.md with status changes",
+        "Log coordination actions in MESSAGE_LOG.md",
+        "Maintain accurate blocking/dependency status",
+        "Flag issues requiring human decision"
+      ],
+      "canRunParallel": true,
+      "dependencies": [],
+      "supervisoryRole": true
+    },
+    {
+      "id": "bug-hunter",
+      "role": "Bug Resolution Specialist",
+      "priority": "P0-P1 issues",
+      "description": "Diagnoses and fixes bugs, security issues, and critical defects",
+      "responsibilities": [
+        "Analyze bug reports from ISSUE_QUEUE.md",
+        "Reproduce issues in development environment",
+        "Identify root cause through debugging",
+        "Write failing test that reproduces the bug (TDD RED)",
+        "Implement fix with minimal scope (TDD GREEN)",
+        "Refactor if needed while tests stay green (TDD REFACTOR)",
+        "Run test suite to ensure no regressions",
+        "Check test coverage meets minimum threshold (70%)",
+        "Validate fix doesn't introduce new issues",
+        "Update MESSAGE_LOG.md with fix details and test coverage",
+        "Create coordination thread if API changes needed"
+      ],
+      "workingDirectories": [
+        "src/**/*.ts",
+        "src/**/*.tsx"
+      ],
+      "contextFiles": [
+        "api/agent_coms/ui/ISSUE_QUEUE.md",
+        "api/agent_coms/messages/ACTIVE_THREADS.md",
+        "api_contracts/**/*.md",
+        "devdocs/**/*.md"
+      ],
+      "specialization": [
+        "Authentication bugs (auth store, token handling, sessions)",
+        "Permission/authorization bugs (role checking, access rights)",
+        "Navigation bugs (routing, protected routes, redirects)",
+        "State management bugs (Zustand stores, context)",
+        "UI rendering bugs (conditional display, context-aware UI)",
+        "API integration bugs (endpoints, response handling, error states)"
+      ],
+      "debuggingPatterns": {
+        "authIssues": "Check authStore state, token storage, API response format",
+        "permissionIssues": "Verify hasGlobalPermission vs hasDeptPermission usage, departmentScoped flag",
+        "navigationIssues": "Check route definitions, ProtectedRoute logic, redirect paths",
+        "uiContextIssues": "Verify useLocation, dashboard detection, userType context"
+      },
+      "testingRequirements": {
+        "tddCycle": "RED (failing test) → GREEN (passing code) → REFACTOR (clean up)",
+        "unitTests": "Required for utility functions and pure logic - write BEFORE implementation",
+        "integrationTests": "Required for auth flows and navigation - write BEFORE implementation",
+        "manualTesting": "Required for UI bugs - document test steps",
+        "coverageCheck": "Run vitest --coverage after each implementation",
+        "regressionSuite": "Run full test suite before marking issue complete"
+      },
+      "canRunParallel": false,
+      "dependencies": []
+    },
+    {
+      "id": "feature-builder",
+      "role": "Feature Implementation Lead",
+      "priority": "P2-P3 issues",
+      "description": "Implements new features, UI components, and enhancements from specifications",
+      "responsibilities": [
+        "Review feature specifications from ISSUE_QUEUE.md",
+        "Design component structure following FSD architecture",
+        "Write failing tests first for new functionality (TDD RED)",
+        "Implement UI components with Tailwind + shadcn/ui (TDD GREEN)",
+        "Refactor for clean code while keeping tests green (TDD REFACTOR)",
+        "Create API integration if new endpoints needed",
+        "Run test suite to check for regressions",
+        "Validate test coverage meets minimum 70% threshold",
+        "Add TypeScript types for new entities",
+        "Document component usage and patterns",
+        "Create coordination thread for API requirements",
+        "Update MESSAGE_LOG.md with implementation notes and coverage report"
+      ],
+      "workingDirectories": [
+        "src/pages/",
+        "src/widgets/",
+        "src/features/",
+        "src/entities/",
+        "src/shared/"
+      ],
+      "contextFiles": [
+        "api/agent_coms/ui/ISSUE_QUEUE.md",
+        "api/agent_coms/messages/ACTIVE_THREADS.md",
+        "api_contracts/**/*.md",
+        "devdocs/**/*.md",
+        "devdocs/UI_AUTH_QUICK_REFERENCE.md"
+      ],
+      "specialization": [
+        "Profile pages (user, learner, staff profiles)",
+        "Form components (auto-save, validation, error handling)",
+        "Dashboard features (tabs, widgets, cards)",
+        "Settings pages (password change, preferences)",
+        "Data tables (sorting, filtering, pagination)",
+        "Modal dialogs (confirmation, forms, info)",
+        "Navigation enhancements (breadcrumbs, tabs, menus)"
+      ],
+      "architecturePatterns": {
+        "featureSlicedDesign": "Follow FSD layers: app > pages > widgets > features > entities > shared",
+        "stateManagement": "React Query for server state, Zustand for client state",
+        "componentComposition": "Build widgets from features, features from entities",
+        "styling": "Tailwind utility classes + shadcn/ui components + cn() helper",
+        "typeDefinition": "Define types in entity layer, import upward"
+      },
+      "implementationStandards": {
+        "tdd": "Write tests first, then implementation - follow RED-GREEN-REFACTOR cycle",
+        "typescript": "Strict mode, no implicit any, define all types",
+        "accessibility": "WCAG 2.1 AA - semantic HTML, ARIA labels, keyboard navigation",
+        "responsiveness": "Mobile-first, test at 320px, 768px, 1024px, 1440px",
+        "errorHandling": "Try-catch API calls, display user-friendly errors, log to console",
+        "validation": "Client-side validation + server validation, clear error messages",
+        "testCoverage": "Check coverage after implementation - minimum 70% overall, 80% critical paths",
+        "regressionTesting": "Run full test suite before committing"
+      },
+      "canRunParallel": true,
+      "dependencies": []
+    },
+    {
+      "id": "integration-coordinator",
+      "role": "API Integration & Coordination Specialist",
+      "priority": "All issues requiring API changes",
+      "description": "Manages API-UI integration and coordinates with backend team",
+      "responsibilities": [
+        "Review API requirements in issue specifications",
+        "Check api_contracts/ for existing endpoints",
+        "Create coordination threads for new API needs",
+        "Post messages in api/agent_coms/messages/",
+        "Monitor ACTIVE_THREADS.md for API responses",
+        "Validate API responses match contract specifications",
+        "Update frontend API clients with new endpoints",
+        "Handle API error states and edge cases",
+        "Document API integration patterns"
+      ],
+      "workingDirectories": [
+        "src/shared/api/",
+        "src/entities/*/api/",
+        "api/agent_coms/messages/",
+        "api_contracts/"
+      ],
+      "contextFiles": [
+        "api/agent_coms/messages/COORDINATION_STANDARD.md",
+        "api/agent_coms/messages/ACTIVE_THREADS.md",
+        "api/agent_coms/ui/MESSAGE_LOG.md",
+        "api_contracts/**/*.md"
+      ],
+      "communicationPatterns": {
+        "newEndpointRequest": "Use REQUEST template from COORDINATION_STANDARD.md",
+        "bugReport": "Use BUG_REPORT template with reproduction steps",
+        "contractClarification": "Use QUESTION template for ambiguities",
+        "updateNotification": "Use UPDATE template when frontend changes affect backend"
+      },
+      "validationChecks": {
+        "contractAlignment": "Ensure TypeScript types match API response structure",
+        "errorHandling": "Handle all documented error codes (400, 401, 403, 404, 500)",
+        "edgeCases": "Test empty arrays, null values, missing optional fields",
+        "authentication": "Verify token handling, admin token priority, refresh logic"
+      },
+      "canRunParallel": true,
+      "dependencies": []
+    },
+    {
+      "id": "qa-validator",
+      "role": "Quality Assurance & Testing Lead",
+      "priority": "All issues post-implementation",
+      "description": "Validates implementations, writes tests, ensures quality standards",
+      "responsibilities": [
+        "Review completed implementations",
+        "Verify TDD approach was followed (tests written first)",
+        "Run full test suite to check for regressions",
+        "Validate test coverage meets minimum thresholds (70% overall, 80% critical)",
+        "Review test quality and edge case coverage",
+        "Write additional tests if coverage gaps found",
+        "Perform manual testing of UI changes",
+        "Validate accessibility compliance",
+        "Check responsive design at all breakpoints",
+        "Verify error handling and edge cases",
+        "Ensure code follows conventions",
+        "Generate and review coverage report",
+        "Update test documentation"
+      ],
+      "workingDirectories": [
+        "src/**/__tests__/",
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx"
+      ],
+      "contextFiles": [
+        "vitest.config.ts",
+        "devdocs/**/*.md"
+      ],
+      "testingStandards": {
+        "tddWorkflow": "Verify RED-GREEN-REFACTOR cycle followed for all code",
+        "unitTests": "Test pure functions, utilities, state management logic - written BEFORE implementation",
+        "integrationTests": "Test auth flows, navigation, API integration - written BEFORE implementation",
+        "componentTests": "Test UI components with React Testing Library",
+        "e2eTests": "Critical user journeys (login, navigation, CRUD operations)",
+        "coverage": "Minimum 70% overall, 80% for critical paths",
+        "regressionSuite": "All existing tests must pass before approval",
+        "coverageReport": "Generate with npm run test:coverage and review"
+      },
+      "qualityChecks": {
+        "tdd": "Tests written before implementation code",
+        "testCoverage": "Meets minimum 70% overall, 80% critical paths",
+        "regressionTests": "All existing tests pass with no failures",
+        "typescript": "No 'any' types, no ts-ignore comments, all types defined",
+        "linting": "No ESLint errors, fix all warnings",
+        "formatting": "Prettier formatting consistent",
+        "accessibility": "No missing alt text, proper ARIA labels, keyboard accessible",
+        "performance": "No console errors, reasonable bundle size, fast load times"
+      },
+      "canRunParallel": false,
+      "dependencies": ["bug-hunter", "feature-builder", "integration-coordinator"],
+      "runsAfterImplementation": true
+    }
+  ],
+  "parallelizationConfig": {
+    "maxConcurrentAgents": 3,
+    "parallelStrategy": {
+      "coordination": "issue-coordinator monitors queue and threads continuously",
+      "bugFixes": "bug-hunter works solo on critical bugs (P0-P1)",
+      "features": "feature-builder + integration-coordinator work in parallel on P2-P3",
+      "validation": "qa-validator runs after implementation complete"
+    },
+    "syncPoints": [
+      {
+        "name": "Issue Triage & Assignment",
+        "timing": "Start of work session or when new issues added",
+        "participants": ["issue-coordinator", "bug-hunter", "feature-builder"],
+        "purpose": "Coordinator assigns issues from queue based on priority, type, and dependencies",
+        "deliverables": ["Issue assignments documented", "Blockers identified"],
+        "gatekeeper": "issue-coordinator"
+      },
+      {
+        "name": "Issue Assignment",
+        "timing": "Start of work session",
+        "participants": ["bug-hunter", "feature-builder"],
+        "purpose": "Assign issues from queue based on priority and type",
+        "deliverables": ["Issue assignments documented"],
+        "gatekeeper": "Human"
+      },
+      {
+        "name": "Dependency Unblocking",
+        "timing": "When API team delivers or blockers resolved",
+        "participants": ["issue-coordinator", "integration-coordinator"],
+        "purpose": "Coordinator identifies completed API work and unblocks waiting issues",
+        "deliverables": ["Issue status updated to 'ready'", "Assigned agents notified via MESSAGE_LOG.md"],
+        "gatekeeper": "issue-coordinator"
+      },
+      {
+        "name": "Implementation Review",
+        "timing": "After code complete",
+        "participants": ["implementer", "qa-validator"],
+        "purpose": "Review implementation and verify TDD approach followed",
+        "deliverables": ["Code review notes", "Test coverage report", "Regression test results"],
+        "gatekeeper": "qa-validator"
+      },
+      {
+        "name": "API Coordination",
+        "timing": "As needed during implementation",
+        "participants": ["integration-coordinator", "backend-team"],
+        "purpose": "Coordinate API changes via message threads",
+        "deliverables": ["Coordination thread created/updated"],
+        "gatekeeper": "integration-coordinator"
+      },
+      {
+        "name": "Issue Completion",
+        "timing": "After QA validation",
+        "participants": ["implementer", "qa-validator", "Human"],
+        "purpose": "Mark issue complete in queue after all tests pass",
+        "deliverables": ["ISSUE_QUEUE.md updated", "MESSAGE_LOG.md updated", "Coverage report", "All tests passing"],
+        "gatekeeper": "Human"
+      }
+    ]
+  },
+  "sharedContext": {
+    "projectStructure": {
+      "app": "src/app/ - Application setup, providers, routing",
+      "pages": "src/pages/ - Page components (route level)",
+      "widgets": "src/widgets/ - Complex UI blocks (sidebar, header, etc.)",
+      "features": "src/features/ - Business logic modules",
+      "entities": "src/entities/ - Domain models, API clients, hooks",
+      "shared": "src/shared/ - Shared utilities, UI components, API config"
+    },
+    "conventions": {
+      "naming": {
+        "components": "PascalCase.tsx (e.g., ProfilePage.tsx)",
+        "hooks": "useCamelCase.ts (e.g., useProfile.ts)",
+        "types": "PascalCase for interfaces (e.g., IPerson, IUserProfile)",
+        "utils": "camelCase.ts",
+        "tests": "*.test.ts or *.test.tsx matching source file"
+      },
+      "architecture": "Feature-Sliced Design (FSD)",
+      "stateManagement": "React Query for server state, Zustand for client state",
+      "styling": "Tailwind CSS + shadcn/ui components + cn() helper"
+    },
+    "authPatterns": {
+      "multiUserType": "Users can have multiple userTypes (learner, staff, global-admin)",
+      "dashboardContext": "UI is context-aware based on current dashboard (/admin, /staff, /learner)",
+      "permissionChecking": "hasGlobalPermission() for global items, hasDeptPermission() for department-scoped",
+      "departmentScoped": "Navigation items have departmentScoped flag",
+      "adminToken": "Memory-only storage, never localStorage",
+      "displayLabels": "Use roleHierarchy.userTypeDisplayMap for display names"
+    },
+    "contractAlignment": [
+      "1. Check api_contracts/ for API endpoint documentation",
+      "2. Validate TypeScript types match backend response structure",
+      "3. Use exact field names from backend (camelCase)",
+      "4. Handle all documented error codes",
+      "5. Create coordination thread if contract unclear or missing"
+    ],
+    "issueQueueWorkflow": [
+      "1. Human creates issue in ISSUE_QUEUE.md with ISS-XXX identifier",
+      "2. Issue coordinator reviews new issue and dependencies",
+      "3. Coordinator assigns to agent based on priority/type OR marks blocked if API work needed",
+      "4. Coordinator creates coordination thread if API/backend work required",
+      "5. Coordinator monitors ACTIVE_THREADS.md for API team progress",
+      "6. When API delivers, coordinator unblocks issue and notifies assigned agent",
+      "7. Agent follows TDD cycle: Write test (RED) → Implement (GREEN) → Refactor",
+      "8. Agent runs tests continuously during development",
+      "9. Agent checks test coverage meets minimum threshold (70%)",
+      "10. Agent runs full regression suite to ensure no existing tests break",
+      "11. Agent validates implementation and writes tests",
+      "12. Agent updates MESSAGE_LOG.md with changes and coverage report",
+      "13. Agent marks issue complete in ISSUE_QUEUE.md",
+      "14. Coordinator reviews completion and closes coordination threads",
+      "15. Human reviews coverage report and validates completion"
+    ]
+  },
+  "workflowRules": {
+    "branchNaming": "fix/<ISS-XXX>-<description> or feat/<ISS-XXX>-<description>",
+    "commitFormat": "fix(ISS-XXX): <description> or feat(ISS-XXX): <description>",
+    "prRequired": false,
+    "tddRequired": true,
+    "testFirst": "Write failing tests before implementation code (RED phase)",
+    "minTestCoverage": 70,
+    "criticalPathCoverage": 80,
+    "regressionTestsRequired": "All existing tests must pass before marking complete",
+    "coverageReportRequired": "Include coverage report in MESSAGE_LOG.md updates",
+    "manualTestingRequired": "Document test steps for UI changes",
+    "messageLogUpdates": "Required for all implementations with test results",
+    "coordinationThreads": "Required for API changes or cross-team work"
+  },
+  "communicationChannels": {
+    "issueQueue": {
+      "path": "api/agent_coms/ui/ISSUE_QUEUE.md",
+      "purpose": "Human-to-agent issue submission",
+      "format": "Full or quick issue format",
+      "updateFrequency": "After each issue completion"
+    },
+    "messageLog": {
+      "path": "api/agent_coms/ui/MESSAGE_LOG.md",
+      "purpose": "Agent change log for messages folder",
+      "format": "Chronological entries with rollback notes",
+      "updateFrequency": "Every time agent posts/updates message"
+    },
+    "coordinationThreads": {
+      "path": "api/agent_coms/messages/",
+      "purpose": "UI-to-API agent communication",
+      "format": "Follow COORDINATION_STANDARD.md templates",
+      "activeThreads": "Track in ACTIVE_THREADS.md"
+    }
+  },
+  "priorityGuidelines": {
+    "P0": {
+      "label": "CRITICAL",
+      "description": "Production blockers, security issues, data loss bugs",
+      "sla": "Immediate - start within 1 hour",
+      "assignTo": "bug-hunter",
+      "testing": "Full regression + manual validation + coverage report required",
+      "tdd": "Write comprehensive test suite before fixing"
+    },
+    "P1": {
+      "label": "HIGH",
+      "description": "Major bugs affecting core functionality, user-visible errors",
+      "sla": "Same day - start within 4 hours",
+      "assignTo": "bug-hunter",
+      "testing": "Integration tests + manual validation + regression suite",
+      "tdd": "Write failing test reproducing bug before implementing fix"
+    },
+    "P2": {
+      "label": "MEDIUM",
+      "description": "Feature implementations, UI enhancements, minor bugs",
+      "sla": "Within 2 days",
+      "assignTo": "feature-builder",
+      "testing": "Unit tests + component tests + coverage check",
+      "tdd": "Follow RED-GREEN-REFACTOR for all new code"
+    },
+    "P3": {
+      "label": "LOW",
+      "description": "Nice-to-haves, polish, refactoring, documentation",
+      "sla": "When capacity available",
+      "assignTo": "feature-builder",
+      "testing": "Basic validation + regression check sufficient",
+      "tdd": "Write tests for critical paths only"
+    }
+  },
+  "tooling": {
+    "development": {
+      "vite": "v5.4.21 - Development server with HMR",
+      "typescript": "Strict mode enabled",
+      "react": "18+ with hooks",
+      "reactRouter": "v6 with route-based code splitting"
+    },
+    "stateManagement": {
+      "zustand": "Client state (auth, navigation)",
+      "reactQuery": "Server state (API data, caching)",
+      "context": "Department context for scoped operations"
+    },
+    "uiComponents": {
+      "shadcn": "Accessible component primitives",
+      "tailwind": "Utility-first CSS framework",
+      "lucideReact": "Icon library"
+    },
+    "testing": {
+      "vitest": "Unit testing framework - run with --watch during development",
+      "reactTestingLibrary": "Component testing",
+      "msw": "API mocking for tests",
+      "coverage": "vitest --coverage for coverage reports",
+      "testCommands": {
+        "watch": "npm run test -- --watch (during TDD development)",
+        "coverage": "npm run test:coverage (before marking complete)",
+        "all": "npm run test (full regression suite)"
+      }
+    }
+  }
+}

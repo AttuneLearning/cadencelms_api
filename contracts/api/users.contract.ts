@@ -217,7 +217,8 @@ export const UsersContract = {
     request: {
       headers: {
         'Authorization': 'Bearer <token>',
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-User-Type-Context': 'staff | learner (required if user has both)'
       },
       body: {
         firstName: {

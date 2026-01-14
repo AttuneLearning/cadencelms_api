@@ -2,7 +2,7 @@
 
 > **Purpose:** Human-provided issue tracking for API agent work
 > **Owner:** Human / API Agent
-> **Last Updated:** 2026-01-12
+> **Last Updated:** 2026-01-13
 
 ---
 
@@ -20,6 +20,95 @@
 ---
 
 ## Pending Issues
+
+### API-ISS-001: Personal Schedule/Calendar Endpoint
+
+**Priority:** medium
+**Type:** feature
+**Status:** pending
+**Assigned:** API Agent
+**Dependencies:** None
+**Requested By:** UI Team (ISS-014 Dashboard Navigation)
+
+**Description:**
+The UI team needs a personal schedule/calendar endpoint for staff and learners. Currently the `/api/v2/calendar/*` endpoints only provide the **institutional academic calendar** (years, terms, cohorts), not individual user schedules.
+
+**What Exists:**
+- ✅ `GET /api/v2/calendar/years` - Academic years (institutional)
+- ✅ `GET /api/v2/calendar/terms` - Academic terms (institutional)
+- ✅ `GET /api/v2/calendar/cohorts` - Cohorts (institutional)
+- ✅ `GET /api/v2/classes?instructor=me` - My teaching classes
+- ✅ `GET /api/v2/enrollments` - Learner enrollments
+
+**What's Needed:**
+A unified endpoint that aggregates personal schedule data from multiple sources:
+
+**For Learners:**
+- Class meeting times (from ClassEnrollment → Class.schedule)
+- Assignment due dates (from Course assignments)
+- Exam dates (from Course exams)
+- Academic term boundaries (from Terms)
+
+**For Staff/Instructors:**
+- Class teaching schedule (from Class.schedule where instructor=me)
+- Office hours (from Staff.personExtended.officeHours)
+- Grading deadlines (from Classes they teach)
+
+**Proposed Endpoints:**
+```
+GET /api/v2/users/me/schedule
+GET /api/v2/users/me/schedule?startDate=X&endDate=Y
+GET /api/v2/users/me/schedule?type=classes|assignments|exams|all
+```
+
+**Response Shape (proposed):**
+```typescript
+{
+  data: {
+    events: [
+      {
+        id: string,
+        type: 'class' | 'assignment' | 'exam' | 'office-hours' | 'term-boundary',
+        title: string,
+        start: Date,
+        end?: Date,
+        allDay?: boolean,
+        location?: string,
+        relatedId: string,  // classId, assignmentId, etc.
+        relatedType: 'class' | 'course' | 'assignment' | 'exam',
+        recurring?: { pattern: string, until?: Date }
+      }
+    ],
+    dateRange: { start: Date, end: Date }
+  }
+}
+```
+
+**Acceptance Criteria:**
+- [ ] Learners see their enrolled class schedules
+- [ ] Instructors see their teaching schedules
+- [ ] Both see relevant academic term dates
+- [ ] Supports date range filtering
+- [ ] Supports type filtering
+- [ ] Handles recurring events (weekly classes)
+- [ ] Contract file created at `contracts/api/schedule.contract.ts`
+
+**Implementation Notes:**
+- Aggregate from: ClassEnrollment, Class, Course, Staff.officeHours, AcademicTerms
+- May need to parse Class.schedule field (currently free-text string)
+- Consider caching for performance (many joins required)
+
+**UI Team Contact:**
+- Referenced in: `agent_coms/ui/ISSUE_QUEUE.md` → ISS-014 Dashboard Navigation
+- Calendar views need this for Staff/Learner dashboards
+
+**Related Files:**
+- `src/models/academic/Class.model.ts` - Has schedule field (string)
+- `src/models/enrollment/ClassEnrollment.model.ts` - Links learners to classes
+- `src/models/auth/PersonExtended.types.ts` - Has officeHours field
+- `src/routes/academic-years.routes.ts` - Existing calendar routes
+
+---
 
 ### API-001: Fix API Test Suite
 

@@ -4,6 +4,27 @@ import { ApiResponse } from '@/utils/ApiResponse';
 import { asyncHandler } from '@/utils/asyncHandler';
 import { ApiError } from '@/utils/ApiError';
 
+type UserTypeContext = 'staff' | 'learner';
+
+function getUserTypeContext(req: Request): UserTypeContext | undefined {
+  const headerValue =
+    req.headers['x-user-type-context'] ?? req.headers['x-dashboard-context'];
+  if (!headerValue) {
+    return undefined;
+  }
+
+  const rawValue = Array.isArray(headerValue) ? headerValue[0] : headerValue;
+  const normalized = rawValue?.toString().trim().toLowerCase();
+
+  if (normalized === 'staff' || normalized === 'learner') {
+    return normalized;
+  }
+
+  throw ApiError.badRequest(
+    'Invalid X-User-Type-Context header. Must be "staff" or "learner".'
+  );
+}
+
 /**
  * Users Controller
  * Handles all /api/v2/users endpoints
@@ -26,6 +47,7 @@ export const getMe = asyncHandler(async (req: Request, res: Response) => {
 export const updateMe = asyncHandler(async (req: Request, res: Response) => {
   const userId = (req as any).user.userId;
   const { firstName, lastName, phone, profileImage } = req.body;
+  const userTypeContext = getUserTypeContext(req);
 
   // Validate input
   if (firstName !== undefined && (typeof firstName !== 'string' || firstName.length < 1 || firstName.length > 100)) {
@@ -67,7 +89,7 @@ export const updateMe = asyncHandler(async (req: Request, res: Response) => {
     }
   });
 
-  const result = await UsersService.updateMe(userId, updateData);
+  const result = await UsersService.updateMe(userId, updateData, userTypeContext);
   res.status(200).json(ApiResponse.success(result, 'Profile updated successfully'));
 });
 
@@ -227,11 +249,12 @@ export const getMyPerson = asyncHandler(async (req: Request, res: Response) => {
 export const updateMyPerson = asyncHandler(async (req: Request, res: Response) => {
   const userId = (req as any).user.userId;
   const personData = req.body;
+  const userTypeContext = getUserTypeContext(req);
 
   // TODO: Add comprehensive validation using Zod validator
   // For now, service layer handles basic validation
 
-  const result = await UsersService.updateMyPerson(userId, personData);
+  const result = await UsersService.updateMyPerson(userId, personData, userTypeContext);
   res.status(200).json(ApiResponse.success(result, 'Person data updated successfully'));
 });
 
@@ -252,11 +275,12 @@ export const getMyPersonExtended = asyncHandler(async (req: Request, res: Respon
 export const updateMyPersonExtended = asyncHandler(async (req: Request, res: Response) => {
   const userId = (req as any).user.userId;
   const extendedData = req.body;
+  const userTypeContext = getUserTypeContext(req);
 
   // TODO: Add comprehensive validation using Zod validator
   // For now, service layer handles basic validation
 
-  const result = await UsersService.updateMyPersonExtended(userId, extendedData);
+  const result = await UsersService.updateMyPersonExtended(userId, extendedData, userTypeContext);
   res.status(200).json(ApiResponse.success(result, 'Extended person data updated successfully'));
 });
 
@@ -277,10 +301,11 @@ export const getMyDemographics = asyncHandler(async (req: Request, res: Response
 export const updateMyDemographics = asyncHandler(async (req: Request, res: Response) => {
   const userId = (req as any).user.userId;
   const demographicsData = req.body;
+  const userTypeContext = getUserTypeContext(req);
 
   // TODO: Add comprehensive validation using Zod validator
   // For now, service layer handles basic validation
 
-  const result = await UsersService.updateMyDemographics(userId, demographicsData);
+  const result = await UsersService.updateMyDemographics(userId, demographicsData, userTypeContext);
   res.status(200).json(ApiResponse.success(result, 'Demographics data updated successfully'));
 });

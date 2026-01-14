@@ -148,6 +148,11 @@ export const UsersContract = {
         authorization: {
           type: 'string',
           required: true
+        },
+        'x-user-type-context': {
+          type: 'string',
+          required: false,
+          description: 'staff | learner (required if user has both)'
         }
       },
       body: {

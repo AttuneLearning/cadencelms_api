@@ -9,6 +9,13 @@
  * IMPORTANT: Demographics data is sensitive, optional, and requires explicit
  * user consent. The same structure is used for both staff and learners.
  *
+ * SECURITY (ISS-011 - Field-Level Encryption):
+ * - alienRegistrationNumber is ENCRYPTED AT REST using AES-256-GCM
+ * - Field is automatically DECRYPTED when returned to authorized users (the owner)
+ * - Field contains sensitive immigration identification (A-numbers)
+ * - Access requires authentication and authorization
+ * - All access should be audit logged for compliance
+ *
  * Both backend and UI teams use these as the source of truth.
  */
 
@@ -54,7 +61,7 @@ export const DemographicsContract = {
             countryOfBirth: 'string | null',
             visaType: 'f1 | j1 | h1b | m1 | h4 | other | null',
             visaExpirationDate: 'Date | null',
-            alienRegistrationNumber: 'string | null',
+            alienRegistrationNumber: 'string | null', // Encrypted at rest, decrypted for authorized user
 
             // Personal Status
             maritalStatus: 'MaritalStatus | null',
@@ -125,7 +132,7 @@ export const DemographicsContract = {
           countryOfBirth: 'US',
           visaType: null,
           visaExpirationDate: null,
-          alienRegistrationNumber: null,
+          alienRegistrationNumber: null // or 'A012345678' for non-citizens
 
           // Personal Status
           maritalStatus: 'single',

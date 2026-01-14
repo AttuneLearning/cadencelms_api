@@ -6,6 +6,13 @@
  * Person data includes basic contact information, preferences, and profile
  * information shared across all user types (staff, learners).
  *
+ * SECURITY (ISS-011 - Field-Level Encryption):
+ * - identifications[].idNumber is ENCRYPTED AT REST using AES-256-GCM
+ * - Field is automatically DECRYPTED when returned to authorized users (the owner)
+ * - Field contains sensitive PII (Passport, Driver's License, State ID numbers)
+ * - Access requires authentication and authorization
+ * - All access should be audit logged for compliance
+ *
  * Both backend and UI teams use these as the source of truth.
  */
 
@@ -239,7 +246,8 @@ export const PersonContract = {
     request: {
       headers: {
         'Authorization': 'Bearer <token>',
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-User-Type-Context': 'staff | learner (required if user has both)'
       },
       body: {
         // Core Identity (optional)
@@ -479,7 +487,7 @@ export const PersonContract = {
               studentId: 'string | null',
               emergencyContacts: '[array of emergency contact objects]',
               parentGuardians: '[array of parent/guardian objects]',
-              identifications: '[array of identification objects]',
+              identifications: '[array of identification objects - idNumber encrypted at rest, decrypted for owner]',
               priorEducation: '[array of prior education objects]',
               transferCredits: 'number | null',
               accommodations: '[array of accommodation objects]',
@@ -528,7 +536,7 @@ export const PersonContract = {
             parentGuardians: [],
             identifications: [
               {
-                idNumber: 'ENCRYPTED',
+                idNumber: 'S-123-456-789-012', // Decrypted for authorized user
                 idType: 'drivers-license',
                 issuingAuthority: 'Massachusetts RMV',
                 issueDate: '2022-01-15',
@@ -599,7 +607,8 @@ export const PersonContract = {
     request: {
       headers: {
         'Authorization': 'Bearer <token>',
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-User-Type-Context': 'staff | learner (required if user has both)'
       },
       body: {
         // For staff: IStaffPersonExtended fields
