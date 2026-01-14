@@ -34,6 +34,7 @@ const BUILT_IN_ROLES = {
       'content:read', 'content:write', 'content:manage',
       'enrollments:read', 'enrollments:write', 'enrollments:manage',
       'assessments:read', 'assessments:write',
+      'grades:override',
       'reports:read', 'reports:write'
     ]
   },
@@ -63,8 +64,19 @@ const BUILT_IN_ROLES = {
     description: 'Billing and payment administrator',
     permissions: [
       'users:read',
+      'courses:read',
       'enrollments:read',
       'reports:read', 'reports:write'
+    ]
+  },
+  'enrollment-admin': {
+    level: 55,
+    description: 'Enrollment and registration administrator',
+    permissions: [
+      'users:read',
+      'courses:read',
+      'enrollments:read', 'enrollments:write', 'enrollments:manage',
+      'reports:read'
     ]
   },
   'learner': {
