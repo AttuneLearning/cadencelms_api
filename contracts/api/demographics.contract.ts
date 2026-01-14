@@ -82,8 +82,8 @@ export const DemographicsContract = {
             otherLanguages: 'string[] | null',
 
             // Socioeconomic
-            pellEligible: 'boolean | null',
-            lowIncomeStatus: 'boolean | null',
+            pellEligible: 'boolean | null (READONLY - Set by Financial Aid office)',
+            lowIncomeStatus: 'boolean | null (READONLY - Set by Financial Aid office)',
             householdIncomeRange: 'IncomeRange | null',
 
             // Religion
@@ -153,8 +153,8 @@ export const DemographicsContract = {
           otherLanguages: ['es'],
 
           // Socioeconomic
-          pellEligible: false,
-          lowIncomeStatus: false,
+          pellEligible: false, // READONLY - Cannot be updated via API
+          lowIncomeStatus: false, // READONLY - Cannot be updated via API
           householdIncomeRange: '75k-100k',
 
           // Religion
@@ -199,6 +199,9 @@ export const DemographicsContract = {
       - CRITICAL: Never display demographics without explicit consent
       - Use this for compliance reporting, research, institutional planning
       - This is the "Demographics" layer of three-layer architecture
+      - READONLY FIELDS: pellEligible and lowIncomeStatus are calculated and set
+        by the Financial Aid office based on FAFSA data. These fields appear in
+        the response but cannot be updated through the API.
     `
   },
 
@@ -218,7 +221,8 @@ export const DemographicsContract = {
     request: {
       headers: {
         'Authorization': 'Bearer <token>',
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-User-Type-Context': 'staff | learner (required if user has both)'
       },
       body: {
         // All fields optional (partial updates)
@@ -331,6 +335,7 @@ export const DemographicsContract = {
       },
       errors: [
         { status: 400, code: 'VALIDATION_ERROR', message: 'Invalid input data', errors: '[{ field, message }]' },
+        { status: 400, code: 'READONLY_FIELD_ERROR', message: 'Cannot update readonly financial aid fields: pellEligible, lowIncomeStatus. These fields are calculated and set by the Financial Aid office based on FAFSA data.' },
         { status: 401, code: 'UNAUTHORIZED', message: 'Invalid or expired token' },
         { status: 404, code: 'DEMOGRAPHICS_NOT_FOUND', message: 'Demographics data not found' }
       ]
@@ -380,6 +385,12 @@ export const DemographicsContract = {
       - Returns complete updated demographics data on success
       - BREAKING CHANGE: New endpoint for demographics management
       - Critical for Title IX, ADA, IPEDS compliance
+      - READONLY FIELDS (ISS-012): pellEligible and lowIncomeStatus CANNOT be
+        updated through this endpoint. They are calculated by the Financial Aid
+        office based on FAFSA data. Attempts to update these fields will result
+        in a 400 READONLY_FIELD_ERROR response.
+      - Financial Aid office sets these fields through administrative interfaces
+        or batch FAFSA data imports.
     `
   }
 };

@@ -211,10 +211,41 @@ export interface IDemographics {
   // Socioeconomic
   // ========================================
 
-  /** Eligible for federal Pell Grant? (for learners) */
+  /**
+   * Eligible for federal Pell Grant? (for learners)
+   *
+   * **READONLY - Calculated Field**
+   *
+   * This field is calculated and set by the Financial Aid office based on
+   * FAFSA (Free Application for Federal Student Aid) data. Students cannot
+   * directly update this field through the API.
+   *
+   * Calculation factors:
+   * - Expected Family Contribution (EFC) from FAFSA
+   * - Cost of Attendance (COA) at institution
+   * - Enrollment status (full-time/part-time)
+   *
+   * Data source: External Financial Aid system or manual entry by Financial Aid staff
+   */
   pellEligible?: boolean;
 
-  /** Low-income status */
+  /**
+   * Low-income status
+   *
+   * **READONLY - Calculated Field**
+   *
+   * This field is calculated and set by the Financial Aid office based on
+   * household income and number of dependents from FAFSA data. Students cannot
+   * directly update this field through the API.
+   *
+   * Calculation factors:
+   * - Household adjusted gross income (AGI)
+   * - Number of dependents
+   * - Federal poverty guidelines
+   * - State-specific thresholds
+   *
+   * Data source: External Financial Aid system or manual entry by Financial Aid staff
+   */
   lowIncomeStatus?: boolean;
 
   /** Household income range (annual, USD) */
@@ -411,12 +442,16 @@ export const DemographicsSchema = new Schema<IDemographics>(
       default: []
     },
 
-    // Socioeconomic
+    // Socioeconomic (READONLY fields set by Financial Aid office)
     pellEligible: {
       type: Boolean
+      // NOTE: READONLY - Set by Financial Aid office based on FAFSA data
+      // Cannot be updated through PUT /users/me/demographics endpoint
     },
     lowIncomeStatus: {
       type: Boolean
+      // NOTE: READONLY - Set by Financial Aid office based on income/dependents
+      // Cannot be updated through PUT /users/me/demographics endpoint
     },
     householdIncomeRange: {
       type: String,

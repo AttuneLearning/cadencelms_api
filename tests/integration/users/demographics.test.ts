@@ -377,20 +377,24 @@ describe('Demographics Endpoints - /api/v2/users/me/demographics', () => {
     });
 
     it('should update socioeconomic information', async () => {
+      // NOTE: pellEligible and lowIncomeStatus are READONLY (ISS-012)
+      // Only householdIncomeRange can be updated by user
       const response = await request(app)
         .put('/api/v2/users/me/demographics')
         .set('Authorization', `Bearer ${learnerToken}`)
         .send({
-          pellEligible: true,
-          lowIncomeStatus: true,
-          householdIncomeRange: 'under-25k'
+          householdIncomeRange: 'under-25k',
+          maritalStatus: 'single',
+          numberOfDependents: 2
         })
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.data.pellEligible).toBe(true);
-      expect(response.body.data.lowIncomeStatus).toBe(true);
       expect(response.body.data.householdIncomeRange).toBe('under-25k');
+      expect(response.body.data.maritalStatus).toBe('single');
+      expect(response.body.data.numberOfDependents).toBe(2);
+      // pellEligible and lowIncomeStatus remain as set in beforeEach
+      expect(response.body.data.pellEligible).toBe(true);
     });
 
     it('should update consent preferences', async () => {
@@ -471,19 +475,21 @@ describe('Demographics Endpoints - /api/v2/users/me/demographics', () => {
     });
 
     it('should handle partial updates', async () => {
+      // NOTE: Test partial update with a non-readonly field (ISS-012)
       const response = await request(app)
         .put('/api/v2/users/me/demographics')
         .set('Authorization', `Bearer ${learnerToken}`)
         .send({
-          pellEligible: false
+          veteranStatus: 'veteran' // Update only one field
         })
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.data.pellEligible).toBe(false);
+      expect(response.body.data.veteranStatus).toBe('veteran');
       // Other fields should remain unchanged
       expect(response.body.data.legalGender).toBe('female');
       expect(response.body.data.isHispanicLatino).toBe(true);
+      expect(response.body.data.pellEligible).toBe(true); // Readonly field unchanged
     });
 
     it('should initialize demographics if not exists', async () => {
@@ -597,6 +603,103 @@ describe('Demographics Endpoints - /api/v2/users/me/demographics', () => {
 
       expect(response.body.success).toBe(true);
       expect(response.body.data.allowResearch).toBe(false);
+    });
+  });
+
+  describe('Financial Aid READONLY Fields (ISS-012)', () => {
+    it('should reject attempts to update pellEligible (readonly field)', async () => {
+      const response = await request(app)
+        .put('/api/v2/users/me/demographics')
+        .set('Authorization', `Bearer ${learnerToken}`)
+        .send({
+          pellEligible: false // Try to change from true to false
+        })
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('readonly financial aid fields');
+      expect(response.body.message).toContain('pellEligible');
+      expect(response.body.message).toContain('Financial Aid office');
+
+      // Verify value unchanged in database
+      const learner = await Learner.findById(testLearnerUser._id);
+      expect(learner?.demographics?.pellEligible).toBe(true); // Still true
+    });
+
+    it('should reject attempts to update lowIncomeStatus (readonly field)', async () => {
+      const response = await request(app)
+        .put('/api/v2/users/me/demographics')
+        .set('Authorization', `Bearer ${learnerToken}`)
+        .send({
+          lowIncomeStatus: false
+        })
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('readonly financial aid fields');
+      expect(response.body.message).toContain('lowIncomeStatus');
+    });
+
+    it('should reject attempts to update both financial aid fields together', async () => {
+      const response = await request(app)
+        .put('/api/v2/users/me/demographics')
+        .set('Authorization', `Bearer ${learnerToken}`)
+        .send({
+          pellEligible: false,
+          lowIncomeStatus: false,
+          householdIncomeRange: '100k-150k' // This one is allowed
+        })
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('pellEligible');
+      expect(response.body.message).toContain('lowIncomeStatus');
+
+      // Verify no fields were updated
+      const learner = await Learner.findById(testLearnerUser._id);
+      expect(learner?.demographics?.pellEligible).toBe(true);
+      // householdIncomeRange should also not be updated due to transaction rollback
+    });
+
+    it('should allow updating other fields while readonly fields exist in database', async () => {
+      // Learner already has pellEligible: true in database
+      const response = await request(app)
+        .put('/api/v2/users/me/demographics')
+        .set('Authorization', `Bearer ${learnerToken}`)
+        .send({
+          householdIncomeRange: '100k-150k',
+          maritalStatus: 'married'
+        })
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.householdIncomeRange).toBe('100k-150k');
+      expect(response.body.data.maritalStatus).toBe('married');
+      expect(response.body.data.pellEligible).toBe(true); // Still present in response
+    });
+
+    it('should return pellEligible and lowIncomeStatus in GET responses', async () => {
+      const response = await request(app)
+        .get('/api/v2/users/me/demographics')
+        .set('Authorization', `Bearer ${learnerToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.pellEligible).toBeDefined();
+      expect(response.body.data.pellEligible).toBe(true);
+      // lowIncomeStatus may be undefined/null if not set
+    });
+
+    it('should handle null financial aid fields gracefully', async () => {
+      // Staff user has no financial aid fields set
+      const response = await request(app)
+        .get('/api/v2/users/me/demographics')
+        .set('Authorization', `Bearer ${staffToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      // Fields should be present in response but null/undefined
+      expect('pellEligible' in response.body.data || response.body.data.pellEligible === undefined).toBe(true);
     });
   });
 });

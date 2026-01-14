@@ -1,0 +1,211 @@
+{
+  "team": {
+    "name": "ISS-012: Financial Aid Fields Integration",
+    "version": "1.0.0",
+    "description": "Adds pellEligible and lowIncomeStatus readonly fields to learner demographics with FAFSA integration design",
+    "issue": "ISS-012",
+    "priority": "low",
+    "type": "feature",
+    "assignedTo": "Both (UI + API coordination)"
+  },
+  "mode": "focused-feature-extension",
+  "issueContext": {
+    "dependencies": ["ISS-010 (must complete first)"],
+    "description": "Add financial aid eligibility fields to learner demographics. These are readonly calculated fields set by Financial Aid office based on FAFSA data.",
+    "fields": {
+      "pellEligible": {
+        "type": "boolean",
+        "readonly": true,
+        "description": "Calculated based on FAFSA data"
+      },
+      "lowIncomeStatus": {
+        "type": "boolean",
+        "readonly": true,
+        "description": "Calculated based on household income and dependents"
+      }
+    },
+    "keyDecisions": [
+      "Design Financial Aid API integration approach",
+      "Determine if separate endpoint needed (/api/v2/users/me/financial-aid) or extend demographics API",
+      "Coordinate on FAFSA data source and calculation logic"
+    ]
+  },
+  "workflow": {
+    "pattern": "Design-Implement-Test-Coordinate",
+    "approach": "extension-of-existing-api",
+    "steps": [
+      "1. Review: Examine existing Demographics model and API",
+      "2. Design: Decide on API structure (separate endpoint vs extend demographics)",
+      "3. Model: Extend IDemographics interface and schema",
+      "4. Service: Add logic to handle readonly fields and null cases",
+      "5. Controller: Update or create endpoints",
+      "6. Contract: Update API contracts",
+      "7. Test: Write tests for new fields and null handling",
+      "8. Coordinate: Document integration points for UI team"
+    ]
+  },
+  "agent": {
+    "id": "agent-iss-012",
+    "role": "Financial Aid Integration Developer",
+    "description": "Focused agent for extending demographics with financial aid fields",
+    "capabilities": [
+      "Extend existing models with new optional fields",
+      "Design integration points for external systems",
+      "Implement readonly field handling",
+      "Update API contracts and documentation",
+      "Coordinate with UI team on field display"
+    ]
+  },
+  "testingStrategy": {
+    "pattern": "Extension Testing",
+    "focus": [
+      "New fields are optional (handle null/undefined)",
+      "Readonly fields cannot be set via API",
+      "Response includes financial aid fields when available",
+      "Response handles missing data gracefully"
+    ],
+    "commands": {
+      "unit": "npm run test:unit -- demographics",
+      "integration": "npm run test:integration -- demographics",
+      "all": "npm test",
+      "specific": "npm test -- ISS-012"
+    }
+  },
+  "contextFiles": {
+    "always": [
+      "src/models/auth/Demographics.types.ts",
+      "contracts/api/demographics.contract.ts",
+      "src/services/demographics/demographics.service.ts"
+    ],
+    "review": [
+      "agent_coms/ui/ISSUE_QUEUE.md",
+      "agent_coms/ui/specs/ISS-010_PERSON_EXTENDED_FORMS.md"
+    ]
+  },
+  "coordination": {
+    "enabled": true,
+    "messagesDir": "agent_coms/messages",
+    "logDir": "agent_coms/api",
+    "protocol": "agent_coms/messages/COORDINATION_STANDARD.md",
+    "required": [
+      "Document endpoint structure for UI team",
+      "Clarify FAFSA data source (external system integration)",
+      "Define field display requirements (badges/tooltips)"
+    ]
+  },
+  "designDecisions": {
+    "endpointStructure": {
+      "options": [
+        {
+          "option": "A",
+          "description": "Extend existing GET /api/v2/users/me/demographics",
+          "pros": ["Single source for all demographics", "Simpler for UI", "Consistent with existing pattern"],
+          "cons": ["Demographics response grows", "Financial aid mixed with other demographics"]
+        },
+        {
+          "option": "B",
+          "description": "Create new GET /api/v2/users/me/financial-aid",
+          "pros": ["Separated concern", "Can have different access controls", "Cleaner for future FAFSA features"],
+          "cons": ["Extra API call", "More complexity for UI", "Data duplication potential"]
+        }
+      ],
+      "recommendation": "Option A - Extend demographics (simpler, consistent with Section 2.15 placement)",
+      "needsApproval": true
+    },
+    "dataSource": {
+      "question": "Where does FAFSA data come from?",
+      "options": [
+        "External Financial Aid system (API integration)",
+        "Manual entry by Financial Aid office",
+        "Batch import from FAFSA portal",
+        "Direct FAFSA API integration (future)"
+      ],
+      "decision": "Needs coordination with Financial Aid office/stakeholders",
+      "implementation": "For now: fields are nullable and set via admin interface or batch process"
+    }
+  },
+  "implementationChecklist": {
+    "model": [
+      "[ ] Add pellEligible?: boolean to IDemographics interface",
+      "[ ] Add lowIncomeStatus?: boolean to IDemographics interface",
+      "[ ] Update DemographicsSchema with new optional fields",
+      "[ ] Add field descriptions/comments",
+      "[ ] Ensure fields are optional (not required)"
+    ],
+    "service": [
+      "[ ] Update demographics service to include new fields in responses",
+      "[ ] Ensure fields are readonly (not updatable via PUT endpoint)",
+      "[ ] Handle null/undefined gracefully",
+      "[ ] Add comments explaining calculation logic placeholder"
+    ],
+    "controller": [
+      "[ ] Update GET endpoint to return new fields",
+      "[ ] Ensure PUT endpoint rejects attempts to set these fields",
+      "[ ] Add appropriate error messages for readonly field attempts"
+    ],
+    "contract": [
+      "[ ] Update demographics.contract.ts response type",
+      "[ ] Document fields as readonly and optional",
+      "[ ] Add examples showing null values"
+    ],
+    "tests": [
+      "[ ] Test GET returns financial aid fields when present",
+      "[ ] Test GET returns null when fields not set",
+      "[ ] Test PUT rejects pellEligible updates",
+      "[ ] Test PUT rejects lowIncomeStatus updates",
+      "[ ] Test response shape matches contract"
+    ],
+    "documentation": [
+      "[ ] Document FAFSA integration architecture (future)",
+      "[ ] Document field calculation logic (placeholder)",
+      "[ ] Document how Financial Aid office sets these values",
+      "[ ] Create coordination message for UI team with field specs"
+    ]
+  },
+  "codeStandards": {
+    "typescript": {
+      "strict": true,
+      "noAny": "prefer-unknown",
+      "imports": "absolute paths with @/ alias"
+    },
+    "readonlyFields": {
+      "pattern": "Fields are optional in model, excluded from update DTOs",
+      "validation": "Reject updates with 400 Bad Request if readonly fields present",
+      "response": "Always include in response (even if null)"
+    }
+  },
+  "quickReference": {
+    "keyFiles": {
+      "model": "src/models/auth/Demographics.types.ts",
+      "contract": "contracts/api/demographics.contract.ts",
+      "service": "src/services/demographics/demographics.service.ts",
+      "controller": "src/controllers/demographics.controller.ts",
+      "route": "src/routes/demographics.routes.ts",
+      "issueSpec": "agent_coms/ui/ISSUE_QUEUE.md (line 53)"
+    },
+    "relatedIssues": {
+      "ISS-010": "PersonExtended & Demographics forms (dependency)",
+      "ISS-011": "Encrypt identification numbers (related security work)"
+    }
+  },
+  "workingDirectory": {
+    "enforced": true,
+    "path": "/home/adam/github/cadencelms_api",
+    "description": "All work must be performed within this directory. Do not access or modify files in lms_ui or other directories."
+  },
+  "coordinationNotes": {
+    "forUITeam": [
+      "Fields are optional - handle null/undefined in UI",
+      "Display appropriate badges/tooltips explaining these are calculated fields",
+      "Show placeholder or 'Not Available' when data not set",
+      "Fields appear in Section 2.15 (Personal & Family Status)",
+      "No edit capability - these are display-only"
+    ],
+    "forHuman": [
+      "Need decision on endpoint structure (extend demographics vs separate endpoint)",
+      "Need clarification on FAFSA data source",
+      "Should Financial Aid office have admin interface to set these values?",
+      "Timeline: Deferred until after ISS-010 completion"
+    ]
+  }
+}

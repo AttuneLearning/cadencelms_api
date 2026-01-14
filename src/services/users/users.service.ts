@@ -1,4 +1,4 @@
-import { User } from '@/models/auth/User.model';
+import { User, UserType } from '@/models/auth/User.model';
 import { Staff } from '@/models/auth/Staff.model';
 import { Learner } from '@/models/auth/Learner.model';
 import Department from '@/models/organization/Department.model';
@@ -59,7 +59,7 @@ export class UsersService {
    * Get current user profile (role-adaptive)
    * v2.0.0: Returns nested person object
    */
-  static async getMe(userId: string): Promise<any> {
+  static async getMe(userId: string, userTypeContext?: 'staff' | 'learner'): Promise<any> {
     const user = await User.findById(userId);
     if (!user) {
       throw ApiError.notFound('User not found');
@@ -78,12 +78,15 @@ export class UsersService {
       updatedAt: user.updatedAt
     };
 
+    let staffPerson: IPerson | null = null;
+    let learnerPerson: IPerson | null = null;
+
     // Get staff data if applicable
     if (user.userTypes.includes('staff')) {
       const staff = await Staff.findById(user._id);
       if (staff) {
         // ✅ NEW: Return nested person object (v2.0.0)
-        userObj.person = staff.person;
+        staffPerson = staff.person;
         userObj.departments = staff.departmentMemberships.map((dm) => dm.departmentId);
         userObj.departmentRoles = staff.departmentMemberships.map((dm) => ({
           departmentId: dm.departmentId,
@@ -98,7 +101,7 @@ export class UsersService {
       const learner = await Learner.findById(user._id);
       if (learner) {
         // ✅ NEW: Return nested person object (v2.0.0)
-        userObj.person = learner.person;
+        learnerPerson = learner.person;
         userObj.studentId = user._id.toString();
 
         // Get program and course enrollments
@@ -117,6 +120,17 @@ export class UsersService {
       }
     }
 
+    const defaultPerson = learnerPerson || staffPerson || null;
+    if (userTypeContext) {
+      const resolvedType = this.resolveProfileUserType(user.userTypes, userTypeContext, false);
+      userObj.person = resolvedType === 'staff' ? staffPerson : learnerPerson;
+      if (!userObj.person) {
+        userObj.person = defaultPerson;
+      }
+    } else {
+      userObj.person = defaultPerson;
+    }
+
     return userObj;
   }
 
@@ -125,7 +139,11 @@ export class UsersService {
    * ⚠️ DEPRECATED: Use updateMyPerson instead for v2.0.0 structure
    * This method provides backward compatibility for legacy flat structure
    */
-  static async updateMe(userId: string, updateData: UpdateMeInput): Promise<any> {
+  static async updateMe(
+    userId: string,
+    updateData: UpdateMeInput,
+    userTypeContext?: 'staff' | 'learner'
+  ): Promise<any> {
     const user = await User.findById(userId);
     if (!user) {
       throw ApiError.notFound('User not found');
@@ -139,65 +157,68 @@ export class UsersService {
       throw ApiError.badRequest('Last name cannot be empty');
     }
 
-    // Update staff or learner record with new person structure
-    if (user.userTypes.includes('staff')) {
+    const profileUserType = this.resolveProfileUserType(user.userTypes, userTypeContext);
+
+    if (profileUserType === 'staff') {
       const staff = await Staff.findById(user._id);
-      if (staff && staff.person) {
-        // Update person object fields
-        if (updateData.firstName) staff.person.firstName = updateData.firstName;
-        if (updateData.lastName) staff.person.lastName = updateData.lastName;
-        if (updateData.phone !== undefined) {
-          // Update primary phone or create new one
-          const primaryPhone = getPrimaryPhone(staff.person);
-          if (primaryPhone) {
-            primaryPhone.number = updateData.phone;
-          } else if (updateData.phone) {
-            staff.person.phones.push({
-              number: updateData.phone,
-              type: 'mobile',
-              isPrimary: true,
-              verified: false,
-              allowSMS: true
-            });
-          }
-        }
-        if (updateData.profileImage !== undefined) {
-          staff.person.avatar = updateData.profileImage;
-        }
-        await staff.save();
+      if (!staff || !staff.person) {
+        throw ApiError.notFound('Staff person record not found');
       }
+      // Update person object fields
+      if (updateData.firstName) staff.person.firstName = updateData.firstName;
+      if (updateData.lastName) staff.person.lastName = updateData.lastName;
+      if (updateData.phone !== undefined) {
+        // Update primary phone or create new one
+        const primaryPhone = getPrimaryPhone(staff.person);
+        if (primaryPhone) {
+          primaryPhone.number = updateData.phone;
+        } else if (updateData.phone) {
+          staff.person.phones.push({
+            number: updateData.phone,
+            type: 'mobile',
+            isPrimary: true,
+            verified: false,
+            allowSMS: true
+          });
+        }
+      }
+      if (updateData.profileImage !== undefined) {
+        staff.person.avatar = updateData.profileImage;
+      }
+      await staff.save();
     }
 
-    if (user.userTypes.includes('learner')) {
+    if (profileUserType === 'learner') {
       const learner = await Learner.findById(user._id);
-      if (learner && learner.person) {
-        // Update person object fields
-        if (updateData.firstName) learner.person.firstName = updateData.firstName;
-        if (updateData.lastName) learner.person.lastName = updateData.lastName;
-        if (updateData.phone !== undefined) {
-          // Update primary phone or create new one
-          const primaryPhone = getPrimaryPhone(learner.person);
-          if (primaryPhone) {
-            primaryPhone.number = updateData.phone;
-          } else if (updateData.phone) {
-            learner.person.phones.push({
-              number: updateData.phone,
-              type: 'mobile',
-              isPrimary: true,
-              verified: false,
-              allowSMS: true
-            });
-          }
-        }
-        if (updateData.profileImage !== undefined) {
-          learner.person.avatar = updateData.profileImage;
-        }
-        await learner.save();
+      if (!learner || !learner.person) {
+        throw ApiError.notFound('Learner person record not found');
       }
+      // Update person object fields
+      if (updateData.firstName) learner.person.firstName = updateData.firstName;
+      if (updateData.lastName) learner.person.lastName = updateData.lastName;
+      if (updateData.phone !== undefined) {
+        // Update primary phone or create new one
+        const primaryPhone = getPrimaryPhone(learner.person);
+        if (primaryPhone) {
+          primaryPhone.number = updateData.phone;
+        } else if (updateData.phone) {
+          learner.person.phones.push({
+            number: updateData.phone,
+            type: 'mobile',
+            isPrimary: true,
+            verified: false,
+            allowSMS: true
+          });
+        }
+      }
+      if (updateData.profileImage !== undefined) {
+        learner.person.avatar = updateData.profileImage;
+      }
+      await learner.save();
     }
 
     // Return updated profile
-    return this.getMe(userId);
+    return this.getMe(userId, userTypeContext);
   }
 
   /**
@@ -773,14 +794,19 @@ export class UsersService {
   /**
    * Update current user's person data
    */
-  static async updateMyPerson(userId: string, personData: Partial<IPerson>): Promise<IPerson> {
+  static async updateMyPerson(
+    userId: string,
+    personData: Partial<IPerson>,
+    userTypeContext?: 'staff' | 'learner'
+  ): Promise<IPerson> {
     const user = await User.findById(userId);
     if (!user) {
       throw ApiError.notFound('User not found');
     }
 
-    // Update person data in staff or learner record
-    if (user.userTypes.includes('staff')) {
+    const profileUserType = this.resolveProfileUserType(user.userTypes, userTypeContext);
+
+    if (profileUserType === 'staff') {
       const staff = await Staff.findById(user._id);
       if (!staff || !staff.person) {
         throw ApiError.notFound('Person data not found');
@@ -792,7 +818,7 @@ export class UsersService {
       return staff.person;
     }
 
-    if (user.userTypes.includes('learner')) {
+    if (profileUserType === 'learner') {
       const learner = await Learner.findById(user._id);
       if (!learner || !learner.person) {
         throw ApiError.notFound('Person data not found');
@@ -847,14 +873,19 @@ export class UsersService {
   /**
    * Update current user's extended person data
    */
-  static async updateMyPersonExtended(userId: string, extendedData: any): Promise<any> {
+  static async updateMyPersonExtended(
+    userId: string,
+    extendedData: any,
+    userTypeContext?: 'staff' | 'learner'
+  ): Promise<any> {
     const user = await User.findById(userId);
     if (!user) {
       throw ApiError.notFound('User not found');
     }
 
-    // Update extended data in staff or learner record
-    if (user.userTypes.includes('staff')) {
+    const profileUserType = this.resolveProfileUserType(user.userTypes, userTypeContext);
+
+    if (profileUserType === 'staff') {
       const staff = await Staff.findById(user._id);
       if (!staff) {
         throw ApiError.notFound('Staff record not found');
@@ -872,7 +903,7 @@ export class UsersService {
       return staff.personExtended;
     }
 
-    if (user.userTypes.includes('learner')) {
+    if (profileUserType === 'learner') {
       const learner = await Learner.findById(user._id);
       if (!learner) {
         throw ApiError.notFound('Learner record not found');
@@ -924,15 +955,39 @@ export class UsersService {
 
   /**
    * Update current user's demographics data
+   *
+   * IMPORTANT: pellEligible and lowIncomeStatus are READONLY fields
+   * that can only be set by the Financial Aid office. If these fields
+   * are present in the update request, they will be rejected with a 400 error.
    */
-  static async updateMyDemographics(userId: string, demographicsData: Partial<IDemographics>): Promise<IDemographics> {
+  static async updateMyDemographics(
+    userId: string,
+    demographicsData: Partial<IDemographics>,
+    userTypeContext?: 'staff' | 'learner'
+  ): Promise<IDemographics> {
+    // READONLY fields that cannot be updated via this endpoint
+    const READONLY_FINANCIAL_AID_FIELDS = ['pellEligible', 'lowIncomeStatus'];
+
+    // Check for attempts to update readonly fields
+    const attemptedReadonlyFields = READONLY_FINANCIAL_AID_FIELDS.filter(
+      field => field in demographicsData
+    );
+
+    if (attemptedReadonlyFields.length > 0) {
+      throw ApiError.badRequest(
+        `Cannot update readonly financial aid fields: ${attemptedReadonlyFields.join(', ')}. ` +
+        'These fields are calculated and set by the Financial Aid office based on FAFSA data.'
+      );
+    }
+
     const user = await User.findById(userId);
     if (!user) {
       throw ApiError.notFound('User not found');
     }
 
-    // Update demographics in staff or learner record
-    if (user.userTypes.includes('staff')) {
+    const profileUserType = this.resolveProfileUserType(user.userTypes, userTypeContext);
+
+    if (profileUserType === 'staff') {
       const staff = await Staff.findById(user._id);
       if (!staff) {
         throw ApiError.notFound('Staff record not found');
@@ -951,7 +1006,7 @@ export class UsersService {
       return staff.demographics;
     }
 
-    if (user.userTypes.includes('learner')) {
+    if (profileUserType === 'learner') {
       const learner = await Learner.findById(user._id);
       if (!learner) {
         throw ApiError.notFound('Learner record not found');
@@ -971,5 +1026,38 @@ export class UsersService {
     }
 
     throw ApiError.notFound('Demographics data not found');
+  }
+
+  private static resolveProfileUserType(
+    userTypes: UserType[],
+    userTypeContext?: 'staff' | 'learner',
+    requireContextWhenMultiple: boolean = true
+  ): 'staff' | 'learner' {
+    const hasStaff = userTypes.includes('staff');
+    const hasLearner = userTypes.includes('learner');
+
+    if (userTypeContext) {
+      if (userTypeContext === 'staff' && !hasStaff) {
+        throw ApiError.forbidden('User does not have a staff profile');
+      }
+      if (userTypeContext === 'learner' && !hasLearner) {
+        throw ApiError.forbidden('User does not have a learner profile');
+      }
+      return userTypeContext;
+    }
+
+    if (hasStaff && hasLearner) {
+      if (requireContextWhenMultiple) {
+        throw ApiError.badRequest(
+          'User profile context required. Send X-User-Type-Context: staff or learner.'
+        );
+      }
+      return 'learner';
+    }
+
+    if (hasStaff) return 'staff';
+    if (hasLearner) return 'learner';
+
+    throw ApiError.notFound('User profile not found');
   }
 }

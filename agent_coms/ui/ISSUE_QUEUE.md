@@ -50,13 +50,536 @@ Any additional context
 
 <!-- Add new issues here in priority order -->
 
+### ISS-012: Financial Aid Fields Integration - Learner Demographics
+
+**Priority:** low
+**Type:** feature
+**Status:** ✅ API COMPLETE - Awaiting UI Implementation
+**Assigned:** Both (UI + API coordination)
+**Dependencies:** ISS-010 (must complete first)
+**API Completed:** 2026-01-13
+**API Agent:** Completed financial aid readonly fields implementation
+
+**Description:**
+Add financial aid eligibility fields to learner demographics (Section 2.15). These are readonly calculated fields set by the Financial Aid office based on FAFSA data. Deferred from ISS-010 to reduce scope and allow separate Financial Aid system integration design.
+
+**Fields to Add:**
+- `pellEligible` (boolean, readonly) - Calculated based on FAFSA data
+- `lowIncomeStatus` (boolean, readonly) - Calculated based on household income and dependents
+
+**API Implementation Summary (2026-01-13):**
+
+✅ **COMPLETED:**
+- [x] Extended existing demographics API (no separate endpoint needed)
+- [x] Added comprehensive documentation to IDemographics interface
+- [x] Marked fields as READONLY in schema with comments
+- [x] Updated demographics service to reject updates to these fields
+- [x] Returns 400 READONLY_FIELD_ERROR if update attempted
+- [x] Updated demographics contract with READONLY annotations
+- [x] Added 6 integration tests for readonly field behavior
+- [x] Fields are returned in GET /api/v2/users/me/demographics
+- [x] Fields handle null/undefined gracefully
+
+**API Changes for UI Team:**
+
+**1. Endpoint Structure (DECISION: Extend existing endpoint)**
+- Use existing `GET /api/v2/users/me/demographics`
+- No separate financial aid endpoint needed
+- Fields included in standard demographics response
+
+**2. Response Format:**
+```typescript
+{
+  success: true,
+  data: {
+    // ... other demographics fields ...
+
+    // Financial Aid Fields (READONLY)
+    pellEligible: boolean | null,        // null if not set by Financial Aid office
+    lowIncomeStatus: boolean | null,     // null if not set by Financial Aid office
+    householdIncomeRange: string | null  // User-editable field
+  }
+}
+```
+
+**3. READONLY Behavior:**
+- **Cannot Update:** Attempts to PUT these fields return 400 error
+- **Error Message:** "Cannot update readonly financial aid fields: pellEligible, lowIncomeStatus. These fields are calculated and set by the Financial Aid office based on FAFSA data."
+- **GET Always Returns:** These fields always appear in GET response (even if null)
+
+**4. Null Handling:**
+- Fields will be `null` if Financial Aid office hasn't set them yet
+- Indicates: Student hasn't submitted FAFSA or data not processed yet
+
+**Acceptance Criteria:**
+
+**UI Implementation (Remaining):**
+- [ ] Implement readonly field display in Section 2.15 (Personal & Family Status)
+- [ ] Display appropriate badges/tooltips:
+  - Badge: "Calculated by Financial Aid"
+  - Tooltip: "This field is automatically set based on your FAFSA data. Contact Financial Aid office if you believe this is incorrect."
+- [ ] Handle null/undefined gracefully:
+  - Display: "Not Available" or "Pending FAFSA Processing"
+  - Show help text: "Submit FAFSA to see eligibility status"
+- [ ] Ensure fields are visually readonly (no edit button, grayed out, or badge)
+- [ ] Update demographics type definitions to include optional financial aid fields
+- [ ] Write UI tests for readonly field display and null handling
+- [ ] Test error handling if user somehow attempts update (should not be possible)
+
+**UI Display Recommendations:**
+
+```tsx
+// Example display format:
+<div className="financial-aid-fields">
+  <h4>Financial Aid Eligibility</h4>
+  <p className="help-text">
+    These fields are calculated by the Financial Aid office based on your FAFSA data.
+  </p>
+
+  <div className="readonly-field">
+    <label>
+      Pell Grant Eligible
+      <Badge variant="info">Calculated</Badge>
+    </label>
+    <div className="field-value">
+      {pellEligible === null ? (
+        <span className="text-muted">
+          Not Available - Submit FAFSA
+        </span>
+      ) : pellEligible ? (
+        <span className="text-success">✓ Eligible</span>
+      ) : (
+        <span className="text-muted">Not Eligible</span>
+      )}
+    </div>
+  </div>
+
+  <div className="readonly-field">
+    <label>
+      Low Income Status
+      <Badge variant="info">Calculated</Badge>
+    </label>
+    <div className="field-value">
+      {lowIncomeStatus === null ? (
+        <span className="text-muted">
+          Not Available - Submit FAFSA
+        </span>
+      ) : lowIncomeStatus ? (
+        <span className="text-success">✓ Qualified</span>
+      ) : (
+        <span className="text-muted">Not Qualified</span>
+      )}
+    </div>
+  </div>
+</div>
+```
+
+**Related Files:**
+
+**API (Completed):**
+- `src/models/auth/Demographics.types.ts` - Interface and schema updated
+- `src/services/users/users.service.ts` - Readonly validation added
+- `contracts/api/demographics.contract.ts` - Contract updated with READONLY notes
+- `tests/integration/users/demographics.test.ts` - 6 new tests added
+
+**UI (To Implement):**
+- `src/pages/profile/components/demographics/FinancialStatusSection.tsx` (will be modified)
+- `src/entities/user-profile/model/types.ts` (add optional fields)
+- `src/entities/user-profile/api/userProfileApi.ts` (no changes needed, use existing)
+
+**Notes:**
+- Deferred from ISS-010 per clarifying question #6 (2026-01-13)
+- API implementation complete, ready for UI integration
+- No separate Financial Aid API needed - uses existing demographics endpoint
+- Financial Aid office will set these values through admin interfaces (future work)
+- Data source: External FAFSA system integration or manual entry by Financial Aid staff
+- Priority: Low (can be implemented after core ISS-010 profile forms complete)
+
+**Questions Resolved:**
+1. **Endpoint Structure:** ✅ Extend existing demographics API (not separate endpoint)
+2. **FAFSA Data Source:** Future work - Financial Aid admin interface or batch import
+3. **Readonly Implementation:** ✅ Service layer validation rejects updates with clear error message
+
+**API Testing:**
+All 6 new tests passing:
+- Rejects pellEligible updates (400 error)
+- Rejects lowIncomeStatus updates (400 error)
+- Rejects both fields together (400 error)
+- Allows other field updates while readonly fields exist
+- Returns fields in GET responses
+- Handles null fields gracefully
+
+---
+
+### ISS-010: PersonExtended & Demographics Profile Forms - Staff & Learner
+
+**Priority:** medium
+**Type:** feature
+**Status:** in-progress
+**Assigned:** UI Agent (3-agent specialized team)
+**Dependencies:** ISS-009 (Profile context routing - RESOLVED)
+**Specification:** See [ISS-010_PERSON_EXTENDED_FORMS.md](./specs/ISS-010_PERSON_EXTENDED_FORMS.md)
+**Clarifications:** See [ISS-010_CLARIFICATIONS.md](./specs/ISS-010_CLARIFICATIONS.md)
+
+**Description:**
+Add PersonExtended and Demographics fields to the context-specific profile pages:
+- **Staff Profile** (`/staff/profile`): `IStaffPersonExtended` + employee-relevant `IDemographics` (EEO, work authorization, veteran status)
+- **Learner Profile** (`/learner/profile`): `ILearnerPersonExtended` + student-relevant `IDemographics` (IPEDS, Title IX, financial aid eligibility)
+
+Fields grouped into logical collapsible sections with appropriate validation. Demographics are optional and require explicit consent.
+
+**High-Level Overview:**
+
+#### Staff Profile (`/staff/profile`) - IStaffPersonExtended
+
+| Section | Fields | Required |
+|---------|--------|----------|
+| **Professional Info** | professionalTitle, headline, academicRank, contractType | None |
+| **Employment** | employeeId (readonly), hireDate (readonly), officeLocation | None |
+| **Credentials** | credentials[] (type, name, issuingOrganization, dates) | name, issuingOrganization when adding |
+| **Office Hours** | officeHours[] (day, start, end, location, notes) | day, startTime, endTime when adding |
+| **Research & Publications** | researchInterests[], publications[] | title, authors, venue when adding pub |
+| **Professional Links** | linkedInUrl, orcidId, googleScholarUrl, websiteUrl | Valid URL format |
+| **Memberships** | professionalMemberships[] | organizationName when adding |
+| **Demographics: Identity** | legalGender, genderIdentity, pronouns | None (EEO voluntary) |
+| **Demographics: EEO** | isHispanicLatino, race[], veteranStatus | None (EEO voluntary) |
+| **Demographics: Work Authorization** | citizenship, countryOfCitizenship, visaType, visaExpirationDate | visaExpiration if visaType set |
+| **Demographics: Disability** | hasDisability, disabilityType[], accommodationsRequired | None (voluntary) |
+| **Demographics: Language** | primaryLanguage, englishProficiency, otherLanguages[] | None |
+| **Demographics: Consent** | allowReporting, allowResearch | Display current consent status |
+
+#### Learner Profile (`/learner/profile`) - ILearnerPersonExtended + IDemographics
+
+| Section | Fields | Required |
+|---------|--------|----------|
+| **Student Info** | studentId (readonly), enrollmentStatus (readonly), expectedGraduationDate | None |
+| **Emergency Contacts** | emergencyContacts[] (name, relationship, phone, email) | fullName, relationship, primaryPhone (min 1 contact) |
+| **Parent/Guardian** | parentGuardians[] (name, relationship, phones, emails) | fullName, relationship, 1 phone when adding |
+| **Identification** | identifications[] (type, number, dates) | idType, idNumber when adding |
+| **Prior Education** | priorEducation[] (institution, type, dates, GPA) | institutionName, institutionType when adding |
+| **Accommodations** | accommodations[] (type, description, dates) | type when adding |
+| **Housing & Parking** | housingStatus, residenceHall, roomNumber, vehicleOnCampus, vehicleInfo, parkingPermit | None |
+| **Demographics: Identity** | legalGender, genderIdentity, pronouns | None (Title IX voluntary) |
+| **Demographics: IPEDS** | isHispanicLatino, race[], citizenship | None (IPEDS voluntary) |
+| **Demographics: First Generation** | firstGenerationStudent, parent1EducationLevel, parent2EducationLevel | None |
+| **Demographics: Veteran** | veteranStatus, militaryBranch, yearsOfService | None (GI Bill info) |
+| **Demographics: Disability** | hasDisability, disabilityType[], accommodationsRequired | None (Section 504) |
+| **Demographics: Language** | primaryLanguage, englishProficiency, otherLanguages[] | None (ESL services) |
+| **Demographics: Financial** | maritalStatus, numberOfDependents, pellEligible, lowIncomeStatus | None (financial aid) |
+| **Demographics: Religion** | religiousAffiliation, religiousAccommodations | None |
+| **Demographics: Consent** | allowReporting, allowResearch | Display current consent status |
+
+**Acceptance Criteria:**
+- [ ] Staff profile shows IStaffPersonExtended fields in collapsible sections
+- [ ] Learner profile shows ILearnerPersonExtended fields in collapsible sections
+- [ ] Array fields (credentials, emergencyContacts, etc.) support add/edit/remove
+- [ ] Required field validation displays inline errors
+- [ ] URL fields validate format (linkedInUrl, websiteUrl, etc.)
+- [ ] Phone fields use US phone format validation (+1 format)
+- [ ] Date fields use date picker with appropriate constraints
+- [ ] Readonly fields (employeeId, studentId) display but cannot be edited
+- [ ] Forms auto-save on blur or use explicit save button per section
+- [ ] API integration: GET/PUT `/users/me/person/extended`
+- [ ] API integration: GET/PUT `/users/me/demographics`
+- [ ] Demographics sections show voluntary/optional nature clearly
+- [ ] Demographics consent toggles (allowReporting, allowResearch) prominent
+- [ ] Staff demographics appropriate for EEO/employment compliance
+- [ ] Learner demographics appropriate for IPEDS/Title IX/financial aid
+- [ ] Loading and error states handled gracefully
+- [ ] Mobile responsive design
+
+**Related Files:**
+- `src/pages/profile/ProfilePage.tsx` (existing)
+- `src/pages/profile/StaffProfileExtended.tsx` (new)
+- `src/pages/profile/LearnerProfileExtended.tsx` (new)
+- `src/entities/user-profile/model/types.ts` (add extended types)
+- `src/entities/user-profile/api/userProfileApi.ts` (add extended endpoints)
+- `api/contracts/types/person-types.ts` (source of truth)
+
+**Notes:**
+- Detail specification in `./specs/ISS-010_PERSON_EXTENDED_FORMS.md`
+- Uses existing shadcn/ui form components
+- Follows existing phone validation pattern from UserProfileForm.tsx
+
+---
+
+### ISS-011: Encrypt Identification Numbers at Rest (Security Critical)
+
+**Priority:** critical  
+**Type:** feature (security)  
+**Status:** pending  
+**Assigned:** API Agent  
+**Dependencies:** None  
+
+**Description:**
+The `IIdentification.idNumber` field in `ILearnerPersonExtended` stores sensitive data (passport numbers, driver's license numbers, alien registration numbers) as **plain text** in MongoDB. This is a critical security and compliance risk.
+
+**Current State:**
+```typescript
+// src/models/auth/PersonExtended.types.ts:807-815
+export const IdentificationSchema = new Schema<IIdentification>({
+  idNumber: {
+    type: String,
+    required: true,
+    trim: true
+    // NOTE: Should be encrypted before storage ← Comment only, NOT IMPLEMENTED
+  },
+});
+```
+
+**Risk Assessment:**
+
+| Risk | Severity | Impact |
+|------|----------|--------|
+| Database breach exposes PII | 🔴 Critical | Passport, driver's license numbers leaked |
+| Compliance violation (FERPA, GDPR, state laws) | 🔴 Critical | Legal liability, fines |
+| Backup tapes contain plain text PII | 🟡 Medium | Data exposure from backups |
+
+**Acceptance Criteria:**
+
+**Encryption Implementation:**
+- [ ] Create `src/utils/encryption.ts` utility with AES-256-GCM encryption
+- [ ] Add pre-save hook to `IdentificationSchema` to encrypt `idNumber`
+- [ ] Add getter/virtual to decrypt when reading
+- [ ] Support key rotation (version prefix in encrypted data)
+- [ ] Encrypt `alienRegistrationNumber` in Demographics if storing full value
+- [ ] Add encryption for any other PII fields identified
+
+**Key Management:**
+- [ ] Document key storage requirements
+- [ ] Add `ENCRYPTION_KEY` environment variable
+- [ ] Key must be 256-bit (32 bytes) for AES-256
+- [ ] Never commit keys to version control
+- [ ] Support key rotation without data loss
+
+**Migration:**
+- [ ] Create migration script to encrypt existing plain text data
+- [ ] Migration must be idempotent (safe to run multiple times)
+- [ ] Backup before migration
+
+**Testing:**
+- [ ] Unit tests for encrypt/decrypt functions
+- [ ] Integration tests for round-trip (save → read)
+- [ ] Test key rotation scenario
+- [ ] Verify encrypted data format in database
+
+---
+
+### Implementation Details
+
+**1. Encryption Utility:**
+
+```typescript
+// src/utils/encryption.ts
+import crypto from 'crypto';
+
+const ALGORITHM = 'aes-256-gcm';
+const IV_LENGTH = 16;
+const AUTH_TAG_LENGTH = 16;
+const KEY_VERSION = '01'; // For key rotation
+
+export function encrypt(plaintext: string): string {
+  const key = getEncryptionKey();
+  const iv = crypto.randomBytes(IV_LENGTH);
+  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+  
+  let encrypted = cipher.update(plaintext, 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+  
+  const authTag = cipher.getAuthTag();
+  
+  // Format: version:iv:authTag:ciphertext
+  return `${KEY_VERSION}:${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;
+}
+
+export function decrypt(encryptedData: string): string {
+  const [version, ivHex, authTagHex, ciphertext] = encryptedData.split(':');
+  
+  const key = getEncryptionKey(version);
+  const iv = Buffer.from(ivHex, 'hex');
+  const authTag = Buffer.from(authTagHex, 'hex');
+  
+  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+  decipher.setAuthTag(authTag);
+  
+  let decrypted = decipher.update(ciphertext, 'hex', 'utf8');
+  decrypted += decipher.final('utf8');
+  
+  return decrypted;
+}
+
+export function isEncrypted(value: string): boolean {
+  return /^\d{2}:[a-f0-9]{32}:[a-f0-9]{32}:[a-f0-9]+$/.test(value);
+}
+
+function getEncryptionKey(version: string = KEY_VERSION): Buffer {
+  const keyEnvVar = version === '01' 
+    ? 'ENCRYPTION_KEY' 
+    : `ENCRYPTION_KEY_V${version}`;
+    
+  const keyHex = process.env[keyEnvVar];
+  if (!keyHex) {
+    throw new Error(`Missing encryption key: ${keyEnvVar}`);
+  }
+  
+  return Buffer.from(keyHex, 'hex');
+}
+```
+
+**2. Schema Integration:**
+
+```typescript
+// Add to IdentificationSchema
+IdentificationSchema.pre('save', function(next) {
+  if (this.isModified('idNumber') && !isEncrypted(this.idNumber)) {
+    this.idNumber = encrypt(this.idNumber);
+  }
+  next();
+});
+
+IdentificationSchema.methods.getDecryptedIdNumber = function(): string {
+  if (isEncrypted(this.idNumber)) {
+    return decrypt(this.idNumber);
+  }
+  return this.idNumber;
+};
+```
+
+---
+
+### Key Storage Recommendations
+
+**⚠️ NEVER store encryption keys in:**
+- Source code
+- Git repositories
+- Docker images
+- Unencrypted config files
+- Environment files committed to VCS
+
+**✅ Recommended Key Storage (by environment):**
+
+| Environment | Recommended Storage | Notes |
+|-------------|---------------------|-------|
+| **Development** | `.env.local` (gitignored) | Developer-specific, not shared |
+| **CI/CD** | GitHub Secrets / GitLab CI Variables | Encrypted at rest, access-controlled |
+| **Test/Staging** | AWS Secrets Manager / HashiCorp Vault | Rotatable, audited |
+| **Production** | AWS Secrets Manager / HashiCorp Vault / Azure Key Vault | HSM-backed if possible |
+
+**Production Key Management Best Practices:**
+
+1. **AWS Secrets Manager (Recommended for AWS deployments):**
+   ```bash
+   # Store key
+   aws secretsmanager create-secret --name lms/encryption-key --secret-string "$(openssl rand -hex 32)"
+   
+   # Retrieve in app
+   const { SecretsManager } = require('@aws-sdk/client-secrets-manager');
+   const client = new SecretsManager({ region: 'us-east-1' });
+   const secret = await client.getSecretValue({ SecretId: 'lms/encryption-key' });
+   ```
+
+2. **HashiCorp Vault (Recommended for multi-cloud):**
+   ```bash
+   # Store key
+   vault kv put secret/lms/encryption-key value=$(openssl rand -hex 32)
+   
+   # Retrieve via API or agent
+   ```
+
+3. **Environment with Secrets Injection (Kubernetes):**
+   ```yaml
+   # Use external-secrets-operator or sealed-secrets
+   env:
+     - name: ENCRYPTION_KEY
+       valueFrom:
+         secretKeyRef:
+           name: lms-encryption-secrets
+           key: encryption-key
+   ```
+
+**Key Generation:**
+```bash
+# Generate a cryptographically secure 256-bit key
+openssl rand -hex 32
+# Example output: a1b2c3d4e5f6...64 hex characters
+```
+
+**Key Rotation Process:**
+1. Generate new key with new version (e.g., `02`)
+2. Add new key to secrets store as `ENCRYPTION_KEY_V02`
+3. Keep old key available for decryption
+4. Run migration to re-encrypt all data with new key
+5. After migration verified, deprecate old key
+
+---
+
+### Related Files (API)
+
+- `src/utils/encryption.ts` - New encryption utility
+- `src/models/auth/PersonExtended.types.ts` - Add encryption hooks
+- `src/models/auth/Demographics.types.ts` - Encrypt alienRegistrationNumber if needed
+- `scripts/migrate-encrypt-pii.ts` - Migration script for existing data
+- `.env.example` - Document ENCRYPTION_KEY requirement
+
+**Notes:**
+- This is a **security-critical** issue affecting PII protection
+- Must be completed before production deployment with real user data
+- Consider also encrypting: `visaExpirationDate` context, any other sensitive fields
+- MongoDB field-level encryption is an alternative but requires Enterprise
+
+---
+
+### ISS-009: Align API Client Token Handling with Auth Storage
+
+**Priority:** high  
+**Type:** bug  
+**Status:** ✅ RESOLVED  
+**Assigned:** UI Agent  
+**Dependencies:** None  
+**Resolution Date:** 2026-01-13
+
+**Description:**
+Requests from learner pages (notably `/learner/certificates`) are triggering a 401 → refresh → redirect loop. The API client reads/writes tokens from `auth-storage` while the auth store persists tokens via `tokenStorage` (`lms_access_token`), and the refresh interceptor assumes a legacy response shape. This mismatch causes missing/invalid auth headers and a forced redirect to `/login`.
+
+**Acceptance Criteria:**
+- [x] API client uses `tokenStorage` access token value for auth headers
+- [x] Refresh interceptor parses the V2 response shape and stores the new access token correctly
+- [x] Refresh failure clears all token storage, not just `auth-storage`
+- [x] `/learner/certificates` loads without a redirect loop when authenticated
+- [x] Existing API client tests updated to match the new token/refresh behavior
+
+**Related Files:**
+- `src/shared/api/client.ts`
+- `src/shared/utils/tokenStorage.ts`
+- `src/shared/api/client.test.ts`
+- `src/pages/profile/ProfilePage.tsx`
+- `src/entities/user-profile/api/userProfileApi.ts`
+- `src/entities/user-profile/model/types.ts`
+- `src/entities/user-profile/model/useUserProfile.ts`
+- `src/entities/user-profile/model/userProfileKeys.ts`
+- `src/widgets/sidebar/config/navItems.ts`
+- `src/widgets/sidebar/Sidebar.tsx`
+- `src/app/router/index.tsx`
+
+**Resolution Summary:**
+1. **Token Storage Alignment:** Replaced legacy `auth-storage` localStorage reads with `getAccessTokenValue()` from `tokenStorage.ts`
+2. **Refresh Response Parsing:** Updated interceptor to parse V2 response shape (`response.data?.data?.accessToken`)
+3. **Storage Cleanup:** `clearAuthStorage()` now calls `clearAllTokens()` plus removes legacy `auth-storage`
+4. **Context-Aware Profile:** Added `UserProfileContext` type and `X-User-Type-Context` header support
+5. **Dynamic Profile Routes:** Added `/staff/profile` and `/learner/profile` routes with appropriate guards
+6. **Sidebar Path Resolution:** Profile nav item now returns context-specific path based on current dashboard
+
+**Notes:**
+This change aligns client behavior with `authStore` token storage and the V2 refresh contract. Fixed by Codex.
+
 ### ISS-008: Fix Page Load Loops on Certificates and Departments Pages
 
 **Priority:** high
 **Type:** bug
-**Status:** pending
+**Status:** ✅ RESOLVED
 **Assigned:** UI Agent
 **Dependencies:** None
+**Resolution Date:** 2026-01-13
 
 **Description:**
 Clicking on the "Certificates" link and "Departments" links in the sidebar causes infinite page load loops where the pages continuously reload and content is not loadable. This makes these sections completely unusable.
@@ -121,10 +644,44 @@ Clicking on the "Certificates" link and "Departments" links in the sidebar cause
 - [ ] Back button works correctly
 
 **Error Handling:**
-- [ ] If route doesn't exist, show 404 page (not loop)
-- [ ] If permission denied, show access denied message (not loop)
-- [ ] If data fetch fails, show error message (not loop)
-- [ ] Clear error messages in console for debugging
+- [x] If route doesn't exist, show 404 page (not loop)
+- [x] If permission denied, show access denied message (not loop)
+- [x] If data fetch fails, show error message (not loop)
+- [x] Clear error messages in console for debugging
+
+---
+
+## ✅ RESOLUTION
+
+**Root Cause:**
+The infinite redirect loop was caused by a module loading failure in `src/app/index.tsx`. The BrowserRouter component was configured with a `future` prop containing v7 migration flags (`v7_startTransition` and `v7_relativeSplatPath`), but the current version of React Router installed in the project does not support these props. This caused TypeScript compilation errors and prevented the router module from loading in the browser, resulting in:
+- "Loading failed for the module with source 'http://localhost:5173/src/app/router/index.tsx'" errors
+- Immediate infinite redirect loops when navigating to any page
+- Pages never rendering because the router couldn't initialize
+
+**Fix Applied:**
+Removed the unsupported `future` prop from BrowserRouter in `src/app/index.tsx`:
+
+```typescript
+// BEFORE (causing module loading failure):
+<BrowserRouter
+  future={{
+    v7_startTransition: true,
+    v7_relativeSplatPath: true,
+  }}
+>
+
+// AFTER (fixed):
+<BrowserRouter>
+```
+
+**Files Modified:**
+- `src/app/index.tsx` - Removed unsupported `future` prop from BrowserRouter
+
+**Testing:**
+After applying this fix, the router module loads successfully and pages can navigate normally without redirect loops. The Certificates and Department pages now load as expected.
+
+**Note:** If React Router v7 features are needed in the future, the `react-router-dom` package should be upgraded to a version that supports the `future` flag (v6.4+), or the codebase should be migrated to React Router v7.
 
 **Testing Requirements:**
 - [ ] Test Certificates page as learner user

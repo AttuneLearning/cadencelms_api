@@ -1,0 +1,130 @@
+{
+  "team": {
+    "name": "LMS Backend - Single Issue Fix Team",
+    "version": "3.0.0",
+    "description": "Optimized for rapid single-issue fixes with TDD discipline"
+  },
+  "mode": "single-agent-tdd",
+  "workflow": {
+    "pattern": "TDD",
+    "approach": "red-green-refactor",
+    "steps": [
+      "1. Understand: Read issue, gather context",
+      "2. Test First: Write failing test for expected behavior",
+      "3. Implement: Write minimal code to pass test",
+      "4. Refactor: Clean up while tests pass",
+      "5. Verify: Run full test suite, check for regressions",
+      "6. Document: Update relevant docs if API changes"
+    ]
+  },
+  "agent": {
+    "id": "agent-fix",
+    "role": "Full-Stack Issue Resolver",
+    "description": "Single agent handling complete issue lifecycle with TDD",
+    "capabilities": [
+      "Read and analyze issue requirements",
+      "Write tests before implementation",
+      "Implement fixes across models, services, controllers, routes",
+      "Run tests and verify fixes",
+      "Update contracts and documentation as needed"
+    ]
+  },
+  "testingStrategy": {
+    "pattern": "TDD",
+    "sequence": [
+      "1. Write unit test for expected behavior (RED)",
+      "2. Implement code to pass test (GREEN)",
+      "3. Refactor if needed (REFACTOR)",
+      "4. Run related integration tests",
+      "5. Run full suite before completion"
+    ],
+    "commands": {
+      "unit": "npm run test:unit -- --testPathPattern=<pattern>",
+      "integration": "npm run test:integration -- --testPathPattern=<pattern>",
+      "all": "npm test",
+      "watch": "npm run test:watch -- --testPathPattern=<pattern>"
+    },
+    "coverage": {
+      "target": 85,
+      "enforced": false,
+      "reportOnCompletion": true
+    }
+  },
+  "contextFiles": {
+    "always": [
+      "contracts/api/*.contract.ts",
+      "src/models/auth/*.ts",
+      "src/services/auth/*.ts"
+    ],
+    "onDemand": [
+      "devdocs/authorization/*.md",
+      "devdocs/plans/*.md"
+    ]
+  },
+  "coordination": {
+    "enabled": true,
+    "messagesDir": "agent_coms/messages",
+    "logDir": "agent_coms/api",
+    "protocol": "agent_coms/messages/COORDINATION_STANDARD.md"
+  },
+  "issueResolution": {
+    "maxTimePerIssue": "2 hours",
+    "checkpoints": [
+      "Context gathered - understand the issue",
+      "Test written - failing test proves the bug",
+      "Implementation done - test passes",
+      "Regression check - no other tests broken",
+      "Documentation updated - if API changed"
+    ],
+    "escalation": {
+      "trigger": "Blocked for >30 minutes",
+      "action": "Post to agent_coms/messages with REQUEST type"
+    }
+  },
+  "codeStandards": {
+    "typescript": {
+      "strict": true,
+      "noAny": "prefer-unknown",
+      "imports": "absolute paths with @/ alias"
+    },
+    "testing": {
+      "framework": "jest",
+      "mocking": "jest.mock() or manual mocks in __mocks__",
+      "assertions": "expect() with descriptive matchers"
+    },
+    "api": {
+      "responses": "Use ApiResponse utility",
+      "errors": "Use ApiError utility",
+      "validation": "Joi or Zod schemas"
+    }
+  },
+  "quickReference": {
+    "projectStructure": {
+      "models": "src/models/",
+      "services": "src/services/",
+      "controllers": "src/controllers/",
+      "routes": "src/routes/",
+      "validators": "src/validators/",
+      "utils": "src/utils/",
+      "tests": "tests/",
+      "contracts": "contracts/api/"
+    },
+    "keyFiles": {
+      "auth": "src/services/auth/auth.service.ts",
+      "users": "src/services/users/users.service.ts",
+      "apiResponse": "src/utils/ApiResponse.ts",
+      "apiError": "src/utils/ApiError.ts"
+    },
+    "commonPatterns": {
+      "addEndpoint": "1. Contract -> 2. Route -> 3. Controller -> 4. Service -> 5. Test",
+      "fixBug": "1. Reproduce -> 2. Test -> 3. Fix -> 4. Verify",
+      "updateModel": "1. Model -> 2. Migration? -> 3. Service -> 4. Test"
+    }
+  },
+  "preflightChecks": [
+    "Is the API server running? (port 5000)",
+    "Is MongoDB connected?",
+    "Is Redis running? (for cache)",
+    "Are there any TypeScript errors? (npm run type-check)"
+  ]
+}

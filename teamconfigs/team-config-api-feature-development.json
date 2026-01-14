@@ -1,0 +1,144 @@
+{
+  "team": {
+    "name": "LMS Backend - API Feature Development Team",
+    "version": "1.0.0",
+    "description": "Optimized for new API feature development with design, implementation, and testing"
+  },
+  "mode": "api-feature-development",
+  "workflow": {
+    "pattern": "Design-First Development",
+    "approach": "contract-driven-development",
+    "steps": [
+      "1. Design: Review requirements, design API contract and data models",
+      "2. Contract: Define API contracts (request/response shapes, validation)",
+      "3. Model: Update or create database models/schemas",
+      "4. Service: Implement business logic in service layer",
+      "5. Controller: Create controller endpoints",
+      "6. Routes: Wire up routes with proper middleware",
+      "7. Test: Write unit and integration tests",
+      "8. Document: Update API docs and contracts"
+    ]
+  },
+  "agent": {
+    "id": "agent-api-feature",
+    "role": "Backend API Feature Developer",
+    "description": "Single agent handling complete feature lifecycle from design to implementation",
+    "capabilities": [
+      "API contract design",
+      "Database schema design",
+      "Service layer implementation",
+      "Controller implementation",
+      "Route configuration",
+      "Unit and integration testing",
+      "API documentation"
+    ]
+  },
+  "testingStrategy": {
+    "pattern": "Test After Implementation",
+    "sequence": [
+      "1. Implement models, services, controllers",
+      "2. Write unit tests for service layer",
+      "3. Write integration tests for endpoints",
+      "4. Test edge cases and error handling",
+      "5. Run full suite before completion"
+    ],
+    "commands": {
+      "unit": "npm run test:unit -- --testPathPattern=<pattern>",
+      "integration": "npm run test:integration -- --testPathPattern=<pattern>",
+      "all": "npm test",
+      "watch": "npm run test:watch -- --testPathPattern=<pattern>"
+    },
+    "coverage": {
+      "target": 85,
+      "enforced": false,
+      "reportOnCompletion": true
+    }
+  },
+  "contextFiles": {
+    "always": [
+      "contracts/api/*.contract.ts",
+      "src/models/**/*.ts"
+    ],
+    "onDemand": [
+      "devdocs/**/*.md",
+      "README.md"
+    ]
+  },
+  "coordination": {
+    "enabled": true,
+    "messagesDir": "agent_coms/messages",
+    "logDir": "agent_coms/api",
+    "protocol": "agent_coms/messages/COORDINATION_STANDARD.md"
+  },
+  "featureDevelopment": {
+    "maxTimePerFeature": "4 hours",
+    "checkpoints": [
+      "Requirements understood - design drafted",
+      "Contract defined - request/response shapes clear",
+      "Models updated - schema changes implemented",
+      "Service layer complete - business logic tested",
+      "Endpoints wired - routes configured",
+      "Tests passing - unit and integration",
+      "Documentation updated - contracts and README"
+    ],
+    "escalation": {
+      "trigger": "Blocked for >30 minutes or need design decision",
+      "action": "Post to agent_coms/messages with REQUEST type"
+    }
+  },
+  "codeStandards": {
+    "typescript": {
+      "strict": true,
+      "noAny": "prefer-unknown",
+      "imports": "absolute paths with @/ alias"
+    },
+    "testing": {
+      "framework": "jest",
+      "mocking": "jest.mock() or manual mocks in __mocks__",
+      "assertions": "expect() with descriptive matchers"
+    },
+    "api": {
+      "responses": "Use ApiResponse utility",
+      "errors": "Use ApiError utility",
+      "validation": "Joi or Zod schemas"
+    },
+    "models": {
+      "mongoose": "Use Mongoose schemas with TypeScript interfaces",
+      "validation": "Schema-level validation with custom validators",
+      "indexes": "Add appropriate indexes for query performance"
+    }
+  },
+  "quickReference": {
+    "projectStructure": {
+      "contracts": "contracts/api/ - API contracts (source of truth)",
+      "models": "src/models/ - Database models and schemas",
+      "services": "src/services/ - Business logic layer",
+      "controllers": "src/controllers/ - Request handlers",
+      "routes": "src/routes/ - Route definitions",
+      "validators": "src/validators/ - Request validation",
+      "utils": "src/utils/ - Shared utilities",
+      "tests": "tests/ - Test files"
+    },
+    "keyFiles": {
+      "apiResponse": "src/utils/ApiResponse.ts",
+      "apiError": "src/utils/ApiError.ts",
+      "authMiddleware": "src/middlewares/authenticate.ts",
+      "errorHandler": "src/middlewares/errorHandler.ts"
+    },
+    "developmentFlow": {
+      "newEndpoint": "1. Contract -> 2. Validator -> 3. Service -> 4. Controller -> 5. Route -> 6. Test",
+      "newModel": "1. Interface -> 2. Schema -> 3. Model -> 4. Test -> 5. Update service",
+      "updateEndpoint": "1. Update contract -> 2. Update service -> 3. Update tests -> 4. Verify"
+    }
+  },
+  "preflightChecks": [
+    "Is MongoDB connected?",
+    "Are there any TypeScript errors? (npm run type-check)",
+    "Do existing tests pass? (npm test)"
+  ],
+  "workingDirectory": {
+    "enforced": true,
+    "path": "/home/adam/github/cadencelms_api",
+    "description": "All work must be performed within this directory. Do not modify files outside this directory."
+  }
+}
