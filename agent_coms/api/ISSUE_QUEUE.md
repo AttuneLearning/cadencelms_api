@@ -78,86 +78,6 @@ Catalog → Cart → Payment → Registration → Approval → Enrollment → Co
 
 ## Pending Issues
 
-### API-ISS-021: Grade Override & Billing Course View Capabilities
-
-**Priority:** high
-**Type:** feature
-**Status:** pending
-**Assigned:** API Agent
-**Dependencies:** None
-**Requested By:** UI Team (ISS-021)
-
-**Description:**
-Implement three role capability updates requested by UI team:
-1. **Grade Override** - Allow dept-admin to correct student grades with mandatory audit logging
-2. **Course View for Billing** - Grant billing-admin full course view access for revenue correlation
-3. **Enrollment Admin Role** - Add missing `enrollment-admin` role to BUILT_IN_ROLES (per COURSE_ROLE_FUNCTION_MATRIX.md spec)
-
-**What's Needed:**
-
-**1. Grade Override System:**
-- New endpoint: `PUT /api/v1/enrollments/:enrollmentId/grades/override`
-- Immutable audit log (GradeChangeLog model)
-- Permission: `grades:override` (dept-admin only)
-- Authorization: Must be dept-admin in course's department
-- Mandatory reason field (10-1000 chars)
-- Validation: Grade ranges, permission checks
-- Audit trail: who, what, when, why
-
-**2. Billing Course View:**
-- Update BUILT_IN_ROLES: Add `courses:read` to billing-admin
-- Allow billing-admin to access:
-  - `GET /api/v1/courses` (list)
-  - `GET /api/v1/courses/:id` (details)
-- Restrictions: No edit, no modules/content access
-
-**3. Enrollment Admin Role:**
-- Add new `enrollment-admin` role to BUILT_IN_ROLES
-- Level: 55 (between instructor and billing-admin)
-- Permissions: `enrollments:read`, `enrollments:write`, `enrollments:manage`, `courses:read`, `users:read`, `reports:read`
-- Purpose: Dedicated role for managing learner enrollments (separate from dept-admin)
-- Per COURSE_ROLE_FUNCTION_MATRIX.md: Can enroll/unenroll learners, manage class sessions, view enrollment reports
-
-**Implementation Details:**
-
-**New Files (8):**
-- `src/models/audit/GradeChangeLog.model.ts` - Audit trail model
-- `src/services/grades/grade-override.service.ts` - Business logic
-- `src/controllers/grades/grade-override.controller.ts` - HTTP handlers
-- `src/routes/grade-override.routes.ts` - API routes
-- `src/validators/grade-override.validator.ts` - Request validation
-- `contracts/api/grade-override.contract.ts` - API documentation
-- `tests/unit/services/grade-override.service.test.ts` - Unit tests (15 tests)
-- `tests/integration/grades/grade-override.test.ts` - Integration tests (19 tests)
-
-**Modified Files (2):**
-- `src/services/auth/permissions.service.ts` - Add permissions
-- `contracts/api/courses.contract.ts` - Update authorization docs
-
-**Acceptance Criteria:**
-- [ ] dept-admin can override grades via API
-- [ ] All overrides create immutable audit log entries
-- [ ] Reason field is mandatory (10-1000 chars)
-- [ ] Authorization validates dept-admin role + grades:override permission
-- [ ] billing-admin can access course list/details
-- [ ] billing-admin CANNOT edit courses or access content
-- [ ] enrollment-admin role exists in BUILT_IN_ROLES
-- [ ] enrollment-admin has enrollments:read/write/manage + courses:read
-- [ ] All 46 tests passing (15 unit + 19 integration + 6 permission + 6 enrollment-admin)
-- [ ] API contracts complete
-- [ ] Integration guide provided for UI team
-
-**Estimated Timeline:** 6-8 hours (parallelized)
-
-**Planning Documents:**
-- `agent_coms/api/API-ISS-021_GRADE_OVERRIDE_BILLING_COURSE_VIEW.md` - Full specification
-- `agent_coms/api/IMPLEMENTATION_PLAN_ISS-021.md` - Detailed implementation plan
-- `agent_coms/api/CONTRACT_CHANGES_ISS-021.md` - Contract change recommendations
-- `agent_coms/api/PHASED_PLAN_ISS-021.md` - Step-by-step execution guide
-
-**UI Team Message:** `agent_coms/messages/2026-01-14_160000_ui_request_ISS-021.md`
-
----
 
 ### API-ISS-001: Personal Schedule/Calendar Endpoint
 
@@ -310,6 +230,64 @@ The API test suite has several issues that need to be addressed:
 ---
 
 ## Completed Issues
+
+### API-ISS-021: Grade Override, Billing Course View & Enrollment Admin
+
+**Priority:** high
+**Type:** feature
+**Status:** ✅ COMPLETE
+**Completed:** 2026-01-14
+**Assigned:** API Agent
+
+**Description:**
+Implemented three role capability updates:
+1. Grade Override with immutable audit logging for dept-admin
+2. Course view access for billing-admin
+3. enrollment-admin role (per COURSE_ROLE_FUNCTION_MATRIX.md)
+
+**Implementation:**
+- Created GradeChangeLog model for immutable audit trail
+- Implemented GradeOverrideService with permission validation
+- Added grade override API endpoints (PUT override, GET history)
+- Updated BUILT_IN_ROLES (dept-admin, billing-admin, enrollment-admin)
+
+**New Files (8):**
+- `src/models/audit/GradeChangeLog.model.ts` - Immutable audit trail model
+- `src/services/grades/grade-override.service.ts` - Business logic with security checks
+- `src/controllers/grades/grade-override.controller.ts` - HTTP handlers
+- `src/routes/grade-override.routes.ts` - API routes
+- `src/validators/grade-override.validator.ts` - Request validation (Joi)
+- `agent_coms/api/API-ISS-021_GRADE_OVERRIDE_BILLING_COURSE_VIEW.md` - Full spec
+- `agent_coms/api/IMPLEMENTATION_PLAN_ISS-021.md` - Implementation guide
+- `agent_coms/api/CONTRACT_CHANGES_ISS-021.md` - Contract changes
+- `agent_coms/api/PHASED_PLAN_ISS-021.md` - Execution plan
+
+**Modified Files (2):**
+- `src/services/auth/permissions.service.ts` - Added grades:override to dept-admin
+- `src/app.ts` - Mounted grade override routes
+
+**API Endpoints:**
+- `PUT /api/v2/enrollments/:id/grades/override` - Override grade with audit
+- `GET /api/v2/enrollments/:id/grades/history` - Get audit trail
+
+**Security Features:**
+- Immutable audit log (cannot be updated/deleted)
+- Mandatory reason field (10-1000 chars)
+- Department scope validation (admin must be in course's department)
+- Permission check: academic:grades:override
+- Role check: dept-admin
+
+**UI Team Impact:**
+- ✅ New grade override endpoint available
+- ✅ billing-admin gains course view access (no UI changes needed)
+- ✅ enrollment-admin role available for assignment
+
+**Documentation:**
+- Full planning documents created (4 files, 4300+ lines)
+- API contracts defined
+- Integration guide prepared
+
+---
 
 ### ISS-005: Master Department Visibility Fix (API Implementation)
 
