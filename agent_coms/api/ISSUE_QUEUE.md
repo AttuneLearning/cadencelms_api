@@ -2,7 +2,7 @@
 
 > **Purpose:** Human-provided issue tracking for API agent work
 > **Owner:** Human / API Agent
-> **Last Updated:** 2026-01-13
+> **Last Updated:** 2026-01-14
 
 ---
 
@@ -16,6 +16,63 @@
    - Move to "completed" when done
    - Create coordination threads with UI team as needed
 4. **Dependencies:** Use issue IDs to reference blockers
+
+---
+
+## Initiatives (Large Multi-Phase Projects)
+
+### INIT-001: Billing & Auto-Registration System
+
+**Priority:** high
+**Type:** initiative
+**Status:** 📋 PLANNING
+**Assigned:** API Team
+**Estimated Effort:** 8-12 weeks (phased)
+
+**Description:**
+Comprehensive billing, registration, and certification system enabling:
+- Course/program catalog with pricing
+- Shopping cart and checkout
+- Payment processing (Stripe, Square, GPay, Elavon)
+- Registration with optional admin approval
+- Auto-enrollment on approval
+- Certificate generation on completion
+
+**Core Flow:**
+```
+Catalog → Cart → Payment → Registration → Approval → Enrollment → Completion → Certificate
+```
+
+**Planning Documents:**
+- `agent_coms/api/BILLING_REGISTRATION_SYSTEM_SPEC.md` - Full architecture
+- `agent_coms/api/BILLING_USER_STORIES.md` - User stories & tasks
+
+**Epics:**
+| Epic | Description | Priority | Est. Points |
+|------|-------------|----------|-------------|
+| E-001 | Catalog & Pricing Management | High | 35 |
+| E-002 | Shopping Cart & Checkout | High | 32 |
+| E-003 | Payment Processing | Critical | 55 |
+| E-004 | Registration & Approval | High | 28 |
+| E-005 | Auto-Enrollment | High | 8 |
+| E-006 | Progress & Completion Tracking | High | 16 |
+| E-007 | Certificate Generation | High | 25 |
+| E-008 | Subscriptions (Future) | Medium | 35 |
+
+**MVP Scope (Phase 1):** ~37 points
+- Course pricing, catalog, cart, Stripe checkout, auto-registration, enrollment, basic certificates
+
+**Open Questions (Needs Human Input):**
+1. Refund policy: Full only? Partial? Time limits?
+2. Tax calculation: TaxJar/Avalara integration or manual?
+3. Multi-currency support needed?
+4. Guest checkout allowed?
+5. Primary payment processor preference?
+
+**Next Steps:**
+1. Human answers open questions
+2. Create API-ISS issues for Phase 1 (MVP)
+3. Begin CoursePricing and Cart model implementation
 
 ---
 

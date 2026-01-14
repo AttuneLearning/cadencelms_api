@@ -33,6 +33,7 @@ import templatesRoutes from './routes/templates.routes';
 
 // Phase 4 routes
 import enrollmentsRoutes from './routes/enrollments.routes';
+import gradeOverrideRoutes from './routes/grade-override.routes';
 import progressRoutes from './routes/progress.routes';
 import contentAttemptsRoutes from './routes/content-attempts.routes';
 import learningEventsRoutes from './routes/learning-events.routes';
@@ -104,6 +105,7 @@ app.use('/api/v2/templates', templatesRoutes);
 
 // API routes - Phase 4
 app.use('/api/v2/enrollments', enrollmentsRoutes);
+app.use('/api/v2/enrollments', gradeOverrideRoutes); // Grade override endpoints nested under enrollments
 app.use('/api/v2/progress', progressRoutes);
 app.use('/api/v2/content-attempts', contentAttemptsRoutes);
 app.use('/api/v2/learning-events', learningEventsRoutes);

@@ -44,14 +44,71 @@ export const RoleSystemTypes = {
   
   /**
    * Staff Roles - Department-scoped
+   * 
+   * IMPORTANT: Roles are ADDITIVE, not hierarchical.
+   * - dept-admin does NOT inherit content-admin capabilities
+   * - A user needs multiple roles to combine capabilities
+   * - Capabilities are deduplicated when combined
+   * 
+   * @updated 2026-01-14 (ISS-021)
    */
   StaffRoles: {
-    values: ['instructor', 'department-admin', 'content-admin', 'billing-admin'] as const,
+    values: ['instructor', 'department-admin', 'content-admin', 'billing-admin', 'enrollment-admin'] as const,
     descriptions: {
-      'instructor': 'Teaches classes, grades student work',
-      'department-admin': 'Manages department operations, staff, settings',
-      'content-admin': 'Creates and manages courses, programs',
-      'billing-admin': 'Department-level billing operations'
+      'instructor': 'Teaches classes, grades student work in assigned classes',
+      'department-admin': 'Manages department operations, staff, settings, publishes content, can override grades',
+      'content-admin': 'Creates and manages courses, programs (cannot publish without dept-admin)',
+      'billing-admin': 'Department-level billing operations, can view courses for revenue correlation',
+      'enrollment-admin': 'Manages enrollments, class sessions, learner rosters'
+    },
+    /**
+     * Default access rights per role
+     * These are the standard rights assigned to each role.
+     * Actual role definitions are stored in DB and can be customized.
+     * 
+     * @updated 2026-01-14 (ISS-021) - Added grades:override to dept-admin, content:courses:read to billing-admin
+     */
+    defaultAccessRights: {
+      'instructor': [
+        'content:courses:read',
+        'content:modules:read',
+        'grades:own-classes:manage',
+        'enrollment:own-classes:read',
+        'reports:own-classes:read'
+      ],
+      'content-admin': [
+        'content:courses:read',
+        'content:courses:create',
+        'content:courses:edit',
+        'content:modules:manage',
+        'content:programs:manage',
+        'content:upload'
+      ],
+      'department-admin': [
+        'content:courses:read',
+        'content:courses:publish',
+        'content:courses:archive',
+        'content:courses:delete',
+        'grades:override',          // ISS-021: Can override student grades (with audit log)
+        'enrollment:manage',
+        'staff:read',
+        'staff:roles:edit',
+        'department:settings:manage'
+      ],
+      'billing-admin': [
+        'content:courses:read',     // ISS-021: Can view courses for revenue reports (view only)
+        'billing:revenue:read',
+        'billing:pricing:manage',
+        'billing:payments:read',
+        'billing:refunds:manage',
+        'reports:financial:read'
+      ],
+      'enrollment-admin': [
+        'content:courses:read',
+        'enrollment:manage',
+        'classes:manage',
+        'learner:read'
+      ]
     }
   },
   

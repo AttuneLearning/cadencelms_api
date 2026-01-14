@@ -1685,6 +1685,250 @@ export const EnrollmentsContract = {
       - Useful for instructors managing class rosters
       - Attendance data included if class has sessions
     `
+  },
+
+  // =========================================================================
+  // GRADE OVERRIDE (ISS-021)
+  // =========================================================================
+
+  /**
+   * Override/Edit Student Grade
+   * PUT /api/v2/enrollments/:enrollmentId/grade/override
+   * 
+   * REQUIRES: grades:override access right (dept-admin role)
+   * 
+   * Allows department administrators to correct/modify student grades
+   * after initial grading. All overrides are logged to audit trail.
+   * 
+   * @added 2026-01-14 (ISS-021)
+   */
+  overrideGrade: {
+    endpoint: '/api/v2/enrollments/:enrollmentId/grade/override',
+    method: 'PUT' as const,
+    version: '1.0.0',
+    description: 'Override or correct a student grade (dept-admin only)',
+
+    request: {
+      headers: {
+        'Authorization': 'Bearer <token>',
+        'Content-Type': 'application/json'
+      },
+      params: {
+        enrollmentId: {
+          type: 'ObjectId',
+          required: true,
+          description: 'Enrollment ID to update grade for'
+        }
+      },
+      body: {
+        newScore: {
+          type: 'number',
+          required: true,
+          min: 0,
+          max: 100,
+          description: 'The corrected numeric grade (0-100)'
+        },
+        reason: {
+          type: 'string',
+          required: true,
+          minLength: 10,
+          maxLength: 500,
+          description: 'Required explanation for the grade override'
+        },
+        recalculateLetter: {
+          type: 'boolean',
+          required: false,
+          default: true,
+          description: 'Whether to recalculate letter grade based on new score'
+        },
+        newLetterGrade: {
+          type: 'string',
+          required: false,
+          enum: ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'D-', 'F', 'P', 'NP', 'I', 'W'],
+          description: 'Manual letter grade override (if recalculateLetter is false)'
+        }
+      }
+    },
+
+    response: {
+      success: {
+        status: 200,
+        body: {
+          success: 'boolean',
+          message: 'string',
+          data: {
+            enrollmentId: 'ObjectId',
+            learnerId: 'ObjectId',
+            courseId: 'ObjectId',
+            previousGrade: {
+              score: 'number',
+              letter: 'string',
+              passed: 'boolean | null'
+            },
+            newGrade: {
+              score: 'number',
+              letter: 'string',
+              passed: 'boolean | null'
+            },
+            override: {
+              id: 'ObjectId',
+              reason: 'string',
+              overriddenBy: {
+                id: 'ObjectId',
+                firstName: 'string',
+                lastName: 'string',
+                email: 'string'
+              },
+              overriddenAt: 'Date',
+              changeLogId: 'ObjectId'
+            }
+          }
+        }
+      },
+      errors: [
+        { status: 401, code: 'UNAUTHORIZED', message: 'Authentication required' },
+        { status: 403, code: 'FORBIDDEN', message: 'Requires grades:override access right' },
+        { status: 404, code: 'NOT_FOUND', message: 'Enrollment not found' },
+        { status: 422, code: 'REASON_REQUIRED', message: 'Reason is required for grade overrides' },
+        { status: 422, code: 'REASON_TOO_SHORT', message: 'Reason must be at least 10 characters' },
+        { status: 422, code: 'INVALID_SCORE', message: 'Score must be between 0 and 100' },
+        { status: 422, code: 'NO_GRADE_TO_OVERRIDE', message: 'Enrollment has no existing grade to override' }
+      ]
+    },
+
+    example: {
+      request: {
+        params: { enrollmentId: '507f1f77bcf86cd799439020' },
+        body: {
+          newScore: 85.5,
+          reason: 'Grade appeal approved by academic committee - exam #3 regraded',
+          recalculateLetter: true
+        }
+      },
+      response: {
+        success: true,
+        message: 'Grade override applied successfully',
+        data: {
+          enrollmentId: '507f1f77bcf86cd799439020',
+          learnerId: '507f1f77bcf86cd799439011',
+          courseId: '507f1f77bcf86cd799439015',
+          previousGrade: {
+            score: 72.0,
+            letter: 'C',
+            passed: true
+          },
+          newGrade: {
+            score: 85.5,
+            letter: 'B',
+            passed: true
+          },
+          override: {
+            id: '507f1f77bcf86cd799439099',
+            reason: 'Grade appeal approved by academic committee - exam #3 regraded',
+            overriddenBy: {
+              id: '507f1f77bcf86cd799439050',
+              firstName: 'Jane',
+              lastName: 'Admin',
+              email: 'jane.admin@university.edu'
+            },
+            overriddenAt: '2026-01-14T16:30:00.000Z',
+            changeLogId: '507f1f77bcf86cd799439100'
+          }
+        }
+      }
+    },
+
+    permissions: ['grades:override'],
+
+    notes: `
+      - REQUIRES grades:override access right (dept-admin role only)
+      - Reason field is MANDATORY (min 10 characters) - no exceptions
+      - All overrides create an immutable audit log entry (GradeChangeLog)
+      - Original instructor grades are preserved in history
+      - Triggers notification to learner about grade change
+      - Can only override grades that exist (enrollment must have been graded)
+      - Letter grade auto-calculated unless recalculateLetter=false
+      - Used for: grade appeals, data entry corrections, administrative adjustments
+      - NOT for initial grading - use standard grading endpoint for that
+    `
+  },
+
+  /**
+   * Get Grade Override History
+   * GET /api/v2/enrollments/:enrollmentId/grade/history
+   * 
+   * View audit trail of all grade changes for an enrollment.
+   * 
+   * @added 2026-01-14 (ISS-021)
+   */
+  getGradeHistory: {
+    endpoint: '/api/v2/enrollments/:enrollmentId/grade/history',
+    method: 'GET' as const,
+    version: '1.0.0',
+    description: 'Get grade override history for an enrollment',
+
+    request: {
+      headers: {
+        'Authorization': 'Bearer <token>'
+      },
+      params: {
+        enrollmentId: {
+          type: 'ObjectId',
+          required: true,
+          description: 'Enrollment ID'
+        }
+      }
+    },
+
+    response: {
+      success: {
+        status: 200,
+        body: {
+          success: 'boolean',
+          data: {
+            enrollmentId: 'ObjectId',
+            currentGrade: {
+              score: 'number',
+              letter: 'string',
+              passed: 'boolean | null'
+            },
+            history: [
+              {
+                id: 'ObjectId',
+                changeType: 'initial | override',
+                previousScore: 'number | null',
+                previousLetter: 'string | null',
+                newScore: 'number',
+                newLetter: 'string',
+                reason: 'string | null',
+                changedBy: {
+                  id: 'ObjectId',
+                  firstName: 'string',
+                  lastName: 'string',
+                  role: 'string'
+                },
+                changedAt: 'Date'
+              }
+            ]
+          }
+        }
+      },
+      errors: [
+        { status: 401, code: 'UNAUTHORIZED', message: 'Authentication required' },
+        { status: 403, code: 'FORBIDDEN', message: 'Cannot view grade history for this enrollment' },
+        { status: 404, code: 'NOT_FOUND', message: 'Enrollment not found' }
+      ]
+    },
+
+    permissions: ['grades:override', 'grades:own-classes:manage'],
+
+    notes: `
+      - Accessible to dept-admin (grades:override) and instructors (grades:own-classes:manage)
+      - Learners can view their own grade history
+      - History is immutable - cannot be deleted or modified
+      - Shows all changes including initial grade and overrides
+      - Useful for audit, compliance, and grade appeal documentation
+    `
   }
 };
 

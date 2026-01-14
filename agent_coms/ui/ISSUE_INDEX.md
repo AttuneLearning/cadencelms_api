@@ -1,6 +1,6 @@
 # Issue Queue Index
 
-**Last Updated:** 2026-01-14 (02:05)
+**Last Updated:** 2026-01-14 (16:00)
 
 ## Overview
 
@@ -10,42 +10,32 @@ This index provides a quick reference to all UI issues. Individual issue documen
 
 ## Status Summary
 
-- **Total Issues:** 18
-- **Completed:** 15 ✅ (83% completion rate)
+- **Total Issues:** 21
+- **Completed:** 18 ✅ (86% completion rate)
 - **Pending:** 3
 
 ## Priority Breakdown
 
-- **Critical:** 1 pending (API issue)
-- **High:** 7 (1 pending, 6 completed) ⭐
-- **Medium:** 2 (1 completed, 1 pending as part of ISS-010)
-- **Low:** 3 (2 completed, 1 pending)
+- **Critical:** 1 completed (API issue) ✅
+- **High:** 10 (3 pending, 7 completed) ⭐
+- **Medium:** 2 (2 completed)
+- **Low:** 3 (3 completed) ✅
 
 ---
 
 ## Pending Issues (3)
 
-### Critical Priority
-
-| Issue | Title | Type | Location | Notes |
-|-------|-------|------|----------|-------|
-| ISS-011 | Encrypt Identification Numbers at Rest (Security Critical) | feature (security) | [issue_queue/ISS-011.md](./issue_queue/ISS-011.md) | **API AGENT** - Backend encryption implementation |
-
 ### High Priority
 
 | Issue | Title | Type | Location | Notes |
 |-------|-------|------|----------|-------|
-| ISS-017 | Department Management - Create Department & Staff Assignment UI | feature | [issue_queue/ISS-017.md](./issue_queue/ISS-017.md) | Large feature - department CRUD UI |
-
-### Low Priority
-
-| Issue | Title | Type | Location | Notes |
-|-------|-------|------|----------|-------|
-| ISS-018 | Add Password Visibility Toggle to All Password Fields | polish | [issue_queue/ISS-018.md](./issue_queue/ISS-018.md) | UX improvement - reusable component |
+| ISS-019 | Rename CourseSegment to CourseModule Throughout UI | refactor | [issue_queue/ISS-019.md](./issue_queue/ISS-019.md) | **PRIORITY** - Blocks ISS-020 |
+| ISS-020 | Wire Up Staff Course Builder Routes | feature | [issue_queue/ISS-020.md](./issue_queue/ISS-020.md) | Depends on ISS-019 |
+| ISS-021 | Role Permission Updates - Grade Override & Billing Course View | feature | [issue_queue/ISS-021.md](./issue_queue/ISS-021.md) | ✅ Contracts updated, ready for UI |
 
 ---
 
-## Completed Issues (15)
+## Completed Issues (18)
 
 | Issue | Title | Type | Completion Date | Location |
 |-------|-------|------|-----------------|----------|
@@ -59,21 +49,24 @@ This index provides a quick reference to all UI issues. Individual issue documen
 | ISS-008 | Fix Page Load Loops on Certificates and Departments Pages | bug | - | [issue_queue_complete/ISS-008.md](./issue_queue_complete/ISS-008.md) |
 | ISS-009 | Align API Client Token Handling with Auth Storage | bug | - | [issue_queue_complete/ISS-009.md](./issue_queue_complete/ISS-009.md) |
 | ISS-010 | PersonExtended & Demographics Profile Forms - Staff & Learner | feature | 2026-01-13 | [issue_queue_complete/ISS-010.md](./issue_queue_complete/ISS-010.md) |
+| ISS-011 | Encrypt Identification Numbers at Rest (Security Critical) | feature (security) | 2026-01-14 (API) | [issue_queue_complete/ISS-011.md](./issue_queue_complete/ISS-011.md) |
 | ISS-012 | Financial Aid Fields Integration - Learner Demographics | feature | 2026-01-13 | [issue_queue_complete/ISS-012.md](./issue_queue_complete/ISS-012.md) |
 | ISS-013 | Admin Tab Requires Escalation Password Modal | feature | 2026-01-13 | [issue_queue_complete/ISS-013.md](./issue_queue_complete/ISS-013.md) |
 | ISS-014 | Dashboard Navigation Consistency - Complete Navigation Structure | feature | 2026-01-14 | [issue_queue_complete/ISS-014.md](./issue_queue_complete/ISS-014.md) |
 | ISS-015 | Dashboard NavItem Not Dynamic - Hardcoded to Learner Dashboard | bug | 2026-01-13 | [issue_queue_complete/ISS-015.md](./issue_queue_complete/ISS-015.md) |
 | ISS-016 | Certificates Link Label Shows "test-certificates" Instead of "Certificates" | bug | 2026-01-13 | [issue_queue_complete/ISS-016.md](./issue_queue_complete/ISS-016.md) |
+| ISS-017 | Department Management - Create Department & Staff Assignment UI | feature | 2026-01-14 | [issue_queue_complete/ISS-017.md](./issue_queue_complete/ISS-017.md) |
+| ISS-018 | Add Password Visibility Toggle to All Password Fields | polish | 2026-01-14 | [issue_queue_complete/ISS-018.md](./issue_queue_complete/ISS-018.md) |
 
 ---
 
 ## Issue Types
 
-- **Feature:** 7 issues (1 pending, 6 completed) ⭐
+- **Feature:** 9 issues (3 pending, 6 completed) ⭐
 - **Bug:** 8 issues (0 pending, 8 completed) ✅ All bugs fixed!
-- **Refactor:** 1 issue (1 completed)
-- **Security:** 1 issue (1 pending - API)
-- **Polish:** 1 issue (1 pending - UX improvement)
+- **Refactor:** 2 issues (1 pending, 1 completed)
+- **Security:** 1 issue (1 completed - API) ✅
+- **Polish:** 1 issue (1 completed) ✅
 
 ---
 
@@ -91,14 +84,17 @@ This index provides a quick reference to all UI issues. Individual issue documen
 - **ISS-008:** Page Load Loops (✅ completed) - [View](./issue_queue_complete/ISS-008.md)
 - **ISS-009:** API Token Handling (✅ completed) - [View](./issue_queue_complete/ISS-009.md)
 - **ISS-010:** Profile Extended Forms (✅ completed, 2026-01-13) - [View](./issue_queue_complete/ISS-010.md)
-- **ISS-011:** Encrypt ID Numbers (⏳ pending, API issue) - [View](./issue_queue/ISS-011.md)
+- **ISS-011:** Encrypt ID Numbers (✅ completed by API, 2026-01-14, commit: 7d7f2ca) - [View](./issue_queue_complete/ISS-011.md)
 - **ISS-012:** Financial Aid Fields (✅ completed, 2026-01-13) - [View](./issue_queue_complete/ISS-012.md)
 - **ISS-013:** Admin Escalation Modal (✅ completed, 2026-01-13, 2 phases) - [View](./issue_queue_complete/ISS-013.md)
 - **ISS-014:** Dashboard Navigation (✅ completed, 2026-01-14) - [View](./issue_queue_complete/ISS-014.md)
 - **ISS-015:** Dynamic Dashboard NavItem (✅ completed, 2026-01-13) - [View](./issue_queue_complete/ISS-015.md)
 - **ISS-016:** Certificates Link Label (✅ completed, 2026-01-13) - [View](./issue_queue_complete/ISS-016.md)
-- **ISS-017:** Department Management UI (⏳ pending, large feature) - [View](./issue_queue/ISS-017.md)
-- **ISS-018:** Password Visibility Toggle (⏳ pending, low priority) - [View](./issue_queue/ISS-018.md)
+- **ISS-017:** Department Management UI (✅ completed, 2026-01-14) - [View](./issue_queue_complete/ISS-017.md)
+- **ISS-018:** Password Visibility Toggle (✅ completed, 2026-01-14) - [View](./issue_queue_complete/ISS-018.md)
+- **ISS-019:** Segment → Module Rename (⏳ pending, **PRIORITY**, blocks ISS-020) - [View](./issue_queue/ISS-019.md)
+- **ISS-020:** Staff Course Builder Routes (⏳ pending, depends on ISS-019) - [View](./issue_queue/ISS-020.md)
+- **ISS-021:** Role Permission Updates (✅ contracts updated, ready for UI) - [View](./issue_queue/ISS-021.md)
 
 ---
 
@@ -113,6 +109,8 @@ This index provides a quick reference to all UI issues. Individual issue documen
 6. ✅ **ISS-012** - Verified UI implementation complete
 7. ✅ **ISS-013** - Admin Escalation Modal & Session Management (commits: 8e98ae9, c052af2) ⭐
 8. ✅ **ISS-014** - Dashboard Navigation Consistency - Complete Navigation Structure ⭐
+9. ✅ **ISS-011** - Encrypt ID Numbers - Completed by API team (commit: 7d7f2ca, no UI changes) ⭐
+10. ✅ **ISS-018** - Password Visibility Toggle - PasswordInput component (pending commit) ⭐
 
 **Git Commits Made:**
 - `6be9cf0` - fix(ISS-015): make Dashboard nav link context-aware
@@ -144,20 +142,30 @@ This index provides a quick reference to all UI issues. Individual issue documen
 
 Based on priority, complexity, and dependencies:
 
-1. **ISS-011** (Critical) - **API AGENT** - Encrypt Identification Numbers - Security critical, API implementation required
-2. **ISS-017** (High) - Department Management UI - Admin feature, requires planning
-3. **ISS-018** (Low) - Password Visibility Toggle - UX polish, low priority
+1. **ISS-019** (High, Refactor) - Rename CourseSegment → CourseModule - **DO FIRST** (blocks ISS-020)
+2. **ISS-020** (High, Feature) - Wire Up Staff Course Builder Routes - Depends on ISS-019
+3. **ISS-021** (High, Feature) - Role Permission Updates - API contract pending
+
+**Reference Specs:**
+- [COURSE_ROLE_FUNCTION_MATRIX.md](./specs/COURSE_ROLE_FUNCTION_MATRIX.md) ✅ APPROVED
+- [CONTENT_ADMIN_FLOW_DESIGN.md](./specs/CONTENT_ADMIN_FLOW_DESIGN.md)
 
 ---
 
 ## Notes
 
 - ✅ **ALL UI BUGS RESOLVED** - 8/8 bug issues completed
-- ⏳ 3 remaining pending issues (2 features + 1 polish)
-- 🔒 ISS-011 is assigned to API Agent (backend encryption work)
-- 📊 Issue completion rate: 83% (15/18) ⭐
-- 🎯 Remaining work is primarily feature development, not bug fixes
-- 🚀 Major features completed in this session: Admin Escalation & Session Management (ISS-013), Dashboard Navigation Consistency (ISS-014)
+- ✅ **ALL SECURITY ISSUES RESOLVED** - ISS-011 encryption completed by API team
+- ✅ **ALL POLISH ISSUES RESOLVED** - ISS-018 password visibility toggle completed
+- ✅ **ISS-017 Department Management COMPLETED** - 2026-01-14
+- ⏳ 3 remaining pending issues:
+  - **ISS-019** - Segment → Module Rename (refactor, blocks ISS-020)
+  - **ISS-020** - Staff Course Builder Routes (depends on ISS-019)
+  - **ISS-021** - Role Permission Updates (API contract pending)
+- 📊 Issue completion rate: **86%** (18/21)
+- 🎯 Dependency chain: ISS-019 → ISS-020 (must complete rename before routing)
+- 📋 **Approved Specs:** COURSE_ROLE_FUNCTION_MATRIX.md, CONTENT_ADMIN_FLOW_DESIGN.md
+- 🚀 Major features completed in this session: Admin Escalation & Session Management (ISS-013), Dashboard Navigation Consistency (ISS-014), ID Number Encryption (ISS-011 via API), Password Visibility Toggle (ISS-018), Department Management (ISS-017)
 
 ---
 

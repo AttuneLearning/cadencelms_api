@@ -678,6 +678,305 @@ Extend the existing Input component to support a `type="password"` variant with 
 
 ---
 
+### ISS-019: Rename CourseSegment to CourseModule Throughout UI
+
+**Priority:** high
+**Type:** refactor
+**Status:** pending
+**Assigned:** UI Agent
+**Dependencies:** None
+**Blocking:** ISS-020 (Course Module Builder UI Routes)
+
+**Description:**
+The API uses "modules" (`/courses/:courseId/modules`) but the UI entity layer uses "segment" (`CourseSegment`, `courseSegmentApi.ts`). This terminology inconsistency causes confusion. The industry-standard term is "module" and the API already uses it - the UI should align.
+
+---
+
+## Current State (Inconsistent)
+
+| Layer | Current Term | Example |
+|-------|--------------|---------|
+| **API Endpoints** | `modules` ✅ | `/courses/:courseId/modules` |
+| **UI Entity** | `segment` ❌ | `CourseSegment`, `courseSegmentApi` |
+| **UI Components** | `segment` ❌ | `CourseSegmentCard`, `CourseSegmentForm` |
+| **Contract Files** | Both (hedging) | `course-segments.contract.ts` |
+| **Query Keys** | `courseSegments` ❌ | `courseSegmentKeys.all` |
+
+## Target State (Consistent)
+
+| Layer | New Term | Example |
+|-------|----------|---------|
+| **API Endpoints** | `modules` ✅ | `/courses/:courseId/modules` (unchanged) |
+| **UI Entity** | `module` ✅ | `CourseModule`, `courseModuleApi` |
+| **UI Components** | `module` ✅ | `CourseModuleCard`, `CourseModuleForm` |
+| **Contract Files** | `module` ✅ | `course-modules.contract.ts` |
+| **Query Keys** | `courseModules` ✅ | `courseModuleKeys.all` |
+
+---
+
+## Files to Rename
+
+### Entity Directory
+```
+src/entities/course-segment/  →  src/entities/course-module/
+├── api/
+│   ├── courseSegmentApi.ts  →  courseModuleApi.ts
+│   └── __tests__/courseSegmentApi.test.ts  →  courseModuleApi.test.ts
+├── model/
+│   ├── courseSegmentKeys.ts  →  courseModuleKeys.ts
+│   ├── types.ts (update internal types)
+│   └── lessonTypes.ts
+├── ui/
+│   ├── CourseSegmentCard.tsx  →  CourseModuleCard.tsx
+│   ├── CourseSegmentForm.tsx  →  CourseModuleForm.tsx
+│   ├── CourseSegmentList.tsx  →  CourseModuleList.tsx
+│   └── __tests__/ (update all test files)
+└── index.ts (update all exports)
+```
+
+### Contract Files
+```
+api/contracts/api/course-segments.contract.ts  →  course-modules.contract.ts
+```
+
+### Shared API
+```
+src/shared/api/endpoints.ts
+  - courseSegments: { ... }  →  courseModules: { ... }
+```
+
+### Mock Data
+```
+src/test/mocks/data/courseSegments.ts  →  courseModules.ts
+```
+
+---
+
+## Types to Rename
+
+| Current | New |
+|---------|-----|
+| `CourseSegment` | `CourseModule` |
+| `CourseSegmentListItem` | `CourseModuleListItem` |
+| `CourseSegmentType` | `CourseModuleType` |
+| `CourseSegmentSettings` | `CourseModuleSettings` |
+| `CreateCourseSegmentPayload` | `CreateCourseModulePayload` |
+| `UpdateCourseSegmentPayload` | `UpdateCourseModulePayload` |
+| `CourseSegmentFilters` | `CourseModuleFilters` |
+| `CourseSegmentsListResponse` | `CourseModulesListResponse` |
+| `ReorderCourseSegmentsPayload` | `ReorderCourseModulesPayload` |
+| `ReorderCourseSegmentsResponse` | `ReorderCourseModulesResponse` |
+| `DeleteCourseSegmentResponse` | `DeleteCourseModuleResponse` |
+
+---
+
+## API Functions to Rename
+
+| Current | New |
+|---------|-----|
+| `listCourseSegments()` | `listCourseModules()` |
+| `getCourseSegment()` | `getCourseModule()` |
+| `createCourseSegment()` | `createCourseModule()` |
+| `updateCourseSegment()` | `updateCourseModule()` |
+| `deleteCourseSegment()` | `deleteCourseModule()` |
+| `reorderCourseSegments()` | `reorderCourseModules()` |
+
+---
+
+## Query Key Changes
+
+```typescript
+// Before
+export const courseSegmentKeys = {
+  all: ['courseSegments'] as const,
+  lists: () => [...courseSegmentKeys.all, 'list'] as const,
+  ...
+};
+
+// After
+export const courseModuleKeys = {
+  all: ['courseModules'] as const,
+  lists: () => [...courseModuleKeys.all, 'list'] as const,
+  ...
+};
+```
+
+---
+
+## Files That Import course-segment (Need Updates)
+
+Search for: `from '@/entities/course-segment'` or `from '../course-segment'`
+
+Expected files to update:
+- `src/pages/staff/courses/CourseEditorPage.tsx`
+- `src/pages/staff/courses/ModuleEditorPage.tsx`
+- `src/pages/staff/courses/CoursePreviewPage.tsx`
+- Any features using course modules
+
+---
+
+## Acceptance Criteria
+
+- [ ] All files renamed from `segment` → `module`
+- [ ] All types renamed from `Segment` → `Module`
+- [ ] All functions renamed from `segment` → `module`
+- [ ] All query keys updated
+- [ ] All imports updated throughout codebase
+- [ ] All tests passing
+- [ ] No remaining references to "segment" (except in git history)
+- [ ] API endpoints unchanged (`/modules` still works)
+
+---
+
+## Implementation Strategy
+
+1. **Create new entity directory** `src/entities/course-module/`
+2. **Copy and rename** all files from `course-segment`
+3. **Update all internal references** in the new files
+4. **Update barrel exports** in `index.ts`
+5. **Update shared/api/endpoints.ts**
+6. **Update all imports** in pages/features
+7. **Delete old `course-segment` directory**
+8. **Run tests** and fix any remaining issues
+9. **Update contract file** `course-segments.contract.ts` → `course-modules.contract.ts`
+
+---
+
+## Notes
+- This is a refactor with no functional changes
+- API endpoints remain unchanged (they already use `/modules`)
+- TypeScript will catch most missed renames at compile time
+- Run `grep -r "segment" src/` after to verify complete rename
+- Update any documentation referencing "segments"
+
+---
+
+### ISS-020: Wire Up Staff Course Builder Routes
+
+**Priority:** high
+**Type:** feature
+**Status:** pending
+**Assigned:** UI Agent
+**Dependencies:** ISS-019 (Segment → Module rename must complete first)
+
+**Description:**
+The staff course builder pages exist but are not connected to the router. Staff users need access to course creation and management tools. This issue wires up the existing pages to proper routes.
+
+---
+
+## Existing Pages (Ready but Not Routed)
+
+| Page | File | Purpose |
+|------|------|---------|
+| `StaffCoursesPage` | `src/pages/staff/courses/StaffCoursesPage.tsx` | Course list + "Create Course" button |
+| `CourseEditorPage` | `src/pages/staff/courses/CourseEditorPage.tsx` | Edit course details + manage modules |
+| `ModuleEditorPage` | `src/pages/staff/courses/ModuleEditorPage.tsx` | Edit individual module |
+| `ContentUploaderPage` | `src/pages/staff/courses/ContentUploaderPage.tsx` | Upload SCORM/video content |
+| `ExerciseBuilderPage` | `src/pages/staff/courses/ExerciseBuilderPage.tsx` | Create custom exercises |
+| `CoursePreviewPage` | `src/pages/staff/courses/CoursePreviewPage.tsx` | ✅ Already routed |
+
+---
+
+## Routes to Add
+
+```tsx
+// src/app/routing/index.tsx
+
+// Staff Course Management Routes
+<Route path="/staff/courses" element={<StaffCoursesPage />} />
+<Route path="/staff/courses/create" element={<CourseEditorPage />} />
+<Route path="/staff/courses/:courseId/edit" element={<CourseEditorPage />} />
+<Route path="/staff/courses/:courseId/modules/:moduleId" element={<ModuleEditorPage />} />
+<Route path="/staff/courses/:courseId/modules/:moduleId/content" element={<ContentUploaderPage />} />
+<Route path="/staff/courses/:courseId/modules/:moduleId/exercises" element={<ExerciseBuilderPage />} />
+
+// Already exists:
+<Route path="/staff/courses/:courseId/preview" element={<CoursePreviewPage />} />
+<Route path="/staff/courses/:courseId/preview/:moduleId" element={<CoursePreviewPage />} />
+```
+
+---
+
+## Navigation Updates
+
+Add to staff sidebar navigation (`navItems.ts`):
+
+```typescript
+// In STAFF_NAV_ITEMS or appropriate section
+{
+  label: 'My Courses',
+  path: '/staff/courses',
+  icon: BookOpen,
+  permissions: ['content:courses:read'],
+},
+```
+
+---
+
+## Route Protection
+
+All routes should be protected:
+- Require `staff` or `global-admin` userType
+- Specific routes may require additional permissions:
+  - Create: `content:courses:manage`
+  - Edit: `content:courses:manage`
+  - Delete: `content:courses:manage`
+
+---
+
+## Page State Handling
+
+### StaffCoursesPage (`/staff/courses`)
+- Shows courses the current user can manage
+- Filter by department context if applicable
+- "Create Course" button (permission-gated)
+
+### CourseEditorPage (`/staff/courses/create` vs `/staff/courses/:courseId/edit`)
+- Detect create vs edit mode via route params
+- `courseId ? 'edit' : 'create'` pattern
+- Pre-populate form in edit mode
+
+### ModuleEditorPage (`/staff/courses/:courseId/modules/:moduleId`)
+- Get courseId and moduleId from params
+- Validate user has access to this course
+- Show breadcrumb: Course > Module
+
+---
+
+## Acceptance Criteria
+
+- [ ] All routes registered in router
+- [ ] Routes protected by authentication
+- [ ] Routes protected by appropriate permissions
+- [ ] Navigation item added to staff sidebar
+- [ ] Create/Edit mode works correctly for CourseEditorPage
+- [ ] Breadcrumb navigation works across pages
+- [ ] Back buttons navigate correctly
+- [ ] URLs are bookmarkable
+
+---
+
+## Related Files
+
+**Router:**
+- `src/app/routing/index.tsx` - Add new routes
+
+**Navigation:**
+- `src/widgets/sidebar/config/navItems.ts` - Add "My Courses" link
+
+**Pages:**
+- `src/pages/staff/courses/index.ts` - Ensure all exports
+
+---
+
+## Notes
+- Pages already exist, this is primarily routing work
+- Depends on ISS-019 completing first (module terminology)
+- Consider lazy loading for performance: `React.lazy(() => import(...))`
+- May need to add route protection via `<ProtectedRoute>`
+
+---
+
 ### ISS-017: Department Management - Create Department & Staff Assignment UI
 
 **Priority:** high
