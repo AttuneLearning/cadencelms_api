@@ -3,6 +3,9 @@ import { authenticate } from '@/middlewares/authenticate';
 import { requireAccessRight } from '@/middlewares/require-access-right';
 import { requireEscalation } from '@/middlewares/require-escalation';
 import * as reportsController from '@/controllers/reporting/reports.controller';
+import reportJobsRoutes from './reports/report-jobs.routes';
+import reportTemplatesRoutes from './reports/report-templates.routes';
+import reportSchedulesRoutes from './reports/report-schedules.routes';
 
 const router = Router();
 
@@ -16,6 +19,11 @@ const router = Router();
 
 // Apply authentication middleware to all routes
 router.use(authenticate);
+
+// Mount new queue-based report system sub-routers
+router.use('/jobs', reportJobsRoutes);
+router.use('/templates', reportTemplatesRoutes);
+router.use('/schedules', reportSchedulesRoutes);
 
 /**
  * GET /api/v2/reports/completion
