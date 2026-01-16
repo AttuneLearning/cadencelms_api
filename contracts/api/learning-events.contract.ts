@@ -46,16 +46,48 @@ export const LearningEventsContract = {
           type: 'string',
           required: false,
           enum: [
-            'enrollment',
-            'content_started',
-            'content_completed',
-            'assessment_started',
-            'assessment_completed',
-            'module_completed',
-            'course_completed',
-            'achievement_earned',
+            // Enrollment Events
+            'enrollment-created',
+            'enrollment-started',
+            'enrollment-completed',
+            'enrollment-withdrawn',
+            'enrollment-expired',
+            // Content Events
+            'content-viewed',
+            'content-started',
+            'content-completed',
+            'content-downloaded',
+            // Assessment Events
+            'assessment-started',
+            'assessment-submitted',
+            'assessment-completed',
+            'assessment-graded',
+            // Module/Course Events
+            'module-started',
+            'module-completed',
+            'course-started',
+            'course-completed',
+            // SCORM Events
+            'scorm-launched',
+            'scorm-initialized',
+            'scorm-completed',
+            'scorm-passed',
+            'scorm-failed',
+            'scorm-suspended',
+            'scorm-exited',
+            // Video Events
+            'video-played',
+            'video-paused',
+            'video-seeked',
+            'video-completed',
+            // Session Events
+            'session-started',
+            'session-ended',
             'login',
-            'logout'
+            'logout',
+            // Achievement Events
+            'achievement-earned',
+            'certificate-issued'
           ],
           description: 'Filter by event type'
         },
@@ -97,7 +129,7 @@ export const LearningEventsContract = {
             events: [
               {
                 id: 'ObjectId',
-                type: 'enrollment|content_started|content_completed|assessment_started|assessment_completed|module_completed|course_completed|achievement_earned|login|logout',
+                type: 'enrollment-created|enrollment-started|enrollment-completed|enrollment-withdrawn|enrollment-expired|content-viewed|content-started|content-completed|content-downloaded|assessment-started|assessment-submitted|assessment-completed|assessment-graded|module-started|module-completed|course-started|course-completed|scorm-launched|scorm-initialized|scorm-completed|scorm-passed|scorm-failed|scorm-suspended|scorm-exited|video-played|video-paused|video-seeked|video-completed|session-started|session-ended|login|logout|achievement-earned|certificate-issued',
                 learner: {
                   id: 'ObjectId',
                   firstName: 'string',
@@ -151,7 +183,7 @@ export const LearningEventsContract = {
         page: 1,
         limit: 20,
         learner: '507f1f77bcf86cd799439011',
-        type: 'content_completed',
+        type: 'content-completed',
         dateFrom: '2026-01-01T00:00:00.000Z',
         dateTo: '2026-01-08T23:59:59.999Z'
       },
@@ -161,7 +193,7 @@ export const LearningEventsContract = {
           events: [
             {
               id: '507f1f77bcf86cd799439020',
-              type: 'content_completed',
+              type: 'content-completed',
               learner: {
                 id: '507f1f77bcf86cd799439011',
                 firstName: 'John',
@@ -242,16 +274,48 @@ export const LearningEventsContract = {
           type: 'string',
           required: true,
           enum: [
-            'enrollment',
-            'content_started',
-            'content_completed',
-            'assessment_started',
-            'assessment_completed',
-            'module_completed',
-            'course_completed',
-            'achievement_earned',
+            // Enrollment Events
+            'enrollment-created',
+            'enrollment-started',
+            'enrollment-completed',
+            'enrollment-withdrawn',
+            'enrollment-expired',
+            // Content Events
+            'content-viewed',
+            'content-started',
+            'content-completed',
+            'content-downloaded',
+            // Assessment Events
+            'assessment-started',
+            'assessment-submitted',
+            'assessment-completed',
+            'assessment-graded',
+            // Module/Course Events
+            'module-started',
+            'module-completed',
+            'course-started',
+            'course-completed',
+            // SCORM Events
+            'scorm-launched',
+            'scorm-initialized',
+            'scorm-completed',
+            'scorm-passed',
+            'scorm-failed',
+            'scorm-suspended',
+            'scorm-exited',
+            // Video Events
+            'video-played',
+            'video-paused',
+            'video-seeked',
+            'video-completed',
+            // Session Events
+            'session-started',
+            'session-ended',
             'login',
-            'logout'
+            'logout',
+            // Achievement Events
+            'achievement-earned',
+            'certificate-issued'
           ],
           description: 'Type of learning event'
         },
@@ -357,7 +421,7 @@ export const LearningEventsContract = {
 
     example: {
       request: {
-        type: 'content_completed',
+        type: 'content-completed',
         learnerId: '507f1f77bcf86cd799439011',
         courseId: '507f1f77bcf86cd799439012',
         classId: '507f1f77bcf86cd799439013',
@@ -376,7 +440,7 @@ export const LearningEventsContract = {
         message: 'Learning event created successfully',
         data: {
           id: '507f1f77bcf86cd799439020',
-          type: 'content_completed',
+          type: 'content-completed',
           learner: {
             id: '507f1f77bcf86cd799439011',
             firstName: 'John',
@@ -517,7 +581,7 @@ export const LearningEventsContract = {
       request: {
         events: [
           {
-            type: 'content_completed',
+            type: 'content-completed',
             learnerId: '507f1f77bcf86cd799439011',
             courseId: '507f1f77bcf86cd799439012',
             contentId: '507f1f77bcf86cd799439014',
@@ -541,7 +605,7 @@ export const LearningEventsContract = {
           events: [
             {
               id: '507f1f77bcf86cd799439020',
-              type: 'content_completed',
+              type: 'content-completed',
               learner: {
                 id: '507f1f77bcf86cd799439011',
                 firstName: 'John',
@@ -552,7 +616,7 @@ export const LearningEventsContract = {
             },
             {
               id: '507f1f77bcf86cd799439021',
-              type: 'module_completed',
+              type: 'module-completed',
               learner: {
                 id: '507f1f77bcf86cd799439011',
                 firstName: 'John',
@@ -659,7 +723,7 @@ export const LearningEventsContract = {
         success: true,
         data: {
           id: '507f1f77bcf86cd799439020',
-          type: 'content_completed',
+          type: 'content-completed',
           learner: {
             id: '507f1f77bcf86cd799439011',
             firstName: 'John',
@@ -751,16 +815,48 @@ export const LearningEventsContract = {
           type: 'string',
           required: false,
           enum: [
-            'enrollment',
-            'content_started',
-            'content_completed',
-            'assessment_started',
-            'assessment_completed',
-            'module_completed',
-            'course_completed',
-            'achievement_earned',
+            // Enrollment Events
+            'enrollment-created',
+            'enrollment-started',
+            'enrollment-completed',
+            'enrollment-withdrawn',
+            'enrollment-expired',
+            // Content Events
+            'content-viewed',
+            'content-started',
+            'content-completed',
+            'content-downloaded',
+            // Assessment Events
+            'assessment-started',
+            'assessment-submitted',
+            'assessment-completed',
+            'assessment-graded',
+            // Module/Course Events
+            'module-started',
+            'module-completed',
+            'course-started',
+            'course-completed',
+            // SCORM Events
+            'scorm-launched',
+            'scorm-initialized',
+            'scorm-completed',
+            'scorm-passed',
+            'scorm-failed',
+            'scorm-suspended',
+            'scorm-exited',
+            // Video Events
+            'video-played',
+            'video-paused',
+            'video-seeked',
+            'video-completed',
+            // Session Events
+            'session-started',
+            'session-ended',
             'login',
-            'logout'
+            'logout',
+            // Achievement Events
+            'achievement-earned',
+            'certificate-issued'
           ],
           description: 'Filter by event type'
         },
@@ -851,7 +947,7 @@ export const LearningEventsContract = {
           events: [
             {
               id: '507f1f77bcf86cd799439020',
-              type: 'content_completed',
+              type: 'content-completed',
               course: {
                 id: '507f1f77bcf86cd799439012',
                 title: 'Introduction to Programming',
@@ -867,7 +963,7 @@ export const LearningEventsContract = {
             },
             {
               id: '507f1f77bcf86cd799439021',
-              type: 'module_completed',
+              type: 'module-completed',
               course: {
                 id: '507f1f77bcf86cd799439012',
                 title: 'Introduction to Programming',
@@ -1053,7 +1149,7 @@ export const LearningEventsContract = {
           events: [
             {
               id: '507f1f77bcf86cd799439020',
-              type: 'content_completed',
+              type: 'content-completed',
               learner: {
                 id: '507f1f77bcf86cd799439011',
                 firstName: 'John',
@@ -1249,7 +1345,7 @@ export const LearningEventsContract = {
           events: [
             {
               id: '507f1f77bcf86cd799439020',
-              type: 'content_completed',
+              type: 'content-completed',
               learner: {
                 id: '507f1f77bcf86cd799439011',
                 firstName: 'John',
@@ -1447,12 +1543,12 @@ export const LearningEventsContract = {
             averageStudyTime: 18254
           },
           eventsByType: [
-            { type: 'content_completed', count: 564, percentage: 30.6 },
-            { type: 'content_started', count: 612, percentage: 33.2 },
-            { type: 'assessment_completed', count: 234, percentage: 12.7 },
+            { type: 'content-completed', count: 564, percentage: 30.6 },
+            { type: 'content-started', count: 612, percentage: 33.2 },
+            { type: 'assessment-completed', count: 234, percentage: 12.7 },
             { type: 'login', count: 312, percentage: 16.9 },
-            { type: 'module_completed', count: 89, percentage: 4.8 },
-            { type: 'course_completed', count: 31, percentage: 1.7 }
+            { type: 'module-completed', count: 89, percentage: 4.8 },
+            { type: 'course-completed', count: 31, percentage: 1.7 }
           ],
           completionRates: {
             courses: {
@@ -1536,6 +1632,46 @@ export const LearningEventsContract = {
 
 // Type exports for consumers
 export type LearningEventsContractType = typeof LearningEventsContract;
-export type LearningEventType = 'enrollment' | 'content_started' | 'content_completed' |
-  'assessment_started' | 'assessment_completed' | 'module_completed' | 'course_completed' |
-  'achievement_earned' | 'login' | 'logout';
+export type LearningEventType =
+  // Enrollment Events
+  | 'enrollment-created'
+  | 'enrollment-started'
+  | 'enrollment-completed'
+  | 'enrollment-withdrawn'
+  | 'enrollment-expired'
+  // Content Events
+  | 'content-viewed'
+  | 'content-started'
+  | 'content-completed'
+  | 'content-downloaded'
+  // Assessment Events
+  | 'assessment-started'
+  | 'assessment-submitted'
+  | 'assessment-completed'
+  | 'assessment-graded'
+  // Module/Course Events
+  | 'module-started'
+  | 'module-completed'
+  | 'course-started'
+  | 'course-completed'
+  // SCORM Events
+  | 'scorm-launched'
+  | 'scorm-initialized'
+  | 'scorm-completed'
+  | 'scorm-passed'
+  | 'scorm-failed'
+  | 'scorm-suspended'
+  | 'scorm-exited'
+  // Video Events
+  | 'video-played'
+  | 'video-paused'
+  | 'video-seeked'
+  | 'video-completed'
+  // Session Events
+  | 'session-started'
+  | 'session-ended'
+  | 'login'
+  | 'logout'
+  // Achievement Events
+  | 'achievement-earned'
+  | 'certificate-issued';
