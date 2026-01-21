@@ -10,6 +10,16 @@ export type ProgramType =
   | 'professional' 
   | 'continuing-education';
 
+export interface ICertificateConfig {
+  enabled: boolean;
+  templateId?: mongoose.Types.ObjectId;
+  title?: string;
+  signatoryName?: string;
+  signatoryTitle?: string;
+  validityPeriod?: number;  // months, 0 = no expiry
+  autoIssue: boolean;
+}
+
 export interface IProgram extends Document {
   name: string;
   code: string;
@@ -23,6 +33,7 @@ export interface IProgram extends Document {
   requiredCredits?: number;
   isActive: boolean;
   metadata?: Record<string, any>;
+  certificate?: ICertificateConfig;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -91,6 +102,36 @@ const programSchema = new Schema<IProgram>(
     metadata: {
       type: Schema.Types.Mixed,
       default: undefined
+    },
+    certificate: {
+      enabled: {
+        type: Boolean,
+        default: false
+      },
+      templateId: {
+        type: Schema.Types.ObjectId,
+        ref: 'Template'
+      },
+      title: {
+        type: String,
+        maxlength: [200, 'Certificate title cannot exceed 200 characters']
+      },
+      signatoryName: {
+        type: String,
+        maxlength: [100, 'Signatory name cannot exceed 100 characters']
+      },
+      signatoryTitle: {
+        type: String,
+        maxlength: [100, 'Signatory title cannot exceed 100 characters']
+      },
+      validityPeriod: {
+        type: Number,
+        min: [0, 'Validity period cannot be negative']
+      },
+      autoIssue: {
+        type: Boolean,
+        default: false
+      }
     }
   },
   {
