@@ -7,12 +7,14 @@ import { User } from '@/models/auth/User.model';
 import { Learner } from '@/models/auth/Learner.model';
 import Template from '@/models/content/Template.model';
 import { ApiError } from '@/utils/ApiError';
+import { getDepartmentAndSubdepartments } from '@/utils/departmentHierarchy';
 import mongoose from 'mongoose';
 
 interface ListProgramsFilters {
   page?: number;
   limit?: number;
   department?: string;
+  includeSubdepartments?: boolean;
   status?: 'active' | 'inactive' | 'archived';
   search?: string;
   sort?: string;
@@ -70,7 +72,12 @@ export class ProgramsService {
       if (!mongoose.Types.ObjectId.isValid(filters.department)) {
         throw ApiError.badRequest('Invalid department ID');
       }
-      query.departmentId = new mongoose.Types.ObjectId(filters.department);
+      if (filters.includeSubdepartments) {
+        const departmentIds = await getDepartmentAndSubdepartments(filters.department);
+        query.departmentId = { $in: departmentIds.map(id => new mongoose.Types.ObjectId(id)) };
+      } else {
+        query.departmentId = new mongoose.Types.ObjectId(filters.department);
+      }
     }
 
     // Filter by status
@@ -105,7 +112,7 @@ export class ProgramsService {
     // Execute query
     const [programs, total] = await Promise.all([
       Program.find(query)
-        .populate('departmentId', 'name')
+        .populate('departmentId', 'name level')
         .sort(sort)
         .skip(skip)
         .limit(limit)
@@ -137,7 +144,8 @@ export class ProgramsService {
           description: program.description || null,
           department: {
             id: department._id.toString(),
-            name: department.name
+            name: department.name,
+            level: (department.level ?? 0) + 1  // Convert 0-based to 1-based
           },
           credential: this.mapProgramTypeToCredential(program.type),
           duration: program.durationYears ? program.durationYears * 12 : 6,

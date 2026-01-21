@@ -20,6 +20,7 @@ export const listPrograms = asyncHandler(async (req: Request, res: Response) => 
     page: req.query.page ? parseInt(req.query.page as string) : 1,
     limit: req.query.limit ? parseInt(req.query.limit as string) : 10,
     department: req.query.department as string,
+    includeSubdepartments: req.query.includeSubdepartments === 'true',
     status: req.query.status as 'active' | 'inactive' | 'archived' | undefined,
     search: req.query.search as string,
     sort: req.query.sort as string
