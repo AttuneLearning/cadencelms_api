@@ -30,6 +30,7 @@ import contentRoutes from './routes/content.routes';
 import exercisesRoutes from './routes/exercises.routes';
 import questionsRoutes from './routes/questions.routes';
 import templatesRoutes from './routes/templates.routes';
+import certificateTemplatesRoutes from './routes/certificate-templates.routes';
 
 // Phase 4 routes
 import enrollmentsRoutes from './routes/enrollments.routes';
@@ -111,6 +112,7 @@ app.use('/api/v2/content', contentRoutes);
 app.use('/api/v2/content/exercises', exercisesRoutes);
 app.use('/api/v2/questions', questionsRoutes);
 app.use('/api/v2/templates', templatesRoutes);
+app.use('/api/v2/certificate-templates', certificateTemplatesRoutes);
 
 // API routes - Phase 4
 app.use('/api/v2/enrollments', enrollmentsRoutes);
