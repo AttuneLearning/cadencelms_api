@@ -5,6 +5,7 @@ import Course from '@/models/academic/Course.model';
 import Enrollment from '@/models/enrollment/Enrollment.model';
 import { User } from '@/models/auth/User.model';
 import { Learner } from '@/models/auth/Learner.model';
+import Template from '@/models/content/Template.model';
 import { ApiError } from '@/utils/ApiError';
 import mongoose from 'mongoose';
 
@@ -775,6 +776,43 @@ export class ProgramsService {
         name: department.name
       },
       updatedAt: program.updatedAt
+    };
+  }
+
+  /**
+   * Update certificate configuration for a program
+   */
+  static async updateCertificateConfig(programId: string, config: any): Promise<any> {
+    if (!mongoose.Types.ObjectId.isValid(programId)) {
+      throw ApiError.badRequest('Invalid program ID');
+    }
+
+    const program = await Program.findById(programId);
+    if (!program) {
+      throw ApiError.notFound('Program not found');
+    }
+
+    // If templateId provided, validate it exists
+    if (config.templateId) {
+      if (!mongoose.Types.ObjectId.isValid(config.templateId)) {
+        throw ApiError.badRequest('Invalid template ID');
+      }
+      const template = await Template.findById(config.templateId);
+      if (!template) {
+        throw ApiError.badRequest('Certificate template not found');
+      }
+      if (template.isDeleted) {
+        throw ApiError.badRequest('Cannot use a deleted template');
+      }
+    }
+
+    program.certificate = config;
+    await program.save();
+
+    return {
+      programId: program._id.toString(),
+      programName: program.name,
+      certificate: program.certificate
     };
   }
 

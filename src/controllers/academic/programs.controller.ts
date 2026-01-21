@@ -315,3 +315,44 @@ export const updateProgramDepartment = asyncHandler(async (req: Request, res: Re
   const result = await ProgramsService.updateProgramDepartment(id, department, userId);
   res.status(200).json(ApiResponse.success(result, 'Program moved to new department successfully'));
 });
+
+/**
+ * PUT /api/v2/programs/:id/certificate
+ * Update certificate configuration for a program
+ */
+export const updateCertificateConfig = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { enabled, templateId, title, signatoryName, signatoryTitle, validityPeriod, autoIssue } = req.body;
+
+  // Validate required fields
+  if (typeof enabled !== 'boolean') {
+    throw ApiError.badRequest('enabled field is required and must be boolean');
+  }
+
+  // Validate optional fields
+  if (title && title.length > 200) {
+    throw ApiError.badRequest('Certificate title cannot exceed 200 characters');
+  }
+  if (signatoryName && signatoryName.length > 100) {
+    throw ApiError.badRequest('Signatory name cannot exceed 100 characters');
+  }
+  if (signatoryTitle && signatoryTitle.length > 100) {
+    throw ApiError.badRequest('Signatory title cannot exceed 100 characters');
+  }
+  if (validityPeriod !== undefined && (typeof validityPeriod !== 'number' || validityPeriod < 0)) {
+    throw ApiError.badRequest('Validity period must be a non-negative number');
+  }
+
+  const certificateConfig = {
+    enabled,
+    templateId,
+    title,
+    signatoryName,
+    signatoryTitle,
+    validityPeriod,
+    autoIssue: autoIssue ?? false
+  };
+
+  const result = await ProgramsService.updateCertificateConfig(id, certificateConfig);
+  res.status(200).json(ApiResponse.success(result));
+});

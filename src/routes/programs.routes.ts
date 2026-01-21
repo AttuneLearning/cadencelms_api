@@ -121,4 +121,14 @@ router.patch('/:id/department',
   programsController.updateProgramDepartment
 );
 
+/**
+ * PUT /api/v2/programs/:id/certificate
+ * Update certificate configuration for a program
+ * Access Right: content:programs:manage
+ */
+router.put('/:id/certificate',
+  requireAccessRight('content:programs:manage'),
+  programsController.updateCertificateConfig
+);
+
 export default router;

@@ -50,10 +50,16 @@ export const listCourses = asyncHandler(async (req: Request, res: Response) => {
   const result = await CoursesService.listCourses(filters);
 
   // Apply visibility filtering based on user's roles and department
+  // Pass the department filter as "context" - if user is viewing a specific department,
+  // they should see its courses regardless of membership
   if (result.courses && Array.isArray(result.courses)) {
-    result.courses = await CoursesService.filterCoursesByVisibility(result.courses, user);
-    result.total = result.courses.length;
-    result.totalPages = Math.ceil(result.courses.length / filters.limit);
+    const originalTotal = result.total;
+    result.courses = await CoursesService.filterCoursesByVisibility(result.courses, user, filters.department);
+    // Only recalculate if we need to (filtered some out and no department context)
+    if (!filters.department && result.courses.length < originalTotal) {
+      result.total = result.courses.length;
+      result.totalPages = Math.ceil(result.courses.length / filters.limit);
+    }
   }
 
   res.status(200).json(ApiResponse.success(result));
@@ -80,9 +86,9 @@ export const createCourse = asyncHandler(async (req: Request, res: Response) => 
   }
 
   // Validate code pattern
-  const codePattern = /^[A-Z]{2,4}[0-9]{3}$/;
-  if (!codePattern.test(code)) {
-    throw ApiError.badRequest('Course code must match pattern: 2-4 uppercase letters followed by 3 digits (e.g., CS101)');
+  const codePattern = /^[A-Za-z0-9]+$/;
+  if (!codePattern.test(code) || code.length > 35) {
+    throw ApiError.badRequest('Course code must contain only letters and numbers (max 35 characters)');
   }
 
   if (!department || typeof department !== 'string') {
@@ -225,9 +231,9 @@ export const updateCourse = asyncHandler(async (req: Request, res: Response) => 
   }
 
   // Validate code pattern
-  const codePattern = /^[A-Z]{2,4}[0-9]{3}$/;
-  if (!codePattern.test(code)) {
-    throw ApiError.badRequest('Course code must match pattern: 2-4 uppercase letters followed by 3 digits (e.g., CS101)');
+  const codePattern = /^[A-Za-z0-9]+$/;
+  if (!codePattern.test(code) || code.length > 35) {
+    throw ApiError.badRequest('Course code must contain only letters and numbers (max 35 characters)');
   }
 
   if (!department || typeof department !== 'string') {
@@ -485,9 +491,9 @@ export const duplicateCourse = asyncHandler(async (req: Request, res: Response) 
   }
 
   // Validate new code pattern
-  const codePattern = /^[A-Z]{2,4}[0-9]{3}$/;
-  if (!codePattern.test(newCode)) {
-    throw ApiError.badRequest('Course code must match pattern: 2-4 uppercase letters followed by 3 digits (e.g., CS101)');
+  const codePattern = /^[A-Za-z0-9]+$/;
+  if (!codePattern.test(newCode) || newCode.length > 35) {
+    throw ApiError.badRequest('Course code must contain only letters and numbers (max 35 characters)');
   }
 
   // Validate newTitle if provided
