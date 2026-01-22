@@ -26,6 +26,7 @@ export interface IQuestion extends Document {
   explanation?: string;
   hints?: string[];
   isActive: boolean;
+  questionBankIds: string[];
   metadata?: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;
@@ -92,6 +93,11 @@ const QuestionSchema = new Schema<IQuestion>(
     isActive: {
       type: Boolean,
       default: true,
+      index: true
+    },
+    questionBankIds: {
+      type: [String],
+      default: [],
       index: true
     },
     metadata: {
