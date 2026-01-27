@@ -7,6 +7,9 @@
 | ADR-API-003 | REST Conventions | Accepted | 2026-01-27 | Platform/API | [[decisions/ADR-API-003-REST-CONVENTIONS]] |
 | ADR-DATA-001 | Data Architecture | Accepted | 2026-01-27 | Data | [[decisions/ADR-DATA-001-DATA-ARCHITECTURE]] |
 | ADR-SEC-001 | Security Architecture | Accepted | 2026-01-27 | Security | [[decisions/ADR-SEC-001-SECURITY-ARCHITECTURE]] |
+| ADR-CONTENT-001 | Content Delivery Architecture | Accepted | 2026-01-27 | Content | [[decisions/ADR-CONTENT-001-CONTENT-DELIVERY-ARCHITECTURE]] |
+| ADR-SCORM-001 | SCORM Runtime Architecture | Accepted | 2026-01-27 | Content/Learning | [[decisions/ADR-SCORM-001-SCORM-RUNTIME-ARCHITECTURE]] |
+| ADR-INFRA-001 | Infrastructure Architecture | Accepted | 2026-01-27 | Infrastructure | [[decisions/ADR-INFRA-001-INFRASTRUCTURE-ARCHITECTURE]] |
 | ADR-AUTH-001 | Unified Authorization Model | Accepted | 2026-01-22 | Platform/Auth | [[decisions/ADR-AUTH-001-UNIFIED-AUTHORIZATION-MODEL]] |
 | ADR-UI-FORM-001 | Standardized Form Pattern | Accepted | 2026-01-22 | UI | [[decisions/ADR-UI-FORM-001-STANDARDIZED-FORM-PATTERN]] |
 | ADR-001 | Refund Policy | Approved | 2026-01-14 | Billing | [[decisions/ADR-001-REFUND-POLICY]] |

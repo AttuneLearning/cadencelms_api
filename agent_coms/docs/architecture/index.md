@@ -22,6 +22,13 @@ This vault records architecture decisions (ADRs) for CadenceLMS. Use the index b
 ### Security
 - [[decisions/ADR-SEC-001-SECURITY-ARCHITECTURE]]
 
+### Content / Learning
+- [[decisions/ADR-CONTENT-001-CONTENT-DELIVERY-ARCHITECTURE]]
+- [[decisions/ADR-SCORM-001-SCORM-RUNTIME-ARCHITECTURE]]
+
+### Infrastructure
+- [[decisions/ADR-INFRA-001-INFRASTRUCTURE-ARCHITECTURE]]
+
 ### UI / Frontend
 - [[decisions/ADR-UI-FORM-001-STANDARDIZED-FORM-PATTERN]]
 
