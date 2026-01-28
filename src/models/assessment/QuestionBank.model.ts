@@ -10,6 +10,9 @@ export interface IQuestionBank extends Document {
   metadata?: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;
+  // Virtuals
+  questionCount?: number;
+  usageCount?: number;
 }
 
 const QuestionBankSchema = new Schema<IQuestionBank>(
@@ -51,5 +54,25 @@ const QuestionBankSchema = new Schema<IQuestionBank>(
 // Indexes for common queries
 QuestionBankSchema.index({ departmentId: 1, isActive: 1 });
 QuestionBankSchema.index({ tags: 1 });
+
+// Virtual: Count of questions that belong to this bank
+QuestionBankSchema.virtual('questionCount', {
+  ref: 'Question',
+  localField: '_id',
+  foreignField: 'questionBankIds',
+  count: true
+});
+
+// Virtual: Count of LearningUnitQuestion links that reference this bank
+QuestionBankSchema.virtual('usageCount', {
+  ref: 'LearningUnitQuestion',
+  localField: '_id',
+  foreignField: 'bankId',
+  count: true
+});
+
+// Enable virtuals in toJSON and toObject
+QuestionBankSchema.set('toJSON', { virtuals: true });
+QuestionBankSchema.set('toObject', { virtuals: true });
 
 export default mongoose.model<IQuestionBank>('QuestionBank', QuestionBankSchema);

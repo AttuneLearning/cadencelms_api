@@ -61,7 +61,7 @@ export const AssessmentAttemptsContracts = {
                 index: 'number',
                 questionId: 'ObjectId',
                 questionText: 'string',
-                questionType: 'multiple-choice | true-false | short-answer | essay | fill-blank | matching',
+                questionType: 'multiple_choice | multiple_select | true_false | short_answer | long_answer | matching | flashcard | fill_in_blank',
                 options: 'string[] | null',
                 matchingPairs: 'object | null',
                 points: 'number',
@@ -118,7 +118,7 @@ export const AssessmentAttemptsContracts = {
               index: 0,
               questionId: '507f1f77bcf86cd799439150',
               questionText: 'What is a variable?',
-              questionType: 'multiple-choice',
+              questionType: 'multiple_choice',
               options: [
                 'A container for storing data',
                 'A type of function',

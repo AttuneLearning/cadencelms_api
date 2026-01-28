@@ -29,14 +29,14 @@ describeIfMongo('QuestionBank Model', () => {
 
     testQuestion1 = await Question.create({
       questionText: 'What is 2 + 2?',
-      questionType: 'multiple-choice',
+      questionTypes: ['multiple_choice'],
       departmentId: testDept._id,
       points: 5
     });
 
     testQuestion2 = await Question.create({
       questionText: 'Define recursion',
-      questionType: 'short-answer',
+      questionTypes: ['short_answer'],
       departmentId: testDept._id,
       points: 10
     });

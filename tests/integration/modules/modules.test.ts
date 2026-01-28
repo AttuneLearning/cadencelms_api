@@ -21,6 +21,7 @@ import { RoleDefinition } from '@/models/RoleDefinition.model';
 import { AccessRight } from '@/models/AccessRight.model';
 import { describeIfMongo } from '../../helpers/mongo-guard';
 import { refreshDepartmentCache } from '../../helpers/department-cache';
+import { seedLearningUnitLookups } from '../../helpers/lookup-values';
 
 describeIfMongo('Modules API Integration Tests', () => {
   let mongoServer: MongoMemoryServer;
@@ -33,6 +34,8 @@ describeIfMongo('Modules API Integration Tests', () => {
     mongoServer = await MongoMemoryServer.create();
     const mongoUri = mongoServer.getUri();
     await mongoose.connect(mongoUri);
+
+    await seedLearningUnitLookups();
 
     // Create course-status lookup values required by Course model
     await LookupValue.create({
@@ -533,7 +536,7 @@ describeIfMongo('Modules API Integration Tests', () => {
           masteryThreshold: 85,
           maxRepetitions: 3,
           repeatOn: { failedAttempt: true, belowMastery: true, learnerRequest: false },
-          repeatableCategories: ['practice', 'assessment'],
+          repeatableCategories: ['practice', 'graded'],
           showAllAvailable: true,
           allowSkip: false
         },
@@ -685,7 +688,7 @@ describeIfMongo('Modules API Integration Tests', () => {
               belowMastery: true,
               learnerRequest: true
             },
-            repeatableCategories: ['practice', 'assessment'],
+            repeatableCategories: ['practice', 'graded'],
             showAllAvailable: true,
             allowSkip: false
           }
@@ -1029,7 +1032,7 @@ describeIfMongo('Modules API Integration Tests', () => {
             repetitionMode: 'until_mastery',
             masteryThreshold: 90,
             repeatOn: { failedAttempt: true, belowMastery: true, learnerRequest: false },
-            repeatableCategories: ['assessment'],
+            repeatableCategories: ['graded'],
             showAllAvailable: false,
             allowSkip: true
           }

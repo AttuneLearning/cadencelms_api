@@ -132,17 +132,25 @@ export const PermissionsContract = {
       - Permissions are grouped by category for easier management
       - System permissions cannot be deleted or modified
       - Custom permissions can be created for specific use cases
-      - Permission levels: read < write < delete < manage
-      - Each permission has a unique key format: category:level
-      - Available categories:
-        * users - User account management
-        * courses - Course and class management
-        * content - Content library and SCORM management
-        * enrollments - Program and course enrollment
-        * assessments - Assessments and grading
-        * reports - Analytics and reporting
-        * settings - System configuration
-        * system - System-wide administration
+      - Permission format: domain:scope:action (three-level)
+        * domain - Resource domain (content, reports, grades, enrollment, staff, learner, settings, system)
+        * scope - Access scope (courses, classes, department, own-classes, etc.)
+        * action - Allowed action (read, manage, export, manage-own)
+      - Examples:
+        * content:courses:read - Read course information
+        * content:courses:manage - Full course management
+        * reports:department:read - Read department reports
+        * reports:class:read - Read class-level reports
+        * grades:own-classes:manage - Manage grades for own classes only
+      - Available domains:
+        * content - Course, program, lesson, exam, class, SCORM management
+        * reports - Analytics and reporting (department, class, content scopes)
+        * grades - Grading functionality
+        * enrollment - Enrollment management
+        * staff - Staff member management
+        * learner - Learner management
+        * settings - Configuration settings
+        * system - System-wide administration (system:* for full access)
     `
   },
 
@@ -225,14 +233,7 @@ export const PermissionsContract = {
               type: 'built-in',
               level: 100,
               permissions: [
-                'users:read', 'users:write', 'users:delete', 'users:manage',
-                'courses:read', 'courses:write', 'courses:delete', 'courses:manage',
-                'content:read', 'content:write', 'content:delete', 'content:manage',
-                'enrollments:read', 'enrollments:write', 'enrollments:delete', 'enrollments:manage',
-                'assessments:read', 'assessments:write', 'assessments:delete', 'assessments:manage',
-                'reports:read', 'reports:write', 'reports:manage',
-                'settings:read', 'settings:write', 'settings:manage',
-                'system:read', 'system:write', 'system:manage'
+                'system:*'
               ],
               departmentId: null,
               inheritsFrom: null,
@@ -248,12 +249,29 @@ export const PermissionsContract = {
               type: 'built-in',
               level: 80,
               permissions: [
-                'users:read', 'users:write',
-                'courses:read', 'courses:write', 'courses:manage',
-                'content:read', 'content:write', 'content:manage',
-                'enrollments:read', 'enrollments:write', 'enrollments:manage',
-                'assessments:read', 'assessments:write',
-                'reports:read', 'reports:write'
+                'content:courses:manage',
+                'content:programs:manage',
+                'content:lessons:manage',
+                'content:exams:manage',
+                'content:scorm:manage',
+                'content:courses:read',
+                'content:classes:manage',
+                'content:lessons:read',
+                'content:classes:read',
+                'content:classes:manage-own',
+                'staff:department:manage',
+                'learner:department:manage',
+                'learner:department:read',
+                'enrollment:department:manage',
+                'enrollment:department:read',
+                'reports:content:read',
+                'reports:department:read',
+                'reports:department:export',
+                'reports:class:read',
+                'reports:class:export',
+                'settings:department:manage',
+                'grades:department:read',
+                'grades:own-classes:manage'
               ],
               departmentId: null,
               inheritsFrom: null,
@@ -269,12 +287,16 @@ export const PermissionsContract = {
               type: 'built-in',
               level: 60,
               permissions: [
-                'users:read',
-                'courses:read', 'courses:write',
-                'content:read', 'content:write',
-                'enrollments:read', 'enrollments:write',
-                'assessments:read', 'assessments:write',
-                'reports:read'
+                'content:courses:read',
+                'content:lessons:read',
+                'content:classes:read',
+                'content:classes:manage-own',
+                'enrollment:department:read',
+                'learner:department:read',
+                'reports:class:read',
+                'reports:class:export',
+                'grades:department:read',
+                'grades:own-classes:manage'
               ],
               departmentId: null,
               inheritsFrom: null,
@@ -290,9 +312,14 @@ export const PermissionsContract = {
               type: 'built-in',
               level: 70,
               permissions: [
-                'content:read', 'content:write', 'content:delete', 'content:manage',
-                'courses:read', 'courses:write',
-                'reports:read'
+                'content:courses:manage',
+                'content:programs:manage',
+                'content:lessons:manage',
+                'content:exams:manage',
+                'content:scorm:manage',
+                'content:courses:read',
+                'content:lessons:read',
+                'reports:content:read'
               ],
               departmentId: null,
               inheritsFrom: null,
@@ -308,9 +335,9 @@ export const PermissionsContract = {
               type: 'built-in',
               level: 50,
               permissions: [
-                'users:read',
-                'enrollments:read',
-                'reports:read', 'reports:write'
+                'enrollment:department:read',
+                'reports:department:read',
+                'reports:department:export'
               ],
               departmentId: null,
               inheritsFrom: null,
@@ -326,10 +353,9 @@ export const PermissionsContract = {
               type: 'built-in',
               level: 10,
               permissions: [
-                'courses:read',
-                'content:read',
-                'enrollments:read',
-                'assessments:read'
+                'content:courses:read',
+                'content:lessons:read',
+                'content:classes:read'
               ],
               departmentId: null,
               inheritsFrom: null,
@@ -345,9 +371,10 @@ export const PermissionsContract = {
               type: 'custom',
               level: 55,
               permissions: [
-                'courses:read', 'courses:write',
-                'content:read',
-                'reports:read'
+                'content:courses:read',
+                'content:courses:manage',
+                'content:lessons:read',
+                'reports:content:read'
               ],
               departmentId: '507f1f77bcf86cd799439030',
               inheritsFrom: '507f1f77bcf86cd799439022',
@@ -668,10 +695,10 @@ export const PermissionsContract = {
         description: 'Reviews and approves course content before publication',
         level: 55,
         permissions: [
-          'courses:read',
-          'courses:write',
-          'content:read',
-          'reports:read'
+          'content:courses:read',
+          'content:courses:manage',
+          'content:lessons:read',
+          'reports:content:read'
         ],
         departmentId: '507f1f77bcf86cd799439030',
         inheritsFrom: null
@@ -687,10 +714,10 @@ export const PermissionsContract = {
             type: 'custom',
             level: 55,
             permissions: [
-              'courses:read',
-              'courses:write',
-              'content:read',
-              'reports:read'
+              'content:courses:read',
+              'content:courses:manage',
+              'content:lessons:read',
+              'reports:content:read'
             ],
             departmentId: '507f1f77bcf86cd799439030',
             inheritsFrom: null,
@@ -807,12 +834,12 @@ export const PermissionsContract = {
         roleId: '507f1f77bcf86cd799439040',
         description: 'Reviews and approves course content with additional reporting access',
         permissions: [
-          'courses:read',
-          'courses:write',
-          'content:read',
-          'content:write',
-          'reports:read',
-          'reports:write'
+          'content:courses:read',
+          'content:courses:manage',
+          'content:lessons:read',
+          'content:lessons:manage',
+          'reports:content:read',
+          'reports:department:read'
         ]
       },
       response: {
@@ -826,12 +853,12 @@ export const PermissionsContract = {
             type: 'custom',
             level: 55,
             permissions: [
-              'courses:read',
-              'courses:write',
-              'content:read',
-              'content:write',
-              'reports:read',
-              'reports:write'
+              'content:courses:read',
+              'content:courses:manage',
+              'content:lessons:read',
+              'content:lessons:manage',
+              'reports:content:read',
+              'reports:department:read'
             ],
             departmentId: '507f1f77bcf86cd799439030',
             inheritsFrom: null,
@@ -1000,13 +1027,13 @@ export const PermissionsContract = {
             ],
             permissions: {
               all: 'string[]',
-              byCategory: {
-                users: 'string[]',
-                courses: 'string[]',
+              byDomain: {
                 content: 'string[]',
-                enrollments: 'string[]',
-                assessments: 'string[]',
                 reports: 'string[]',
+                grades: 'string[]',
+                enrollment: 'string[]',
+                staff: 'string[]',
+                learner: 'string[]',
                 settings: 'string[]',
                 system: 'string[]'
               },
@@ -1062,20 +1089,21 @@ export const PermissionsContract = {
           ],
           permissions: {
             all: [
-              'users:read', 'users:write',
-              'courses:read', 'courses:write', 'courses:manage',
-              'content:read', 'content:write', 'content:manage',
-              'enrollments:read', 'enrollments:write', 'enrollments:manage',
-              'assessments:read', 'assessments:write',
-              'reports:read', 'reports:write'
+              'content:courses:manage',
+              'content:classes:manage',
+              'content:lessons:manage',
+              'enrollment:department:manage',
+              'reports:department:read',
+              'reports:department:export',
+              'grades:own-classes:manage'
             ],
-            byCategory: {
-              users: ['users:read', 'users:write'],
-              courses: ['courses:read', 'courses:write', 'courses:manage'],
-              content: ['content:read', 'content:write', 'content:manage'],
-              enrollments: ['enrollments:read', 'enrollments:write', 'enrollments:manage'],
-              assessments: ['assessments:read', 'assessments:write'],
-              reports: ['reports:read', 'reports:write'],
+            byDomain: {
+              content: ['content:courses:manage', 'content:classes:manage', 'content:lessons:manage'],
+              enrollment: ['enrollment:department:manage'],
+              reports: ['reports:department:read', 'reports:department:export'],
+              grades: ['grades:own-classes:manage'],
+              staff: [],
+              learner: [],
               settings: [],
               system: []
             },
@@ -1084,21 +1112,23 @@ export const PermissionsContract = {
                 roleId: '507f1f77bcf86cd799439021',
                 roleName: 'department-admin',
                 permissions: [
-                  'users:read', 'users:write',
-                  'courses:read', 'courses:write', 'courses:manage',
-                  'content:read', 'content:write', 'content:manage',
-                  'enrollments:read', 'enrollments:write', 'enrollments:manage',
-                  'assessments:read', 'assessments:write',
-                  'reports:read', 'reports:write'
+                  'content:courses:manage',
+                  'content:classes:manage',
+                  'content:lessons:manage',
+                  'enrollment:department:manage',
+                  'reports:department:read',
+                  'reports:department:export',
+                  'grades:own-classes:manage'
                 ]
               },
               {
                 roleId: '507f1f77bcf86cd799439040',
                 roleName: 'course-reviewer',
                 permissions: [
-                  'courses:read', 'courses:write',
-                  'content:read', 'content:write',
-                  'reports:read', 'reports:write'
+                  'content:courses:read',
+                  'content:courses:manage',
+                  'content:lessons:read',
+                  'reports:content:read'
                 ]
               }
             ]
@@ -1108,9 +1138,10 @@ export const PermissionsContract = {
               id: '507f1f77bcf86cd799439030',
               name: 'Engineering Department',
               permissions: [
-                'courses:read', 'courses:write',
-                'content:read', 'content:write',
-                'reports:read', 'reports:write'
+                'content:courses:read',
+                'content:courses:manage',
+                'content:lessons:read',
+                'reports:content:read'
               ]
             }
           ],
@@ -1212,7 +1243,7 @@ export const PermissionsContract = {
 
     example: {
       request: {
-        permissions: ['courses:write', 'courses:manage'],
+        permissions: ['content:courses:manage', 'content:classes:manage'],
         requireAll: false,
         departmentId: '507f1f77bcf86cd799439030'
       },
@@ -1220,8 +1251,8 @@ export const PermissionsContract = {
         success: true,
         data: {
           hasPermission: true,
-          checkedPermissions: ['courses:write', 'courses:manage'],
-          grantedPermissions: ['courses:write', 'courses:manage'],
+          checkedPermissions: ['content:courses:manage', 'content:classes:manage'],
+          grantedPermissions: ['content:courses:manage', 'content:classes:manage'],
           deniedPermissions: [],
           reason: null,
           context: {
@@ -1247,9 +1278,9 @@ export const PermissionsContract = {
       - Useful for showing/hiding UI elements
       - Frontend should cache results for performance
       - Example use cases:
-        * Check if user can create courses: { permission: 'courses:write' }
-        * Check if user can publish OR archive: { permissions: ['courses:publish', 'courses:archive'] }
-        * Check if user can grade AND report: { permissions: ['assessments:write', 'reports:read'], requireAll: true }
+        * Check if user can manage courses: { permission: 'content:courses:manage' }
+        * Check if user can read reports: { permissions: ['reports:department:read', 'reports:class:read'] }
+        * Check if user can grade AND export: { permissions: ['grades:own-classes:manage', 'reports:class:export'], requireAll: true }
       - reason field explains why permission was denied (if applicable)
       - Extremely fast endpoint (< 10ms) for repeated checks
     `
@@ -1309,25 +1340,305 @@ export const BUILT_IN_ROLES = {
 } as const;
 
 /**
- * Permission Categories Reference
+ * Permission Format Reference
+ *
+ * Permissions use a three-level format: `domain:scope:action`
+ *
+ * - domain: The resource domain (content, reports, grades, etc.)
+ * - scope: The scope of access (department, class, own-classes, courses, etc.)
+ * - action: The action allowed (read, manage, export, etc.)
+ *
+ * Examples:
+ * - content:courses:read - Read courses in any scope
+ * - content:courses:manage - Full management of courses
+ * - reports:department:read - Read department-level reports
+ * - reports:class:read - Read class-level reports
+ * - grades:own-classes:manage - Manage grades for own classes only
  */
-export const PERMISSION_CATEGORIES = {
-  USERS: 'users',
-  COURSES: 'courses',
+
+/**
+ * 2-Part to 3-Part Permission Migration Guide
+ *
+ * The original contract specified a 2-part format (category:level).
+ * The actual implementation uses a 3-part format (domain:scope:action).
+ *
+ * This mapping shows how to convert between formats and guidelines
+ * for creating new permissions.
+ *
+ * FORMAT:
+ *   2-part: category:action     (e.g., courses:read)
+ *   3-part: domain:scope:action (e.g., content:courses:read)
+ *
+ * MIGRATION MAPPING:
+ *
+ * ┌─────────────────────────────────────────────────────────────────────────┐
+ * │ CONTENT DOMAIN                                                         │
+ * ├──────────────────────┬──────────────────────────────────────────────────┤
+ * │ 2-Part (deprecated)  │ 3-Part (actual)                                  │
+ * ├──────────────────────┼──────────────────────────────────────────────────┤
+ * │ courses:read         │ content:courses:read                             │
+ * │ courses:write        │ content:courses:manage                           │
+ * │ courses:manage       │ content:courses:manage                           │
+ * │ content:read         │ content:lessons:read                             │
+ * │ content:write        │ content:lessons:manage                           │
+ * │ content:manage       │ content:programs:manage, content:exams:manage,   │
+ * │                      │ content:scorm:manage                             │
+ * │ (new)                │ content:classes:read                             │
+ * │ (new)                │ content:classes:manage                           │
+ * │ (new)                │ content:classes:manage-own                       │
+ * └──────────────────────┴──────────────────────────────────────────────────┘
+ *
+ * ┌─────────────────────────────────────────────────────────────────────────┐
+ * │ ENROLLMENT DOMAIN                                                      │
+ * ├──────────────────────┬──────────────────────────────────────────────────┤
+ * │ 2-Part (deprecated)  │ 3-Part (actual)                                  │
+ * ├──────────────────────┼──────────────────────────────────────────────────┤
+ * │ enrollments:read     │ enrollment:department:read                       │
+ * │ enrollments:write    │ enrollment:department:manage                     │
+ * │ enrollments:manage   │ enrollment:department:manage                     │
+ * └──────────────────────┴──────────────────────────────────────────────────┘
+ *
+ * ┌─────────────────────────────────────────────────────────────────────────┐
+ * │ REPORTS DOMAIN                                                         │
+ * ├──────────────────────┬──────────────────────────────────────────────────┤
+ * │ 2-Part (deprecated)  │ 3-Part (actual)                                  │
+ * ├──────────────────────┼──────────────────────────────────────────────────┤
+ * │ reports:read         │ reports:department:read                          │
+ * │                      │ reports:class:read                               │
+ * │                      │ reports:content:read                             │
+ * │ reports:write        │ reports:department:export                        │
+ * │                      │ reports:class:export                             │
+ * └──────────────────────┴──────────────────────────────────────────────────┘
+ *
+ * ┌─────────────────────────────────────────────────────────────────────────┐
+ * │ GRADES DOMAIN (was "assessments")                                      │
+ * ├──────────────────────┬──────────────────────────────────────────────────┤
+ * │ 2-Part (deprecated)  │ 3-Part (actual)                                  │
+ * ├──────────────────────┼──────────────────────────────────────────────────┤
+ * │ assessments:read     │ grades:department:read                           │
+ * │ assessments:write    │ grades:own-classes:manage                        │
+ * └──────────────────────┴──────────────────────────────────────────────────┘
+ *
+ * ┌─────────────────────────────────────────────────────────────────────────┐
+ * │ USER MANAGEMENT (split into staff/learner domains)                     │
+ * ├──────────────────────┬──────────────────────────────────────────────────┤
+ * │ 2-Part (deprecated)  │ 3-Part (actual)                                  │
+ * ├──────────────────────┼──────────────────────────────────────────────────┤
+ * │ users:read           │ learner:department:read                          │
+ * │ users:write          │ staff:department:manage                          │
+ * │                      │ learner:department:manage                        │
+ * └──────────────────────┴──────────────────────────────────────────────────┘
+ *
+ * ┌─────────────────────────────────────────────────────────────────────────┐
+ * │ SETTINGS DOMAIN                                                        │
+ * ├──────────────────────┬──────────────────────────────────────────────────┤
+ * │ 2-Part (deprecated)  │ 3-Part (actual)                                  │
+ * ├──────────────────────┼──────────────────────────────────────────────────┤
+ * │ settings:read        │ (not implemented)                                │
+ * │ settings:write       │ settings:department:manage                       │
+ * └──────────────────────┴──────────────────────────────────────────────────┘
+ *
+ * ┌─────────────────────────────────────────────────────────────────────────┐
+ * │ SYSTEM DOMAIN (unchanged)                                              │
+ * ├──────────────────────┬──────────────────────────────────────────────────┤
+ * │ 2-Part               │ 3-Part                                           │
+ * ├──────────────────────┼──────────────────────────────────────────────────┤
+ * │ system:*             │ system:*                                         │
+ * └──────────────────────┴──────────────────────────────────────────────────┘
+ *
+ * GUIDELINES FOR NEW PERMISSIONS:
+ *
+ * 1. Always use 3-part format: domain:scope:action
+ *
+ * 2. Choose appropriate scope based on access level:
+ *    - department    → Access to all resources in a department
+ *    - class         → Access to specific class resources
+ *    - own-classes   → Access only to classes user is assigned to
+ *    - own           → Access only to user's own resources
+ *
+ * 3. Use consistent action names:
+ *    - read          → View/list resources
+ *    - manage        → Create, update, delete resources
+ *    - manage-own    → Manage only own resources
+ *    - export        → Export/download data
+ *
+ * 4. Examples of future permissions:
+ *
+ *    Certificates:
+ *    - certificates:department:read      → View department certificates
+ *    - certificates:department:manage    → Manage department certificates
+ *    - certificates:own:read             → View own certificates
+ *
+ *    Notifications:
+ *    - notifications:department:manage   → Manage department notifications
+ *    - notifications:own:read            → View own notifications
+ *
+ *    Calendar:
+ *    - calendar:department:read          → View department calendar
+ *    - calendar:department:manage        → Manage department events
+ *    - calendar:own-classes:manage       → Manage own class schedules
+ *
+ *    Announcements:
+ *    - announcements:department:read     → View department announcements
+ *    - announcements:department:manage   → Create/edit announcements
+ *    - announcements:class:manage        → Manage class-level announcements
+ *
+ *    Analytics:
+ *    - analytics:department:read         → View department analytics
+ *    - analytics:class:read              → View class analytics
+ *    - analytics:own-classes:read        → View analytics for own classes
+ *
+ *    Billing (if applicable):
+ *    - billing:organization:read         → View org billing
+ *    - billing:organization:manage       → Manage org billing
+ *    - billing:department:read           → View department billing
+ */
+
+/**
+ * Permission Domains Reference
+ */
+export const PERMISSION_DOMAINS = {
   CONTENT: 'content',
-  ENROLLMENTS: 'enrollments',
-  ASSESSMENTS: 'assessments',
   REPORTS: 'reports',
+  GRADES: 'grades',
+  ENROLLMENT: 'enrollment',
+  STAFF: 'staff',
+  LEARNER: 'learner',
   SETTINGS: 'settings',
   SYSTEM: 'system'
 } as const;
 
 /**
- * Permission Levels Reference
+ * Permission Scopes Reference
  */
-export const PERMISSION_LEVELS = {
+export const PERMISSION_SCOPES = {
+  // Resource scopes
+  COURSES: 'courses',
+  PROGRAMS: 'programs',
+  LESSONS: 'lessons',
+  EXAMS: 'exams',
+  CLASSES: 'classes',
+  SCORM: 'scorm',
+  // Access scopes
+  DEPARTMENT: 'department',
+  CLASS: 'class',
+  OWN_CLASSES: 'own-classes',
+  CONTENT: 'content'
+} as const;
+
+/**
+ * Permission Actions Reference
+ */
+export const PERMISSION_ACTIONS = {
   READ: 'read',
-  WRITE: 'write',
-  DELETE: 'delete',
-  MANAGE: 'manage'
+  MANAGE: 'manage',
+  MANAGE_OWN: 'manage-own',
+  EXPORT: 'export'
+} as const;
+
+/**
+ * Complete Permission Keys Reference
+ *
+ * These are the actual permission strings returned by the backend
+ * and used for authorization checks.
+ */
+export const PERMISSION_KEYS = {
+  // Content permissions
+  CONTENT_COURSES_READ: 'content:courses:read',
+  CONTENT_COURSES_MANAGE: 'content:courses:manage',
+  CONTENT_PROGRAMS_MANAGE: 'content:programs:manage',
+  CONTENT_LESSONS_READ: 'content:lessons:read',
+  CONTENT_LESSONS_MANAGE: 'content:lessons:manage',
+  CONTENT_EXAMS_MANAGE: 'content:exams:manage',
+  CONTENT_SCORM_MANAGE: 'content:scorm:manage',
+  CONTENT_CLASSES_READ: 'content:classes:read',
+  CONTENT_CLASSES_MANAGE: 'content:classes:manage',
+  CONTENT_CLASSES_MANAGE_OWN: 'content:classes:manage-own',
+
+  // Staff/Learner management
+  STAFF_DEPARTMENT_MANAGE: 'staff:department:manage',
+  LEARNER_DEPARTMENT_READ: 'learner:department:read',
+  LEARNER_DEPARTMENT_MANAGE: 'learner:department:manage',
+
+  // Enrollment permissions
+  ENROLLMENT_DEPARTMENT_READ: 'enrollment:department:read',
+  ENROLLMENT_DEPARTMENT_MANAGE: 'enrollment:department:manage',
+
+  // Reports permissions
+  REPORTS_CONTENT_READ: 'reports:content:read',
+  REPORTS_DEPARTMENT_READ: 'reports:department:read',
+  REPORTS_DEPARTMENT_EXPORT: 'reports:department:export',
+  REPORTS_CLASS_READ: 'reports:class:read',
+  REPORTS_CLASS_EXPORT: 'reports:class:export',
+
+  // Grades permissions
+  GRADES_DEPARTMENT_READ: 'grades:department:read',
+  GRADES_OWN_CLASSES_MANAGE: 'grades:own-classes:manage',
+
+  // Settings permissions
+  SETTINGS_DEPARTMENT_MANAGE: 'settings:department:manage',
+
+  // System permissions (global admin)
+  SYSTEM_ALL: 'system:*'
+} as const;
+
+/**
+ * Role-to-Permissions Mapping Reference
+ *
+ * Shows which permissions are typically granted to each built-in role.
+ * Actual permissions may vary based on department membership.
+ */
+export const ROLE_PERMISSIONS = {
+  'department-admin': [
+    'content:courses:manage',
+    'content:programs:manage',
+    'content:lessons:manage',
+    'content:exams:manage',
+    'content:scorm:manage',
+    'content:courses:read',
+    'content:classes:manage',
+    'content:lessons:read',
+    'content:classes:read',
+    'content:classes:manage-own',
+    'staff:department:manage',
+    'learner:department:manage',
+    'learner:department:read',
+    'enrollment:department:manage',
+    'enrollment:department:read',
+    'reports:content:read',
+    'reports:department:read',
+    'reports:department:export',
+    'reports:class:read',
+    'reports:class:export',
+    'settings:department:manage',
+    'grades:department:read',
+    'grades:own-classes:manage'
+  ],
+  'instructor': [
+    'content:courses:read',
+    'content:lessons:read',
+    'content:classes:read',
+    'content:classes:manage-own',
+    'enrollment:department:read',
+    'learner:department:read',
+    'reports:class:read',
+    'reports:class:export',
+    'grades:department:read',
+    'grades:own-classes:manage'
+  ],
+  'content-admin': [
+    'content:courses:manage',
+    'content:programs:manage',
+    'content:lessons:manage',
+    'content:exams:manage',
+    'content:scorm:manage',
+    'content:courses:read',
+    'content:lessons:read',
+    'reports:content:read'
+  ],
+  'learner': [
+    'content:courses:read',
+    'content:lessons:read',
+    'content:classes:read'
+  ]
 } as const;

@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IScormAttempt extends Document {
+  attemptId?: mongoose.Types.ObjectId;
   contentId: mongoose.Types.ObjectId;
   learnerId: mongoose.Types.ObjectId;
   attemptNumber: number;
@@ -29,6 +30,12 @@ export interface IScormAttempt extends Document {
 
 const ScormAttemptSchema = new Schema<IScormAttempt>(
   {
+    attemptId: {
+      type: Schema.Types.ObjectId,
+      required: [true, 'attemptId is required'],
+      unique: true,
+      index: true
+    },
     contentId: {
       type: Schema.Types.ObjectId,
       required: [true, 'contentId is required'],
@@ -128,6 +135,13 @@ const ScormAttemptSchema = new Schema<IScormAttempt>(
     timestamps: true
   }
 );
+
+ScormAttemptSchema.pre<IScormAttempt>('validate', function (next) {
+  if (!this.attemptId) {
+    this.attemptId = this._id;
+  }
+  next();
+});
 
 // Compound index for efficient queries
 ScormAttemptSchema.index({ contentId: 1, learnerId: 1, attemptNumber: 1 });

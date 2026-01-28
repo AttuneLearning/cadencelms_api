@@ -81,7 +81,7 @@ export interface AIExerciseInput {
  * Question input for AI question creation
  */
 export interface AIQuestionInput {
-  type: 'multiple_choice' | 'true_false' | 'essay' | 'short_answer' | 'fill_blank';
+  type: 'multiple_choice' | 'true_false' | 'long_answer' | 'short_answer' | 'fill_blank';
   questionText: string;
   points: number;
 
@@ -91,7 +91,7 @@ export interface AIQuestionInput {
   // For true_false
   correctAnswer?: string | boolean;
 
-  // For essay and short_answer
+  // For long_answer and short_answer
   sampleAnswer?: string;
 
   // Additional properties

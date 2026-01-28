@@ -83,12 +83,12 @@ export class AssessmentAttemptsService {
     // Get questions from question banks
     const questions = await this.selectQuestions(assessment);
 
-    // Create question attempts
+    // Create question attempts - select first type from questionTypes array for presentation
     const questionAttempts: IQuestionAttempt[] = questions.map((q) => ({
       questionId: q._id as mongoose.Types.ObjectId,
       questionSnapshot: {
         questionText: q.questionText,
-        questionType: q.questionType,
+        questionType: q.questionTypes?.[0] || 'multiple_choice', // Select first available type
         options: q.options,
         correctAnswer: q.correctAnswer,
         correctAnswers: q.correctAnswers,
@@ -103,7 +103,10 @@ export class AssessmentAttemptsService {
 
     // Determine if manual grading will be required
     const requiresManualGrading = questions.some(
-      (q) => q.questionType === 'essay' || q.questionType === 'short-answer'
+      (q) => {
+        const primaryType = q.questionTypes?.[0];
+        return primaryType === 'long_answer' || primaryType === 'short_answer';
+      }
     );
 
     // Create the attempt
@@ -485,15 +488,17 @@ export class AssessmentAttemptsService {
 
     // If no response, mark as incorrect
     if (response === undefined || response === null || response === '') {
-      if (questionType === 'essay') {
+      if (questionType === 'essay' || questionType === 'long_answer') {
         return { graded: false, isCorrect: false, pointsEarned: 0 };
       }
       return { graded: true, isCorrect: false, pointsEarned: 0 };
     }
 
     switch (questionType) {
-      case 'multiple-choice':
-      case 'true-false': {
+      case 'multiple_choice':
+      case 'multiple-choice':  // Legacy support
+      case 'true_false':
+      case 'true-false': {     // Legacy support
         const correctAnswer = question.questionSnapshot?.correctAnswer;
         const isCorrect = String(response).toLowerCase() === String(correctAnswer).toLowerCase();
         return {
@@ -503,7 +508,8 @@ export class AssessmentAttemptsService {
         };
       }
 
-      case 'short-answer': {
+      case 'short_answer':
+      case 'short-answer': {   // Legacy support
         const correctAnswers = question.questionSnapshot?.correctAnswers || [];
         const correctAnswer = question.questionSnapshot?.correctAnswer;
 
@@ -523,11 +529,13 @@ export class AssessmentAttemptsService {
         };
       }
 
-      case 'essay':
-        // Essay questions require manual grading
+      case 'long_answer':
+      case 'essay':          // Legacy support
+        // Essay/long_answer questions require manual grading
         return { graded: false, isCorrect: false, pointsEarned: 0 };
 
-      case 'fill-blank': {
+      case 'fill_in_blank':
+      case 'fill-blank': {   // Legacy support
         const correctAnswer = question.questionSnapshot?.correctAnswer;
         const isCorrect = String(response).toLowerCase().trim() === String(correctAnswer).toLowerCase().trim();
         return {

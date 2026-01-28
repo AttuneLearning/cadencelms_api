@@ -51,7 +51,7 @@ describeIfMongo('AssessmentAttemptsService - Unit Tests', () => {
       // Create questions
       const question1 = await Question.create({
         questionText: 'What is 2+2?',
-        questionType: 'multiple-choice',
+        questionTypes: ['multiple_choice'],
         departmentId,
         points: 10,
         options: ['3', '4', '5', '6'],
@@ -62,7 +62,7 @@ describeIfMongo('AssessmentAttemptsService - Unit Tests', () => {
 
       const question2 = await Question.create({
         questionText: 'The sky is blue.',
-        questionType: 'true-false',
+        questionTypes: ['true_false'],
         departmentId,
         points: 5,
         correctAnswer: 'true',
@@ -552,7 +552,7 @@ describeIfMongo('AssessmentAttemptsService - Unit Tests', () => {
           {
             questionId: questionId1,
             questionSnapshot: {
-              questionType: 'multiple-choice',
+              questionType: 'multiple_choice',
               correctAnswer: '4'
             },
             response: '4',
@@ -561,7 +561,7 @@ describeIfMongo('AssessmentAttemptsService - Unit Tests', () => {
           {
             questionId: questionId2,
             questionSnapshot: {
-              questionType: 'true-false',
+              questionType: 'true_false',
               correctAnswer: 'true'
             },
             response: 'false',
@@ -603,7 +603,7 @@ describeIfMongo('AssessmentAttemptsService - Unit Tests', () => {
         questions: [{
           questionId,
           questionSnapshot: {
-            questionType: 'essay',
+            questionType: 'long_answer',
             maxWordCount: 500
           },
           response: 'This is my essay answer about the topic.',
@@ -664,7 +664,7 @@ describeIfMongo('AssessmentAttemptsService - Unit Tests', () => {
         questions: [{
           questionId,
           questionSnapshot: {
-            questionType: 'short-answer',
+            questionType: 'short_answer',
             correctAnswers: ['Paris', 'paris', 'PARIS']
           },
           response: 'paris',
@@ -731,7 +731,7 @@ describeIfMongo('AssessmentAttemptsService - Unit Tests', () => {
         questions: [{
           questionId: new mongoose.Types.ObjectId(),
           questionSnapshot: {
-            questionType: 'multiple-choice',
+            questionTypes: ['multiple_choice'],
             questionText: 'What is 2+2?',
             correctAnswer: '4'
           },
@@ -809,7 +809,7 @@ describeIfMongo('AssessmentAttemptsService - Unit Tests', () => {
         questions: [{
           questionId: new mongoose.Types.ObjectId(),
           questionSnapshot: {
-            questionType: 'multiple-choice',
+            questionTypes: ['multiple_choice'],
             questionText: 'What is 2+2?',
             correctAnswer: '4'
           },
@@ -1184,7 +1184,7 @@ describeIfMongo('AssessmentAttemptsService - Unit Tests', () => {
         questions: [{
           questionId,
           questionSnapshot: {
-            questionType: 'essay',
+            questionType: 'long_answer',
             maxWordCount: 500
           },
           response: 'This is a well-written essay response.',
@@ -1229,7 +1229,7 @@ describeIfMongo('AssessmentAttemptsService - Unit Tests', () => {
         questions: [{
           questionId,
           questionSnapshot: {
-            questionType: 'essay',
+            questionType: 'long_answer',
             maxWordCount: 500
           },
           response: 'Essay response.',
@@ -1273,7 +1273,7 @@ describeIfMongo('AssessmentAttemptsService - Unit Tests', () => {
         questions: [{
           questionId,
           questionSnapshot: {
-            questionType: 'essay'
+            questionTypes: ['long_answer']
           },
           response: 'Essay response.',
           pointsPossible: 20
@@ -1310,7 +1310,7 @@ describeIfMongo('AssessmentAttemptsService - Unit Tests', () => {
         status: 'submitted',
         questions: [{
           questionId: new mongoose.Types.ObjectId(),
-          questionSnapshot: { questionType: 'essay' },
+          questionSnapshot: { questionType: 'long_answer' },
           response: 'Essay response.',
           pointsPossible: 20
         }],
@@ -1346,7 +1346,7 @@ describeIfMongo('AssessmentAttemptsService - Unit Tests', () => {
         status: 'in_progress',
         questions: [{
           questionId: new mongoose.Types.ObjectId(),
-          questionSnapshot: { questionType: 'essay' },
+          questionSnapshot: { questionType: 'long_answer' },
           pointsPossible: 20
         }],
         timing: {
@@ -1419,7 +1419,7 @@ describeIfMongo('AssessmentAttemptsService - Unit Tests', () => {
         questions: [{
           questionId,
           questionSnapshot: {
-            questionType: 'multiple-choice',
+            questionTypes: ['multiple_choice'],
             correctAnswer: '4'
           },
           pointsPossible: 10
@@ -1451,7 +1451,7 @@ describeIfMongo('AssessmentAttemptsService - Unit Tests', () => {
       // Create question
       const question = await Question.create({
         questionText: 'Explain the importance of testing.',
-        questionType: 'essay',
+        questionTypes: ['long_answer'],
         departmentId,
         points: 20,
         maxWordCount: 500,

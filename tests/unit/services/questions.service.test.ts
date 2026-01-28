@@ -28,7 +28,7 @@ describe('QuestionsService', () => {
   const mockQuestion = {
     _id: mockQuestionId,
     questionText: 'What is 2 + 2?',
-    questionType: 'multiple-choice',
+    questionTypes: ['multiple_choice'],
     departmentId: new mongoose.Types.ObjectId(mockDepartmentId),
     points: 10,
     options: ['3', '4', '5', '6'],
@@ -211,7 +211,7 @@ describe('QuestionsService', () => {
       );
     });
 
-    it('should filter by question type', async () => {
+    it('should filter by question types', async () => {
       const questions = [mockQuestion];
 
       // Mock find to return array directly when no limit is specified
@@ -219,13 +219,13 @@ describe('QuestionsService', () => {
 
       const result = await QuestionsService.getQuestionsByBankIds(
         [mockBankId],
-        { questionType: 'multiple_choice' }
+        { questionTypes: ['multiple_choice'] }
       );
 
       expect(result).toHaveLength(1);
       expect(Question.find).toHaveBeenCalledWith(
         expect.objectContaining({
-          questionType: 'multiple-choice'
+          questionTypes: { $in: ['multiple_choice'] }
         })
       );
     });
@@ -539,7 +539,7 @@ describe('QuestionsService', () => {
     it('should create question with questionBankIds', async () => {
       const questionData = {
         questionText: 'What is 2 + 2?',
-        questionType: 'multiple_choice' as any,
+        questionTypes: ['multiple_choice'] as any,
         options: [
           { text: '3', isCorrect: false },
           { text: '4', isCorrect: true },
@@ -573,7 +573,7 @@ describe('QuestionsService', () => {
     it('should create question with empty questionBankIds if not provided', async () => {
       const questionData = {
         questionText: 'What is 2 + 2?',
-        questionType: 'multiple_choice' as any,
+        questionTypes: ['multiple_choice'] as any,
         options: [
           { text: '3', isCorrect: false },
           { text: '4', isCorrect: true },

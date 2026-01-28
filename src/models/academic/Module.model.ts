@@ -1,9 +1,10 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import { validateLookupValue } from '@/utils/lookup-validators';
 
 export type CompletionCriteriaType = 'all_required' | 'percentage' | 'gate_learning_unit' | 'points';
 export type PresentationMode = 'prescribed' | 'learner_choice' | 'random';
 export type RepetitionMode = 'none' | 'until_passed' | 'until_mastery' | 'spaced';
-export type LearningUnitCategory = 'exposition' | 'practice' | 'assessment';
+export type LearningUnitCategory = string;
 
 export interface ICompletionCriteria {
   type: CompletionCriteriaType;
@@ -108,7 +109,6 @@ const presentationRulesSchema = new Schema<IPresentationRules>(
     },
     repeatableCategories: {
       type: [String],
-      enum: ['exposition', 'practice', 'assessment'],
       required: true
     },
     showAllAvailable: {
@@ -235,6 +235,25 @@ moduleSchema.index({ courseId: 1, order: 1 });
 
 // Index for filtering published modules
 moduleSchema.index({ isPublished: 1 });
+
+const LEARNING_UNIT_CATEGORY_LOOKUP = 'learning-unit-category';
+
+moduleSchema.pre('validate', async function(next) {
+  try {
+    const categories = this.presentationRules?.repeatableCategories || [];
+    for (const category of categories) {
+      const isValid = await validateLookupValue(LEARNING_UNIT_CATEGORY_LOOKUP, category);
+      if (!isValid) {
+        throw new Error(
+          `Invalid repeatableCategory: "${category}". Must be a registered learning-unit-category in LookupValue.`
+        );
+      }
+    }
+    next();
+  } catch (error) {
+    next(error as Error);
+  }
+});
 
 const Module = mongoose.model<IModule>('Module', moduleSchema);
 

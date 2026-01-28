@@ -44,7 +44,7 @@ describeIfMongo('AssessmentsService - Unit Tests', () => {
     testQuestions = await Question.insertMany([
       {
         questionText: 'What is 2 + 2?',
-        questionType: 'multiple-choice',
+        questionTypes: ['multiple_choice'],
         departmentId: testDepartment._id,
         points: 10,
         options: ['3', '4', '5', '6'],
@@ -55,7 +55,7 @@ describeIfMongo('AssessmentsService - Unit Tests', () => {
       },
       {
         questionText: 'What is the capital of France?',
-        questionType: 'short-answer',
+        questionTypes: ['short_answer'],
         departmentId: testDepartment._id,
         points: 10,
         correctAnswer: 'Paris',
@@ -65,7 +65,7 @@ describeIfMongo('AssessmentsService - Unit Tests', () => {
       },
       {
         questionText: 'Is JavaScript a programming language?',
-        questionType: 'true-false',
+        questionTypes: ['true_false'],
         departmentId: testDepartment._id,
         points: 5,
         options: ['True', 'False'],
@@ -76,7 +76,7 @@ describeIfMongo('AssessmentsService - Unit Tests', () => {
       },
       {
         questionText: 'Explain the concept of recursion.',
-        questionType: 'essay',
+        questionTypes: ['long_answer'],
         departmentId: testDepartment._id,
         points: 20,
         difficulty: 'hard',
@@ -85,7 +85,7 @@ describeIfMongo('AssessmentsService - Unit Tests', () => {
       },
       {
         questionText: 'What is 10 / 2?',
-        questionType: 'multiple-choice',
+        questionTypes: ['multiple_choice'],
         departmentId: testDepartment._id,
         points: 10,
         options: ['3', '4', '5', '6'],

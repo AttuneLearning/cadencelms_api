@@ -15,7 +15,8 @@
  * Seeds run in order:
  *   1. Constants (LookupValues)
  *   2. Admin User & Master Department
- *   3. Sample Modules & Learning Units (requires courses from mock data)
+ *   3. Cognitive Depth Levels (Adaptive Learning)
+ *   4. Sample Modules & Learning Units (requires courses from mock data)
  *
  * @module scripts/seeds/run-seeds
  */
@@ -24,6 +25,7 @@ import mongoose from 'mongoose';
 import { loadEnv } from '../utils/load-env';
 import { seedConstants } from './constants.seed';
 import { seedAdmin } from '../seed-admin';
+import { seedCognitiveDepthLevels } from '../seed-cognitive-depth-levels';
 import { seedSampleModules } from './seed-sample-modules';
 
 // Load environment variables
@@ -101,6 +103,17 @@ async function main(): Promise<void> {
           await mongoose.connect(config.mongoUri);
         },
         skip: options.skipAdmin
+      });
+    }
+
+    // Add cognitive depth levels seed (for adaptive learning)
+    if (!options.skipAdmin && !options.constantsOnly && !options.modulesOnly) {
+      seedSequence.push({
+        name: 'Cognitive Depth Levels (Adaptive Learning)',
+        fn: async () => {
+          // seedCognitiveDepthLevels uses existing connection
+          await seedCognitiveDepthLevels();
+        }
       });
     }
 

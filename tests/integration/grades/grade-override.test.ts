@@ -13,7 +13,9 @@ import ClassEnrollment from '@/models/enrollment/ClassEnrollment.model';
 import GradeChangeLog from '@/models/audit/GradeChangeLog.model';
 import { hashPassword } from '@/utils/password';
 import AccessRight from '@/models/AccessRight.model';
+import { RoleDefinition } from '@/models/RoleDefinition.model';
 import { describeIfMongo } from '../../helpers/mongo-guard';
+import { refreshDepartmentCache } from '../../helpers/department-cache';
 
 /**
  * ISS-021 Integration Tests: Grade Override API
@@ -75,12 +77,25 @@ describeIfMongo('Grade Override API - Integration Tests (ISS-021)', () => {
       isActive: true
     });
 
+    // Create role definition for department-admin with grade override access right
+    await RoleDefinition.create({
+      name: 'department-admin',
+      userType: 'staff',
+      displayName: 'Department Administrator',
+      description: 'Can manage department and override grades',
+      accessRights: ['academic:grades:override'],
+      isActive: true
+    });
+
     // Create department
     department = await Department.create({
       name: 'Computer Science',
       code: 'CS',
       isVisible: true
     });
+
+    // Refresh department cache to pick up new departments
+    await refreshDepartmentCache();
 
     // Create course
     course = await Course.create({
@@ -132,7 +147,7 @@ describeIfMongo('Grade Override API - Integration Tests (ISS-021)', () => {
       },
       departmentMemberships: [{
         departmentId: department._id,
-        roles: ['dept-admin']
+        roles: ['department-admin', 'dept-admin']
       }],
       isActive: true
     });
@@ -181,9 +196,13 @@ describeIfMongo('Grade Override API - Integration Tests (ISS-021)', () => {
       {
         userId: adminUser._id.toString(),
         email: adminUser.email,
-        roles: ['dept-admin'],
-        allAccessRights: ['academic:grades:override'], // Use allAccessRights for middleware
-        type: 'access'
+        type: 'access',
+        roles: ['department-admin', 'dept-admin'],
+        globalRights: [],
+        departmentRights: {
+          [department._id.toString()]: ['academic:grades:override']
+        },
+        departmentMemberships: [{ departmentId: department._id.toString() }]
       },
       process.env.JWT_ACCESS_SECRET || 'test-secret',
       { expiresIn: '1h' }
@@ -397,9 +416,11 @@ describeIfMongo('Grade Override API - Integration Tests (ISS-021)', () => {
           {
             userId: regularUser._id.toString(),
             email: regularUser.email,
+            type: 'access',
             roles: ['instructor'],
-            allAccessRights: [],
-            type: 'access'
+            globalRights: [],
+            departmentRights: {},
+            departmentMemberships: []
           },
           process.env.JWT_ACCESS_SECRET || 'test-secret',
           { expiresIn: '1h' }
@@ -451,7 +472,7 @@ describeIfMongo('Grade Override API - Integration Tests (ISS-021)', () => {
           },
           departmentMemberships: [{
             departmentId: otherDepartment._id, // Different department!
-            roles: ['dept-admin']
+            roles: ['department-admin', 'dept-admin']
           }],
           isActive: true
         });
@@ -460,9 +481,13 @@ describeIfMongo('Grade Override API - Integration Tests (ISS-021)', () => {
           {
             userId: otherAdmin._id.toString(),
             email: otherAdmin.email,
-            roles: ['dept-admin'],
-            allAccessRights: ['academic:grades:override'],
-            type: 'access'
+            type: 'access',
+            roles: ['department-admin', 'dept-admin'],
+            globalRights: [],
+            departmentRights: {
+              [otherDepartment._id.toString()]: ['academic:grades:override']
+            },
+            departmentMemberships: [{ departmentId: otherDepartment._id.toString() }]
           },
           process.env.JWT_ACCESS_SECRET || 'test-secret',
           { expiresIn: '1h' }
@@ -615,9 +640,11 @@ describeIfMongo('Grade Override API - Integration Tests (ISS-021)', () => {
           {
             userId: regularUser._id.toString(),
             email: regularUser.email,
+            type: 'access',
             roles: ['instructor'],
-            allAccessRights: [],
-            type: 'access'
+            globalRights: [],
+            departmentRights: {},
+            departmentMemberships: []
           },
           process.env.JWT_ACCESS_SECRET || 'test-secret',
           { expiresIn: '1h' }

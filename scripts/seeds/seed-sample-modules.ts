@@ -164,7 +164,7 @@ async function createSampleModulesForCourse(
             belowMastery: true,
             learnerRequest: true
           },
-          repeatableCategories: ['practice', 'assessment'] as const,
+          repeatableCategories: ['practice', 'graded'] as const,
           showAllAvailable: template.presentationMode === 'learner_choice',
           allowSkip: template.presentationMode === 'learner_choice'
         },
@@ -207,37 +207,37 @@ async function createSampleLearningUnitsForModule(
 
   let unitTemplates: Array<{
     titleSuffix: string;
-    type: 'scorm' | 'custom' | 'exercise' | 'video' | 'document' | 'assessment';
-    category: 'exposition' | 'practice' | 'assessment';
+    type: 'scorm' | 'custom' | 'exercise' | 'media' | 'document' | 'assessment' | 'assignment';
+    category: 'topic' | 'assignment' | 'practice' | 'graded';
     isRequired: boolean;
     isReplayable: boolean;
     weight: number;
   }>;
 
   if (moduleOrder === 1) {
-    // Introduction module: mostly exposition
+    // Introduction module: mostly topic content
     unitTemplates = [
-      { titleSuffix: 'Overview Video', type: 'video', category: 'exposition', isRequired: true, isReplayable: true, weight: 0 },
-      { titleSuffix: 'Core Reading', type: 'document', category: 'exposition', isRequired: true, isReplayable: true, weight: 0 },
+      { titleSuffix: 'Overview Video', type: 'media', category: 'topic', isRequired: true, isReplayable: true, weight: 0 },
+      { titleSuffix: 'Core Reading', type: 'document', category: 'topic', isRequired: true, isReplayable: true, weight: 0 },
       { titleSuffix: 'Terminology Exercise', type: 'exercise', category: 'practice', isRequired: false, isReplayable: true, weight: 10 },
-      { titleSuffix: 'Quick Check Quiz', type: 'assessment', category: 'assessment', isRequired: true, isReplayable: false, weight: 20 }
+      { titleSuffix: 'Quick Check Quiz', type: 'assessment', category: 'graded', isRequired: true, isReplayable: false, weight: 20 }
     ];
   } else if (moduleOrder === 2) {
     // Core concepts module: mix of all types
     unitTemplates = [
-      { titleSuffix: 'Lecture Video', type: 'video', category: 'exposition', isRequired: true, isReplayable: true, weight: 0 },
-      { titleSuffix: 'Case Study Reading', type: 'document', category: 'exposition', isRequired: true, isReplayable: true, weight: 0 },
+      { titleSuffix: 'Lecture Video', type: 'media', category: 'topic', isRequired: true, isReplayable: true, weight: 0 },
+      { titleSuffix: 'Case Study Reading', type: 'document', category: 'topic', isRequired: true, isReplayable: true, weight: 0 },
       { titleSuffix: 'Interactive SCORM Module', type: 'scorm', category: 'practice', isRequired: true, isReplayable: true, weight: 15 },
       { titleSuffix: 'Practice Exercise', type: 'exercise', category: 'practice', isRequired: false, isReplayable: true, weight: 15 },
       { titleSuffix: 'Application Exercise', type: 'exercise', category: 'practice', isRequired: true, isReplayable: true, weight: 20 },
-      { titleSuffix: 'Progress Quiz', type: 'assessment', category: 'assessment', isRequired: true, isReplayable: false, weight: 25 }
+      { titleSuffix: 'Progress Quiz', type: 'assessment', category: 'graded', isRequired: true, isReplayable: false, weight: 25 }
     ];
   } else {
-    // Assessment module: heavy on assessments
+    // Graded module: heavy on graded items
     unitTemplates = [
-      { titleSuffix: 'Review Summary', type: 'document', category: 'exposition', isRequired: true, isReplayable: true, weight: 0 },
+      { titleSuffix: 'Review Summary', type: 'document', category: 'topic', isRequired: true, isReplayable: true, weight: 0 },
       { titleSuffix: 'Comprehensive Practice', type: 'exercise', category: 'practice', isRequired: true, isReplayable: true, weight: 20 },
-      { titleSuffix: 'Final Exam', type: 'assessment', category: 'assessment', isRequired: true, isReplayable: false, weight: 50 }
+      { titleSuffix: 'Final Exam', type: 'assessment', category: 'graded', isRequired: true, isReplayable: false, weight: 50 }
     ];
   }
 
@@ -277,7 +277,7 @@ async function createSampleLearningUnitsForModule(
           maxAttempts: null, // unlimited
           showFeedback: true
         } : undefined,
-        estimatedDuration: template.type === 'video' ? 30 :
+        estimatedDuration: template.type === 'media' ? 30 :
                           template.type === 'document' ? 20 :
                           template.type === 'scorm' ? 45 :
                           template.type === 'exercise' ? 25 :

@@ -38,7 +38,7 @@ describe('SchemaService', () => {
 
         const courseCodeProperty = result?.schema.properties.course.properties.code;
         expect(courseCodeProperty).toBeDefined();
-        expect(courseCodeProperty.pattern).toBe('^[A-Z]{2,4}[0-9]{3}[A-Z]?$');
+        expect(courseCodeProperty.pattern).toBe('^[A-Za-z0-9]+$');
         expect(courseCodeProperty.description).toContain('Course code');
       });
 
@@ -173,7 +173,7 @@ describe('SchemaService', () => {
         expect(questionTypeProperty).toBeDefined();
         expect(questionTypeProperty.enum).toContain('multiple_choice');
         expect(questionTypeProperty.enum).toContain('true_false');
-        expect(questionTypeProperty.enum).toContain('essay');
+        expect(questionTypeProperty.enum).toContain('long_answer');
         expect(questionTypeProperty.enum).toContain('short_answer');
         expect(questionTypeProperty.enum).toContain('fill_blank');
       });
@@ -292,7 +292,7 @@ describe('SchemaService', () => {
         const result = await SchemaService.getSchema('course');
 
         expect(result?.validations['course.code']).toBeDefined();
-        expect(result?.validations['course.code'].pattern).toBe('^[A-Z]{2,4}[0-9]{3}[A-Z]?$');
+        expect(result?.validations['course.code'].pattern).toBe('^[A-Za-z0-9]+$');
       });
 
       it('should extract min/max validations from schema', async () => {

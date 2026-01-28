@@ -1,10 +1,17 @@
 import request from 'supertest';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
+import jwt from 'jsonwebtoken';
 import app from '@/app';
 import Program from '@/models/academic/Program.model';
 import Department from '@/models/organization/Department.model';
+import { User } from '@/models/auth/User.model';
+import { Staff } from '@/models/auth/Staff.model';
+import { RoleDefinition } from '@/models/RoleDefinition.model';
+import { AccessRight } from '@/models/AccessRight.model';
+import { hashPassword } from '@/utils/password';
 import { describeIfMongo } from '../../helpers/mongo-guard';
+import { refreshDepartmentCache } from '../../helpers/department-cache';
 
 describeIfMongo('GET /api/v2/programs - includeSubdepartments', () => {
   let mongoServer: MongoMemoryServer;
@@ -21,26 +28,6 @@ describeIfMongo('GET /api/v2/programs - includeSubdepartments', () => {
     const mongoUri = mongoServer.getUri();
     await mongoose.connect(mongoUri);
 
-    // Register a staff user with content permissions
-    const registerResponse = await request(app)
-      .post('/api/v2/auth/register/staff')
-      .send({
-        email: 'programs-test@example.com',
-        password: 'SecurePass123!',
-        firstName: 'Test',
-        lastName: 'User',
-        roles: ['department-admin']
-      });
-
-    authToken = registerResponse.body.data?.accessToken;
-  });
-
-  afterAll(async () => {
-    await mongoose.disconnect();
-    await mongoServer.stop();
-  });
-
-  beforeEach(async () => {
     // Create department hierarchy: Parent -> Child -> Grandchild
     parentDept = await Department.create({
       name: 'Parent Department',
@@ -68,6 +55,90 @@ describeIfMongo('GET /api/v2/programs - includeSubdepartments', () => {
       isActive: true
     });
 
+    // Refresh department cache after creating departments
+    await refreshDepartmentCache();
+
+    // Seed role definition for department-admin
+    await RoleDefinition.create({
+      name: 'department-admin',
+      userType: 'staff',
+      displayName: 'Department Administrator',
+      description: 'Can manage department content and programs',
+      accessRights: ['content:programs:read', 'content:programs:manage', 'content:courses:read'],
+      isActive: true
+    });
+
+    // Seed access rights
+    await AccessRight.create([
+      { name: 'content:programs:read', domain: 'content', resource: 'programs', action: 'read', description: 'Read programs', isActive: true },
+      { name: 'content:programs:manage', domain: 'content', resource: 'programs', action: 'manage', description: 'Manage programs', isActive: true },
+      { name: 'content:courses:read', domain: 'content', resource: 'courses', action: 'read', description: 'Read courses', isActive: true }
+    ]);
+
+    // Create a staff user with department-admin role
+    const hashedPassword = await hashPassword('SecurePass123!');
+    const userId = new mongoose.Types.ObjectId();
+
+    await User.create({
+      _id: userId,
+      email: 'programs-test@example.com',
+      password: hashedPassword,
+      userTypes: ['staff'],
+      defaultDashboard: 'staff',
+      isActive: true,
+      accessRights: []
+    });
+
+    await Staff.create({
+      _id: userId,
+      person: {
+        firstName: 'Test',
+        lastName: 'User',
+        emails: [{
+          email: 'programs-test@example.com',
+          type: 'institutional',
+          isPrimary: true,
+          verified: true
+        }],
+        phones: [],
+        addresses: []
+      },
+      departmentMemberships: [{
+        departmentId: parentDept._id,
+        roles: ['department-admin'],
+        isPrimary: true,
+        isActive: true,
+        joinedAt: new Date()
+      }],
+      isActive: true
+    });
+
+    // Generate JWT token with new authorization format
+    // Note: The actual authorization uses departmentRights computed from database
+    // via roleCache.getCombinedAccessRights(), not from the JWT token
+    authToken = jwt.sign(
+      {
+        userId: userId.toString(),
+        email: 'programs-test@example.com',
+        type: 'access',
+        roles: ['department-admin'],
+        globalRights: [],
+        departmentRights: {
+          [parentDept._id.toString()]: ['content:programs:read', 'content:programs:manage', 'content:courses:read']
+        },
+        departmentMemberships: [{ departmentId: parentDept._id.toString() }]
+      },
+      process.env.JWT_ACCESS_SECRET || 'test-secret',
+      { expiresIn: '1h' }
+    );
+  });
+
+  afterAll(async () => {
+    await mongoose.disconnect();
+    await mongoServer.stop();
+  });
+
+  beforeEach(async () => {
     // Create programs in each department
     parentProgram = await Program.create({
       name: 'Parent Program',
@@ -93,7 +164,6 @@ describeIfMongo('GET /api/v2/programs - includeSubdepartments', () => {
 
   afterEach(async () => {
     await Program.deleteMany({ code: /^(PPROG|CPROG|GPROG)/ });
-    await Department.deleteMany({ code: /^(PARENT|CHILD|GCHILD)/ });
   });
 
   describe('includeSubdepartments=false (default)', () => {

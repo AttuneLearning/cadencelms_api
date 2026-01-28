@@ -18,10 +18,10 @@ export const listPermissions = asyncHandler(async (req: Request, res: Response) 
     category: req.query.category as string | undefined
   };
 
-  // Validate category if provided
-  const validCategories = ['users', 'courses', 'content', 'enrollments', 'assessments', 'reports', 'settings', 'system'];
-  if (filters.category && !validCategories.includes(filters.category)) {
-    throw ApiError.badRequest(`Invalid category. Must be one of: ${validCategories.join(', ')}`);
+  // Validate category/domain if provided (uses 3-part format: domain:resource:action)
+  const validDomains = ['content', 'enrollment', 'staff', 'learner', 'reports', 'settings', 'system', 'billing', 'audit', 'grades', 'analytics', 'academic', 'department'];
+  if (filters.category && !validDomains.includes(filters.category)) {
+    throw ApiError.badRequest(`Invalid category. Must be one of: ${validDomains.join(', ')}`);
   }
 
   const result = await PermissionsService.listPermissions(filters);
@@ -101,10 +101,11 @@ export const createRole = asyncHandler(async (req: Request, res: Response) => {
     throw ApiError.badRequest('At least one permission is required');
   }
 
-  // Validate permission format
+  // Validate permission format (3-part: domain:resource:action or wildcard domain:*)
+  const permissionPattern = /^[a-z]+:[a-z-]+:[a-z-]+$|^[a-z]+:\*$/;
   for (const perm of permissions) {
-    if (typeof perm !== 'string' || !perm.includes(':')) {
-      throw ApiError.badRequest('Invalid permission format. Must be in format "category:level"');
+    if (typeof perm !== 'string' || !permissionPattern.test(perm)) {
+      throw ApiError.badRequest('Invalid permission format. Must be in format "domain:resource:action" (e.g., content:courses:read) or wildcard "domain:*"');
     }
   }
 
@@ -159,10 +160,11 @@ export const updateRole = asyncHandler(async (req: Request, res: Response) => {
       throw ApiError.badRequest('At least one permission is required');
     }
 
-    // Validate permission format
+    // Validate permission format (3-part: domain:resource:action or wildcard domain:*)
+    const permissionPattern = /^[a-z]+:[a-z-]+:[a-z-]+$|^[a-z]+:\*$/;
     for (const perm of permissions) {
-      if (typeof perm !== 'string' || !perm.includes(':')) {
-        throw ApiError.badRequest('Invalid permission format. Must be in format "category:level"');
+      if (typeof perm !== 'string' || !permissionPattern.test(perm)) {
+        throw ApiError.badRequest('Invalid permission format. Must be in format "domain:resource:action" (e.g., content:courses:read) or wildcard "domain:*"');
       }
     }
   }
@@ -250,15 +252,17 @@ export const checkPermission = asyncHandler(async (req: Request, res: Response) 
     throw ApiError.badRequest('permissions array cannot be empty');
   }
 
-  // Validate permission format
-  if (permission && (typeof permission !== 'string' || !permission.includes(':'))) {
-    throw ApiError.badRequest('Invalid permission format. Must be in format "category:level"');
+  // Validate permission format (3-part: domain:resource:action or wildcard domain:*)
+  const permissionPattern = /^[a-z]+:[a-z-]+:[a-z-]+$|^[a-z]+:\*$/;
+
+  if (permission && (typeof permission !== 'string' || !permissionPattern.test(permission))) {
+    throw ApiError.badRequest('Invalid permission format. Must be in format "domain:resource:action" (e.g., content:courses:read) or wildcard "domain:*"');
   }
 
   if (permissions) {
     for (const perm of permissions) {
-      if (typeof perm !== 'string' || !perm.includes(':')) {
-        throw ApiError.badRequest('Invalid permission format. Must be in format "category:level"');
+      if (typeof perm !== 'string' || !permissionPattern.test(perm)) {
+        throw ApiError.badRequest('Invalid permission format. Must be in format "domain:resource:action" (e.g., content:courses:read) or wildcard "domain:*"');
       }
     }
   }

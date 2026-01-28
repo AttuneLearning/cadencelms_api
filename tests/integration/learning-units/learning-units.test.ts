@@ -14,6 +14,8 @@ import { Staff } from '@/models/auth/Staff.model';
 import { RoleDefinition } from '@/models/RoleDefinition.model';
 import { AccessRight } from '@/models/AccessRight.model';
 import { describeIfMongo } from '../../helpers/mongo-guard';
+import { refreshDepartmentCache } from '../../helpers/department-cache';
+import { seedLearningUnitLookups } from '../../helpers/lookup-values';
 
 describeIfMongo('Learning Units API', () => {
   let mongoServer: MongoMemoryServer;
@@ -38,13 +40,20 @@ describeIfMongo('Learning Units API', () => {
       isActive: true
     });
 
+    await seedLearningUnitLookups();
+
     // Create test department
     testDepartment = await Department.create({
       name: 'Test Department',
       code: 'TESTDEPT',
       slug: 'test-department',
+      level: 0,
+      path: [],
       isActive: true
     });
+
+    // Refresh department cache after creating departments
+    await refreshDepartmentCache();
 
     // Seed role definitions
     await RoleDefinition.create({
@@ -99,9 +108,18 @@ describeIfMongo('Learning Units API', () => {
       }]
     });
 
-    // Generate auth token
+    // Generate auth token with new authorization format
     authToken = jwt.sign(
-      { userId: testUser._id.toString(), email: testUser.email, roles: ['staff'], type: 'access' },
+      {
+        userId: testUser._id.toString(),
+        email: testUser.email,
+        type: 'access',
+        globalRights: ['*'], // System admin for test simplicity
+        departmentRights: {
+          [testDepartment._id.toString()]: ['content:courses:read', 'content:courses:manage', 'content:lessons:manage']
+        },
+        departmentMemberships: [{ departmentId: testDepartment._id }]
+      },
       process.env.JWT_ACCESS_SECRET || 'test-secret',
       { expiresIn: '1h' }
     );
@@ -191,8 +209,8 @@ describeIfMongo('Learning Units API', () => {
           moduleId: testModule._id,
           title: 'Introduction Video',
           description: 'Overview of the module',
-          type: 'video',
-          category: 'exposition',
+          type: 'media',
+          category: 'topic',
           isRequired: true,
           isReplayable: true,
           weight: 10,
@@ -220,7 +238,7 @@ describeIfMongo('Learning Units API', () => {
           title: 'Module Assessment',
           description: 'Test your knowledge',
           type: 'assessment',
-          category: 'assessment',
+          category: 'graded',
           isRequired: true,
           isReplayable: false,
           weight: 50,
@@ -234,7 +252,7 @@ describeIfMongo('Learning Units API', () => {
           title: 'Optional Reading',
           description: 'Additional materials',
           type: 'document',
-          category: 'exposition',
+          category: 'topic',
           isRequired: false,
           isReplayable: true,
           weight: 5,
@@ -361,15 +379,15 @@ describeIfMongo('Learning Units API', () => {
     });
 
     describe('filtering by category', () => {
-      it('should filter by exposition category', async () => {
+      it('should filter by topic category', async () => {
         const response = await request(app)
-          .get(`/api/v2/modules/${testModule._id}/learning-units?category=exposition`)
+          .get(`/api/v2/modules/${testModule._id}/learning-units?category=topic`)
           .set('Authorization', `Bearer ${authToken}`);
 
         expect(response.status).toBe(200);
         expect(response.body.data.learningUnits).toHaveLength(2);
         response.body.data.learningUnits.forEach((unit: any) => {
-          expect(unit.category).toBe('exposition');
+          expect(unit.category).toBe('topic');
         });
       });
 
@@ -385,14 +403,14 @@ describeIfMongo('Learning Units API', () => {
         });
       });
 
-      it('should filter by assessment category', async () => {
+      it('should filter by graded category', async () => {
         const response = await request(app)
-          .get(`/api/v2/modules/${testModule._id}/learning-units?category=assessment`)
+          .get(`/api/v2/modules/${testModule._id}/learning-units?category=graded`)
           .set('Authorization', `Bearer ${authToken}`);
 
         expect(response.status).toBe(200);
         expect(response.body.data.learningUnits).toHaveLength(1);
-        expect(response.body.data.learningUnits[0].category).toBe('assessment');
+        expect(response.body.data.learningUnits[0].category).toBe('graded');
       });
 
       it('should return 400 for invalid category', async () => {
@@ -451,8 +469,8 @@ describeIfMongo('Learning Units API', () => {
         moduleId: testModule._id,
         title: 'Test Learning Unit',
         description: 'A detailed description of this learning unit',
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         isRequired: true,
         isReplayable: true,
         weight: 25,
@@ -473,8 +491,8 @@ describeIfMongo('Learning Units API', () => {
       expect(response.body.data.id).toBe(testLearningUnit._id.toString());
       expect(response.body.data.title).toBe('Test Learning Unit');
       expect(response.body.data.description).toBe('A detailed description of this learning unit');
-      expect(response.body.data.category).toBe('exposition');
-      expect(response.body.data.contentType).toBe('video');
+      expect(response.body.data.category).toBe('topic');
+      expect(response.body.data.contentType).toBe('media');
       expect(response.body.data.isRequired).toBe(true);
       expect(response.body.data.isReplayable).toBe(true);
       expect(response.body.data.weight).toBe(25);
@@ -504,8 +522,8 @@ describeIfMongo('Learning Units API', () => {
       const otherUnit = await LearningUnit.create({
         moduleId: testModule2._id,
         title: 'Other Module Unit',
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         isRequired: true,
         isReplayable: false,
         weight: 10,
@@ -524,16 +542,16 @@ describeIfMongo('Learning Units API', () => {
   });
 
   describe('POST /api/v2/modules/:moduleId/learning-units', () => {
-    describe('creating exposition category', () => {
-      it('should create an exposition learning unit with video type', async () => {
+    describe('creating topic category', () => {
+      it('should create an topic learning unit with media type', async () => {
         const response = await request(app)
           .post(`/api/v2/modules/${testModule._id}/learning-units`)
           .set('Authorization', `Bearer ${authToken}`)
           .send({
             title: 'Introduction Video',
             description: 'Welcome to the module',
-            category: 'exposition',
-            contentType: 'video',
+            category: 'topic',
+            contentType: 'media',
             isRequired: true,
             isReplayable: true,
             weight: 15,
@@ -544,20 +562,20 @@ describeIfMongo('Learning Units API', () => {
         expect(response.body.success).toBe(true);
         expect(response.body.message).toBe('Learning unit created successfully');
         expect(response.body.data.title).toBe('Introduction Video');
-        expect(response.body.data.category).toBe('exposition');
-        expect(response.body.data.contentType).toBe('video');
+        expect(response.body.data.category).toBe('topic');
+        expect(response.body.data.contentType).toBe('media');
         expect(response.body.data.sequence).toBe(1);
         expect(response.body.data.isActive).toBe(true);
       });
 
-      it('should create an exposition learning unit with document type', async () => {
+      it('should create an topic learning unit with document type', async () => {
         const response = await request(app)
           .post(`/api/v2/modules/${testModule._id}/learning-units`)
           .set('Authorization', `Bearer ${authToken}`)
           .send({
             title: 'Course Reading Materials',
             description: 'Required reading for this module',
-            category: 'exposition',
+            category: 'topic',
             contentType: 'document',
             isRequired: true,
             weight: 10
@@ -565,7 +583,7 @@ describeIfMongo('Learning Units API', () => {
 
         expect(response.status).toBe(201);
         expect(response.body.data.contentType).toBe('document');
-        expect(response.body.data.category).toBe('exposition');
+        expect(response.body.data.category).toBe('topic');
       });
     });
 
@@ -608,15 +626,15 @@ describeIfMongo('Learning Units API', () => {
       });
     });
 
-    describe('creating assessment category', () => {
-      it('should create an assessment learning unit', async () => {
+    describe('creating graded category', () => {
+      it('should create a graded learning unit', async () => {
         const response = await request(app)
           .post(`/api/v2/modules/${testModule._id}/learning-units`)
           .set('Authorization', `Bearer ${authToken}`)
           .send({
             title: 'Module Quiz',
             description: 'Test your understanding',
-            category: 'assessment',
+            category: 'graded',
             contentType: 'assessment',
             isRequired: true,
             isReplayable: false,
@@ -625,7 +643,7 @@ describeIfMongo('Learning Units API', () => {
           });
 
         expect(response.status).toBe(201);
-        expect(response.body.data.category).toBe('assessment');
+        expect(response.body.data.category).toBe('graded');
         expect(response.body.data.contentType).toBe('assessment');
         expect(response.body.data.isReplayable).toBe(false);
         expect(response.body.data.weight).toBe(50);
@@ -639,7 +657,7 @@ describeIfMongo('Learning Units API', () => {
           .set('Authorization', `Bearer ${authToken}`)
           .send({
             title: 'SCORM Package',
-            category: 'exposition',
+            category: 'topic',
             contentType: 'scorm',
             isRequired: true,
             weight: 30
@@ -656,8 +674,8 @@ describeIfMongo('Learning Units API', () => {
           .set('Authorization', `Bearer ${authToken}`)
           .send({
             title: 'Linked Content',
-            category: 'exposition',
-            contentType: 'video',
+            category: 'topic',
+            contentType: 'media',
             contentId: contentId.toString(),
             isRequired: true,
             weight: 10
@@ -676,8 +694,8 @@ describeIfMongo('Learning Units API', () => {
           .set('Authorization', `Bearer ${authToken}`)
           .send({
             title: 'First Unit',
-            category: 'exposition',
-            contentType: 'video',
+            category: 'topic',
+            contentType: 'media',
             isRequired: true,
             weight: 10
           });
@@ -704,7 +722,7 @@ describeIfMongo('Learning Units API', () => {
           .set('Authorization', `Bearer ${authToken}`)
           .send({
             title: 'Third Unit',
-            category: 'assessment',
+            category: 'graded',
             contentType: 'assessment',
             isRequired: true,
             weight: 30
@@ -715,122 +733,122 @@ describeIfMongo('Learning Units API', () => {
     });
 
     describe('validation errors', () => {
-      it('should return 400 when title is missing', async () => {
+      it('should return 422 when title is missing', async () => {
         const response = await request(app)
           .post(`/api/v2/modules/${testModule._id}/learning-units`)
           .set('Authorization', `Bearer ${authToken}`)
           .send({
-            category: 'exposition',
-            contentType: 'video'
+            category: 'topic',
+            contentType: 'media'
           });
 
-        expect(response.status).toBe(400);
+        expect(response.status).toBe(422);
       });
 
-      it('should return 400 when title exceeds 200 characters', async () => {
+      it('should return 422 when title exceeds 200 characters', async () => {
         const response = await request(app)
           .post(`/api/v2/modules/${testModule._id}/learning-units`)
           .set('Authorization', `Bearer ${authToken}`)
           .send({
             title: 'A'.repeat(201),
-            category: 'exposition',
-            contentType: 'video'
+            category: 'topic',
+            contentType: 'media'
           });
 
-        expect(response.status).toBe(400);
+        expect(response.status).toBe(422);
       });
 
-      it('should return 400 when category is missing', async () => {
+      it('should return 422 when category is missing', async () => {
         const response = await request(app)
           .post(`/api/v2/modules/${testModule._id}/learning-units`)
           .set('Authorization', `Bearer ${authToken}`)
           .send({
             title: 'Test Unit',
-            contentType: 'video'
+            contentType: 'media'
           });
 
-        expect(response.status).toBe(400);
+        expect(response.status).toBe(422);
       });
 
-      it('should return 400 when category is invalid', async () => {
+      it('should return 422 when category is invalid', async () => {
         const response = await request(app)
           .post(`/api/v2/modules/${testModule._id}/learning-units`)
           .set('Authorization', `Bearer ${authToken}`)
           .send({
             title: 'Test Unit',
             category: 'invalid-category',
-            contentType: 'video'
+            contentType: 'media'
           });
 
-        expect(response.status).toBe(400);
+        expect(response.status).toBe(422);
       });
 
-      it('should return 400 when contentType is missing', async () => {
+      it('should return 422 when contentType is missing', async () => {
         const response = await request(app)
           .post(`/api/v2/modules/${testModule._id}/learning-units`)
           .set('Authorization', `Bearer ${authToken}`)
           .send({
             title: 'Test Unit',
-            category: 'exposition'
+            category: 'topic'
           });
 
-        expect(response.status).toBe(400);
+        expect(response.status).toBe(422);
       });
 
-      it('should return 400 when weight exceeds 100', async () => {
+      it('should return 422 when weight exceeds 100', async () => {
         const response = await request(app)
           .post(`/api/v2/modules/${testModule._id}/learning-units`)
           .set('Authorization', `Bearer ${authToken}`)
           .send({
             title: 'Test Unit',
-            category: 'exposition',
-            contentType: 'video',
+            category: 'topic',
+            contentType: 'media',
             weight: 101
           });
 
-        expect(response.status).toBe(400);
+        expect(response.status).toBe(422);
       });
 
-      it('should return 400 when weight is negative', async () => {
+      it('should return 422 when weight is negative', async () => {
         const response = await request(app)
           .post(`/api/v2/modules/${testModule._id}/learning-units`)
           .set('Authorization', `Bearer ${authToken}`)
           .send({
             title: 'Test Unit',
-            category: 'exposition',
-            contentType: 'video',
+            category: 'topic',
+            contentType: 'media',
             weight: -5
           });
 
-        expect(response.status).toBe(400);
+        expect(response.status).toBe(422);
       });
 
-      it('should return 400 when description exceeds 2000 characters', async () => {
+      it('should return 422 when description exceeds 2000 characters', async () => {
         const response = await request(app)
           .post(`/api/v2/modules/${testModule._id}/learning-units`)
           .set('Authorization', `Bearer ${authToken}`)
           .send({
             title: 'Test Unit',
             description: 'A'.repeat(2001),
-            category: 'exposition',
-            contentType: 'video'
+            category: 'topic',
+            contentType: 'media'
           });
 
-        expect(response.status).toBe(400);
+        expect(response.status).toBe(422);
       });
 
-      it('should return 400 when estimatedDuration is negative', async () => {
+      it('should return 422 when estimatedDuration is negative', async () => {
         const response = await request(app)
           .post(`/api/v2/modules/${testModule._id}/learning-units`)
           .set('Authorization', `Bearer ${authToken}`)
           .send({
             title: 'Test Unit',
-            category: 'exposition',
-            contentType: 'video',
+            category: 'topic',
+            contentType: 'media',
             estimatedDuration: -10
           });
 
-        expect(response.status).toBe(400);
+        expect(response.status).toBe(422);
       });
 
       it('should return 404 when module does not exist', async () => {
@@ -840,8 +858,8 @@ describeIfMongo('Learning Units API', () => {
           .set('Authorization', `Bearer ${authToken}`)
           .send({
             title: 'Test Unit',
-            category: 'exposition',
-            contentType: 'video'
+            category: 'topic',
+            contentType: 'media'
           });
 
         expect(response.status).toBe(404);
@@ -855,8 +873,8 @@ describeIfMongo('Learning Units API', () => {
           .set('Authorization', `Bearer ${authToken}`)
           .send({
             title: 'Minimal Unit',
-            category: 'exposition',
-            contentType: 'video'
+            category: 'topic',
+            contentType: 'media'
           });
 
         expect(response.status).toBe(201);
@@ -876,8 +894,8 @@ describeIfMongo('Learning Units API', () => {
         moduleId: testModule._id,
         title: 'Original Title',
         description: 'Original description',
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         isRequired: true,
         isReplayable: false,
         weight: 20,
@@ -889,7 +907,7 @@ describeIfMongo('Learning Units API', () => {
     });
 
     describe('updating category', () => {
-      it('should update category from exposition to practice', async () => {
+      it('should update category from topic to practice', async () => {
         const response = await request(app)
           .put(`/api/v2/modules/${testModule._id}/learning-units/${testLearningUnit._id}`)
           .set('Authorization', `Bearer ${authToken}`)
@@ -901,16 +919,16 @@ describeIfMongo('Learning Units API', () => {
         expect(response.body.data.category).toBe('practice');
       });
 
-      it('should update category from exposition to assessment', async () => {
+      it('should update category from topic to graded', async () => {
         const response = await request(app)
           .put(`/api/v2/modules/${testModule._id}/learning-units/${testLearningUnit._id}`)
           .set('Authorization', `Bearer ${authToken}`)
           .send({
-            category: 'assessment'
+            category: 'graded'
           });
 
         expect(response.status).toBe(200);
-        expect(response.body.data.category).toBe('assessment');
+        expect(response.body.data.category).toBe('graded');
       });
     });
 
@@ -939,7 +957,7 @@ describeIfMongo('Learning Units API', () => {
         expect(response.body.data.weight).toBe(0);
       });
 
-      it('should return 400 when weight exceeds 100', async () => {
+      it('should return 422 when weight exceeds 100', async () => {
         const response = await request(app)
           .put(`/api/v2/modules/${testModule._id}/learning-units/${testLearningUnit._id}`)
           .set('Authorization', `Bearer ${authToken}`)
@@ -947,7 +965,7 @@ describeIfMongo('Learning Units API', () => {
             weight: 150
           });
 
-        expect(response.status).toBe(400);
+        expect(response.status).toBe(422);
       });
     });
 
@@ -1047,7 +1065,7 @@ describeIfMongo('Learning Units API', () => {
           .send({
             title: 'Comprehensive Update',
             description: 'All new description',
-            category: 'assessment',
+            category: 'graded',
             weight: 75,
             isRequired: false,
             isReplayable: true,
@@ -1057,7 +1075,7 @@ describeIfMongo('Learning Units API', () => {
         expect(response.status).toBe(200);
         expect(response.body.data.title).toBe('Comprehensive Update');
         expect(response.body.data.description).toBe('All new description');
-        expect(response.body.data.category).toBe('assessment');
+        expect(response.body.data.category).toBe('graded');
         expect(response.body.data.weight).toBe(75);
         expect(response.body.data.isRequired).toBe(false);
         expect(response.body.data.isReplayable).toBe(true);
@@ -1066,7 +1084,7 @@ describeIfMongo('Learning Units API', () => {
     });
 
     describe('validation errors', () => {
-      it('should return 400 for empty title', async () => {
+      it('should return 422 for empty title', async () => {
         const response = await request(app)
           .put(`/api/v2/modules/${testModule._id}/learning-units/${testLearningUnit._id}`)
           .set('Authorization', `Bearer ${authToken}`)
@@ -1074,10 +1092,10 @@ describeIfMongo('Learning Units API', () => {
             title: ''
           });
 
-        expect(response.status).toBe(400);
+        expect(response.status).toBe(422);
       });
 
-      it('should return 400 for invalid category', async () => {
+      it('should return 422 for invalid category', async () => {
         const response = await request(app)
           .put(`/api/v2/modules/${testModule._id}/learning-units/${testLearningUnit._id}`)
           .set('Authorization', `Bearer ${authToken}`)
@@ -1085,7 +1103,7 @@ describeIfMongo('Learning Units API', () => {
             category: 'invalid'
           });
 
-        expect(response.status).toBe(400);
+        expect(response.status).toBe(422);
       });
 
       it('should return 404 for non-existent learning unit', async () => {
@@ -1104,8 +1122,8 @@ describeIfMongo('Learning Units API', () => {
         const otherUnit = await LearningUnit.create({
           moduleId: testModule2._id,
           title: 'Other Module Unit',
-          type: 'video',
-          category: 'exposition',
+          type: 'media',
+          category: 'topic',
           isRequired: true,
           isReplayable: false,
           weight: 10,
@@ -1134,8 +1152,8 @@ describeIfMongo('Learning Units API', () => {
         moduleId: testModule._id,
         title: 'Unit to Delete',
         description: 'This unit will be deleted',
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         isRequired: true,
         isReplayable: false,
         weight: 10,
@@ -1210,8 +1228,8 @@ describeIfMongo('Learning Units API', () => {
       const otherUnit = await LearningUnit.create({
         moduleId: testModule2._id,
         title: 'Other Module Unit',
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         isRequired: true,
         isReplayable: false,
         weight: 10,
@@ -1237,8 +1255,8 @@ describeIfMongo('Learning Units API', () => {
       unit1 = await LearningUnit.create({
         moduleId: testModule._id,
         title: 'Unit 1',
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         isRequired: true,
         isReplayable: false,
         weight: 10,
@@ -1264,7 +1282,7 @@ describeIfMongo('Learning Units API', () => {
         moduleId: testModule._id,
         title: 'Unit 3',
         type: 'assessment',
-        category: 'assessment',
+        category: 'graded',
         isRequired: true,
         isReplayable: false,
         weight: 30,
@@ -1316,7 +1334,7 @@ describeIfMongo('Learning Units API', () => {
       expect(units[2].title).toBe('Unit 1');
     });
 
-    it('should return 400 when learningUnitIds is not an array', async () => {
+    it('should return 422 when learningUnitIds is not an array', async () => {
       const response = await request(app)
         .put(`/api/v2/modules/${testModule._id}/learning-units/reorder`)
         .set('Authorization', `Bearer ${authToken}`)
@@ -1324,7 +1342,7 @@ describeIfMongo('Learning Units API', () => {
           learningUnitIds: 'not-an-array'
         });
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(422);
     });
 
     it('should return 400 when not all learning units are included', async () => {
@@ -1342,8 +1360,8 @@ describeIfMongo('Learning Units API', () => {
       const otherUnit = await LearningUnit.create({
         moduleId: testModule2._id,
         title: 'Other Module Unit',
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         isRequired: true,
         isReplayable: false,
         weight: 10,
@@ -1362,7 +1380,7 @@ describeIfMongo('Learning Units API', () => {
       expect(response.status).toBe(400);
     });
 
-    it('should return 400 for invalid learning unit ID in array', async () => {
+    it('should return 422 for invalid learning unit ID in array', async () => {
       const response = await request(app)
         .put(`/api/v2/modules/${testModule._id}/learning-units/reorder`)
         .set('Authorization', `Bearer ${authToken}`)
@@ -1370,10 +1388,10 @@ describeIfMongo('Learning Units API', () => {
           learningUnitIds: [unit1._id.toString(), 'invalid-id', unit3._id.toString()]
         });
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(422);
     });
 
-    it('should handle empty module (no learning units)', async () => {
+    it('should return 422 for empty module (no learning units provided)', async () => {
       const response = await request(app)
         .put(`/api/v2/modules/${testModule2._id}/learning-units/reorder`)
         .set('Authorization', `Bearer ${authToken}`)
@@ -1381,7 +1399,7 @@ describeIfMongo('Learning Units API', () => {
           learningUnitIds: []
         });
 
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(422);
     });
   });
 
@@ -1393,8 +1411,8 @@ describeIfMongo('Learning Units API', () => {
         moduleId: testModule._id,
         title: 'Unit to Move',
         description: 'This unit will be moved',
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         isRequired: true,
         isReplayable: false,
         weight: 25,
@@ -1439,8 +1457,8 @@ describeIfMongo('Learning Units API', () => {
         await LearningUnit.create({
           moduleId: testModule2._id,
           title: 'Existing Target Unit',
-          type: 'video',
-          category: 'exposition',
+          type: 'media',
+          category: 'topic',
           isRequired: true,
           isReplayable: false,
           weight: 10,
@@ -1512,13 +1530,13 @@ describeIfMongo('Learning Units API', () => {
     });
 
     describe('validation errors', () => {
-      it('should return 400 when targetModuleId is missing', async () => {
+      it('should return 422 when targetModuleId is missing', async () => {
         const response = await request(app)
           .put(`/api/v2/modules/${testModule._id}/learning-units/${unitToMove._id}/move`)
           .set('Authorization', `Bearer ${authToken}`)
           .send({});
 
-        expect(response.status).toBe(400);
+        expect(response.status).toBe(422);
       });
 
       it('should return 400 when trying to move to same module', async () => {
@@ -1561,8 +1579,8 @@ describeIfMongo('Learning Units API', () => {
         const otherUnit = await LearningUnit.create({
           moduleId: testModule2._id,
           title: 'Other Module Unit',
-          type: 'video',
-          category: 'exposition',
+          type: 'media',
+          category: 'topic',
           isRequired: true,
           isReplayable: false,
           weight: 10,
@@ -1581,7 +1599,7 @@ describeIfMongo('Learning Units API', () => {
         expect(response.status).toBe(404);
       });
 
-      it('should return 400 for invalid target module ID', async () => {
+      it('should return 422 for invalid target module ID', async () => {
         const response = await request(app)
           .put(`/api/v2/modules/${testModule._id}/learning-units/${unitToMove._id}/move`)
           .set('Authorization', `Bearer ${authToken}`)
@@ -1589,7 +1607,7 @@ describeIfMongo('Learning Units API', () => {
             targetModuleId: 'invalid-id'
           });
 
-        expect(response.status).toBe(400);
+        expect(response.status).toBe(422);
       });
     });
 
@@ -1605,8 +1623,8 @@ describeIfMongo('Learning Units API', () => {
         expect(response.status).toBe(200);
         expect(response.body.data.title).toBe('Unit to Move');
         expect(response.body.data.description).toBe('This unit will be moved');
-        expect(response.body.data.contentType).toBe('video');
-        expect(response.body.data.category).toBe('exposition');
+        expect(response.body.data.contentType).toBe('media');
+        expect(response.body.data.category).toBe('topic');
         expect(response.body.data.isRequired).toBe(true);
         expect(response.body.data.isReplayable).toBe(false);
         expect(response.body.data.weight).toBe(25);
@@ -1628,8 +1646,8 @@ describeIfMongo('Learning Units API', () => {
         .post(`/api/v2/modules/${testModule._id}/learning-units`)
         .send({
           title: 'Test',
-          category: 'exposition',
-          contentType: 'video'
+          category: 'topic',
+          contentType: 'media'
         });
 
       expect(response.status).toBe(401);
@@ -1639,8 +1657,8 @@ describeIfMongo('Learning Units API', () => {
       const unit = await LearningUnit.create({
         moduleId: testModule._id,
         title: 'Test Unit',
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         isRequired: true,
         isReplayable: false,
         weight: 10,
@@ -1660,8 +1678,8 @@ describeIfMongo('Learning Units API', () => {
       const unit = await LearningUnit.create({
         moduleId: testModule._id,
         title: 'Test Unit',
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         isRequired: true,
         isReplayable: false,
         weight: 10,

@@ -1,25 +1,121 @@
 import request from 'supertest';
+import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
-import app from '../../../src/app';
-import Program from '../../../src/models/academic/Program.model';
-import Template from '../../../src/models/content/Template.model';
-import { createTestUser, getAuthToken } from '../../helpers/auth';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
+import app from '@/app';
+import Program from '@/models/academic/Program.model';
+import Template from '@/models/content/Template.model';
+import Department from '@/models/organization/Department.model';
+import { User } from '@/models/auth/User.model';
+import { Staff } from '@/models/auth/Staff.model';
+import { RoleDefinition } from '@/models/RoleDefinition.model';
+import { AccessRight } from '@/models/AccessRight.model';
+import { describeIfMongo } from '../../helpers/mongo-guard';
+import { refreshDepartmentCache } from '../../helpers/department-cache';
 
-describe('PUT /api/v2/programs/:id/certificate', () => {
+describeIfMongo('PUT /api/v2/programs/:id/certificate', () => {
+  let mongoServer: MongoMemoryServer;
   let authToken: string;
   let testProgram: any;
   let testTemplate: any;
-  let testDepartmentId: mongoose.Types.ObjectId;
+  let testDepartment: any;
+  let testUser: any;
 
   beforeAll(async () => {
-    // Get auth token for user with content:programs:manage permission
-    const user = await createTestUser({
-      roles: ['department-admin'],
-      permissions: ['content:programs:manage']
-    });
-    authToken = await getAuthToken(user);
+    mongoServer = await MongoMemoryServer.create();
+    const mongoUri = mongoServer.getUri();
+    await mongoose.connect(mongoUri);
 
-    testDepartmentId = new mongoose.Types.ObjectId();
+    // Create test department
+    testDepartment = await Department.create({
+      name: 'Certificate Test Department',
+      code: 'CERTT' + Math.random().toString(36).slice(2, 8).toUpperCase(),
+      slug: 'cert-test-department-' + Date.now(),
+      level: 0,
+      path: [],
+      isActive: true
+    });
+
+    // Refresh department cache after creating departments
+    await refreshDepartmentCache();
+
+    // Seed role definitions - use existing content-admin role
+    await RoleDefinition.create({
+      name: 'content-admin',
+      userType: 'staff',
+      displayName: 'Content Administrator',
+      description: 'Can manage content including programs',
+      accessRights: ['content:programs:manage'],
+      isActive: true
+    });
+
+    // Seed access rights
+    await AccessRight.create({
+      name: 'content:programs:manage',
+      domain: 'content',
+      resource: 'programs',
+      action: 'manage',
+      description: 'Manage programs',
+      isActive: true
+    });
+
+    // Create test user with proper authorization
+    const hashedPassword = await bcrypt.hash('Password123!', 10);
+    testUser = await User.create({
+      email: `cert-test-${Date.now()}@example.com`,
+      password: hashedPassword,
+      userTypes: ['staff'],
+      defaultDashboard: 'staff',
+      isActive: true
+    });
+
+    await Staff.create({
+      _id: testUser._id,
+      person: {
+        firstName: 'Test',
+        lastName: 'User',
+        emails: [{
+          email: testUser.email,
+          type: 'institutional',
+          isPrimary: true,
+          verified: true,
+          allowNotifications: true
+        }],
+        phones: [],
+        addresses: [],
+        timezone: 'America/New_York',
+        languagePreference: 'en'
+      },
+      departmentMemberships: [{
+        departmentId: testDepartment._id,
+        roles: ['content-admin'],
+        isPrimary: true,
+        isActive: true,
+        joinedAt: new Date()
+      }]
+    });
+
+    // Generate auth token with new authorization format
+    authToken = jwt.sign(
+      {
+        userId: testUser._id.toString(),
+        email: testUser.email,
+        type: 'access',
+        globalRights: ['*'], // System admin for test simplicity
+        departmentRights: {
+          [testDepartment._id.toString()]: ['content:programs:manage']
+        },
+        departmentMemberships: [{ departmentId: testDepartment._id }]
+      },
+      process.env.JWT_ACCESS_SECRET || 'test-secret',
+      { expiresIn: '1h' }
+    );
+  });
+
+  afterAll(async () => {
+    await mongoose.disconnect();
+    await mongoServer.stop();
   });
 
   beforeEach(async () => {
@@ -27,16 +123,19 @@ describe('PUT /api/v2/programs/:id/certificate', () => {
     testProgram = await Program.create({
       name: 'Test Certificate Program',
       code: 'TESTCERT' + Date.now(),
-      departmentId: testDepartmentId,
+      departmentId: testDepartment._id,
       type: 'certificate'
     });
 
     // Create a test template
     testTemplate = await Template.create({
       name: 'Test Certificate Template',
-      type: 'certificate',
-      content: '<html>Certificate</html>',
-      isActive: true
+      type: 'master',
+      status: 'active',
+      html: '<html>Certificate</html>',
+      isGlobal: true,
+      createdBy: testUser._id,
+      isDeleted: false
     });
   });
 

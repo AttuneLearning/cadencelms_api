@@ -106,6 +106,7 @@
 - Refund requests go to `billing-admin` queue
 - Approval creates refund in payment processor
 - Rejection sends notification with reason
+**Decision Doc:** `../docs/architecture/decisions/ADR-001-REFUND-POLICY.md`
 
 ### ADR-002: Tax Calculation
 **Decision:** Use TaxJar for automated tax calculation  
@@ -114,6 +115,7 @@
 - TaxJar API integration for tax calculation
 - Fallback: Manual tax rate configuration per department/region
 - Tax exempt status support for organizations
+**Decision Doc:** `../docs/architecture/decisions/ADR-002-TAX-CALCULATION.md`
 
 **Alternatives Considered:**
 - Avalara (more enterprise, higher cost)
@@ -128,6 +130,7 @@
 - Display prices in local currencies (conversion at checkout)
 - Payment processor handles currency conversion
 - Store both `displayAmount`/`displayCurrency` and `settlementAmount`/`settlementCurrency`
+**Decision Doc:** `../docs/architecture/decisions/ADR-003-MULTI-CURRENCY-SUPPORT.md`
 
 ```typescript
 interface IOrderAmount {
@@ -152,6 +155,7 @@ interface IOrderAmount {
 - Redirect to login/register before checkout
 - Cart persists via session ID, merged to account on login
 - Registration email sent on account creation
+**Decision Doc:** `../docs/architecture/decisions/ADR-004-GUEST-CHECKOUT.md`
 
 ### ADR-005: Payment Processor
 **Decision:** Stripe as default, extensible architecture  
@@ -162,6 +166,7 @@ interface IOrderAmount {
 - Configuration-driven processor selection per department
 - Default: Stripe
 - Future: Square, GPay (via Stripe), Elavon
+**Decision Doc:** `../docs/architecture/decisions/ADR-005-PAYMENT-PROCESSOR.md`
 
 ### ADR-006: PDF Generation
 **Decision:** PDFKit (lightweight, pure Node.js)  
@@ -171,6 +176,7 @@ interface IOrderAmount {
 - Template-based design with customization
 - Generate on-demand (not stored as files)
 - Cache generated PDFs in S3 with TTL
+**Decision Doc:** `../docs/architecture/decisions/ADR-006-PDF-GENERATION.md`
 
 **Alternatives Considered:**
 - Puppeteer (heavier, requires Chrome, better for complex layouts)
@@ -185,6 +191,7 @@ interface IOrderAmount {
 - Default: SendGrid
 - Planned: Mailgun
 - Template system with variable substitution
+**Decision Doc:** `../docs/architecture/decisions/ADR-007-EMAIL-PROVIDER.md`
 
 ```typescript
 interface IEmailProvider {

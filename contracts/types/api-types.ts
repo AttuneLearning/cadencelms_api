@@ -288,7 +288,7 @@ export interface CreateExamRequest {
 export interface CreateQuestionRequest {
   examId: string;
   questionText: string;
-  questionType: 'multiple-choice' | 'true-false' | 'short-answer' | 'essay' | 'matching';
+  questionTypes: ('multiple_choice' | 'multiple_select' | 'true_false' | 'short_answer' | 'long_answer' | 'matching' | 'flashcard' | 'fill_in_blank')[];
   points: number;
   options?: { text: string; isCorrect: boolean }[];
   correctAnswer?: string;

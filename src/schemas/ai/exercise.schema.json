@@ -39,7 +39,7 @@
         "properties": {
           "type": {
             "type": "string",
-            "enum": ["multiple_choice", "true_false", "essay", "short_answer", "fill_blank"]
+            "enum": ["multiple_choice", "true_false", "long_answer", "short_answer", "fill_blank"]
           },
           "questionText": {
             "type": "string",
@@ -173,7 +173,7 @@
         "shuffleQuestions": true,
         "questions": [
           {
-            "type": "essay",
+            "type": "long_answer",
             "questionText": "Explain the concept of object-oriented programming and provide examples of its key principles.",
             "points": 20,
             "sampleAnswer": "Object-oriented programming (OOP) is a programming paradigm based on the concept of objects. Key principles include: 1) Encapsulation - bundling data and methods that work on that data within one unit. 2) Inheritance - ability to create new classes based on existing ones. 3) Polymorphism - ability of objects to take on multiple forms. 4) Abstraction - hiding complex implementation details.",
@@ -243,7 +243,7 @@
             "hints": ["It's logarithmic"]
           },
           {
-            "type": "essay",
+            "type": "long_answer",
             "questionText": "Describe the differences between SQL and NoSQL databases. When would you use each?",
             "points": 20,
             "sampleAnswer": "SQL databases are relational, use structured schemas, and are ideal for complex queries and transactions. NoSQL databases are non-relational, schema-flexible, and excel at horizontal scaling and handling unstructured data. Use SQL for financial systems, e-commerce with complex relationships. Use NoSQL for real-time analytics, IoT data, or rapidly evolving data models."

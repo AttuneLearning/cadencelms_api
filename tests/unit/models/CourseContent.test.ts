@@ -72,13 +72,15 @@ describeIfMongo('CourseContent Model', () => {
       await expect(courseContent.save()).rejects.toThrow(/courseId/);
     });
 
-    it('should require contentId field', async () => {
-      const courseContent = new CourseContent({
+    it('should allow contentId to be optional', async () => {
+      const courseContent = await CourseContent.create({
         courseId: testCourse._id,
         sequence: 1
       });
 
-      await expect(courseContent.save()).rejects.toThrow(/contentId/);
+      expect(courseContent.courseId).toEqual(testCourse._id);
+      expect(courseContent.contentId).toBeUndefined();
+      expect(courseContent.sequence).toBe(1);
     });
 
     it('should require sequence field', async () => {

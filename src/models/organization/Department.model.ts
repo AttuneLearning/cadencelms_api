@@ -12,6 +12,7 @@ export interface IDepartment extends Document {
   isSystem: boolean;
   isVisible: boolean;
   requireExplicitMembership: boolean;
+  allowCourseDepthOverrides: boolean;
   metadata?: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;
@@ -71,6 +72,10 @@ const departmentSchema = new Schema<IDepartment>(
       default: true
     },
     requireExplicitMembership: {
+      type: Boolean,
+      default: false
+    },
+    allowCourseDepthOverrides: {
       type: Boolean,
       default: false
     },

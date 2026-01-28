@@ -2,8 +2,10 @@ import mongoose from 'mongoose';
 import ExamResult from '@/models/activity/ExamResult.model';
 import Exercise from '@/models/assessment/Exercise.model';
 import Question from '@/models/assessment/Question.model';
-import { User } from '@/models/auth/User.model';
+import { Learner } from '@/models/auth/Learner.model';
 import { Staff } from '@/models/auth/Staff.model';
+import { User } from '@/models/auth/User.model';
+import { getDisplayName, getPrimaryEmail } from '@/models/auth/Person.types';
 import { ApiError } from '@/utils/ApiError';
 
 /**
@@ -62,6 +64,18 @@ function shuffleArray<T>(array: T[]): T[] {
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
   return shuffled;
+}
+
+function getLearnerDisplayName(learner?: any): string {
+  return learner?.person ? getDisplayName(learner.person) : '';
+}
+
+function getLearnerContactEmail(learner?: any, user?: any): string {
+  if (user?.email) {
+    return user.email;
+  }
+  const primary = learner?.person ? getPrimaryEmail(learner.person) : undefined;
+  return primary?.email || '';
 }
 
 export class ExamAttemptsService {
@@ -133,8 +147,7 @@ export class ExamAttemptsService {
     // Execute query
     const [attempts, total] = await Promise.all([
       ExamResult.find(query)
-        .populate('examId', 'title type')
-        .populate('learnerId', 'firstName lastName email')
+        .populate('examId', 'title type timeLimit')
         .sort(sortObj)
         .skip(skip)
         .limit(limit)
@@ -142,10 +155,21 @@ export class ExamAttemptsService {
       ExamResult.countDocuments(query)
     ]);
 
+    const learnerIds = attempts
+      .map((attempt: any) => attempt.learnerId?.toString())
+      .filter((id: string | undefined): id is string => Boolean(id));
+
+    const learners = learnerIds.length > 0
+      ? await Learner.find({ _id: { $in: learnerIds } }, { person: 1 }).lean()
+      : [];
+
+    const learnerMap = new Map(learners.map(learner => [learner._id.toString(), learner]));
+
     // Format results
     const attemptsData = attempts.map((attempt: any) => {
       const exam = attempt.examId || {};
-      const learner = attempt.learnerId || {};
+      const learnerId = attempt.learnerId?.toString() || '';
+      const learner = learnerMap.get(learnerId);
 
       // Calculate remaining time if in progress
       let remainingTime: number | null = null;
@@ -161,8 +185,8 @@ export class ExamAttemptsService {
         id: attempt._id.toString(),
         examId: exam._id?.toString() || '',
         examTitle: exam.title || '',
-        learnerId: learner._id?.toString() || '',
-        learnerName: learner.person.firstName && learner.person.lastName ? `${learner.person.firstName} ${learner.person.lastName}` : '',
+        learnerId,
+        learnerName: getLearnerDisplayName(learner),
         attemptNumber: attempt.attemptNumber,
         status: attempt.status === 'in-progress' ? 'in_progress' : attempt.status,
         score: attempt.score || 0,
@@ -239,10 +263,13 @@ export class ExamAttemptsService {
       const question = questionMap.get(eq.questionId.toString());
       if (!question) return null;
 
+      // Select the first available question type for presentation
+      const presentationType = question.questionTypes?.[0] || 'multiple_choice';
+
       return {
         id: question._id.toString(),
         questionText: question.questionText,
-        questionType: question.questionType.replace('-', '_'), // Convert to contract format
+        questionType: presentationType.replace('-', '_'), // Convert to contract format
         order: index + 1,
         points: eq.points,
         options: question.options || [],
@@ -308,7 +335,6 @@ export class ExamAttemptsService {
 
     const attempt = await ExamResult.findById(attemptId)
       .populate('examId')
-      .populate('learnerId', 'firstName lastName email')
       .populate('gradedBy', 'firstName lastName')
       .lean();
 
@@ -318,7 +344,10 @@ export class ExamAttemptsService {
 
     // Check access permissions
     const user = await User.findById(userId).lean();
-    const isOwner = attempt.learnerId._id.toString() === userId;
+    const attemptLearnerId = (attempt.learnerId as any)?._id?.toString()
+      || attempt.learnerId?.toString()
+      || '';
+    const isOwner = attemptLearnerId === userId;
     const isStaff = user?.userTypes?.some((r: string) => ['global-admin', 'staff'].includes(r));
 
     if (!isOwner && !isStaff) {
@@ -326,7 +355,7 @@ export class ExamAttemptsService {
     }
 
     const exam = attempt.examId as any;
-    const learner = attempt.learnerId as any;
+    const learner = attemptLearnerId ? await Learner.findById(attemptLearnerId).lean() : null;
 
     // Get questions with details
     const questionOrder = attempt.metadata?.questionOrder || [];
@@ -349,10 +378,13 @@ export class ExamAttemptsService {
         correctAnswer = question.correctAnswer || question.correctAnswers?.[0] || null;
       }
 
+      // Select the first available question type for presentation
+      const presentationType = question.questionTypes?.[0] || 'multiple_choice';
+
       return {
         id: question._id.toString(),
         questionText: question.questionText,
-        questionType: question.questionType.replace('-', '_'),
+        questionType: presentationType.replace('-', '_'),
         order: index + 1,
         points: question.points,
         options: question.options || [],
@@ -388,8 +420,8 @@ export class ExamAttemptsService {
       examId: exam._id?.toString() || '',
       examTitle: exam.title || '',
       examType: exam.type || 'quiz',
-      learnerId: learner._id?.toString() || '',
-      learnerName: learner.person.firstName && learner.person.lastName ? `${learner.person.firstName} ${learner.person.lastName}` : '',
+      learnerId: attemptLearnerId,
+      learnerName: getLearnerDisplayName(learner),
       attemptNumber: attempt.attemptNumber,
       status: attempt.status === 'in-progress' ? 'in_progress' : attempt.status,
       score: attempt.score || 0,
@@ -559,8 +591,11 @@ export class ExamAttemptsService {
       const userAnswer = attempt.answers?.[qId];
       const points = (exerciseQ as any).points || 0;
 
+      // Get the presentation type (first available type) for grading logic
+      const presentationType = question.questionTypes?.[0] || 'multiple_choice';
+
       // Auto-grade based on question type
-      if (question.questionType === 'multiple-choice' || question.questionType === 'true-false') {
+      if (presentationType === 'multiple_choice' || presentationType === 'true_false') {
         const isCorrect = userAnswer === question.correctAnswer;
         const scoreEarned = isCorrect ? points : 0;
 
@@ -641,7 +676,6 @@ export class ExamAttemptsService {
 
     const attempt = await ExamResult.findById(attemptId)
       .populate('examId')
-      .populate('learnerId', 'firstName lastName')
       .populate('gradedBy', 'firstName lastName')
       .lean();
 
@@ -651,7 +685,10 @@ export class ExamAttemptsService {
 
     // Check access permissions
     const user = await User.findById(userId).lean();
-    const isOwner = attempt.learnerId._id.toString() === userId;
+    const attemptLearnerId = (attempt.learnerId as any)?._id?.toString()
+      || attempt.learnerId?.toString()
+      || '';
+    const isOwner = attemptLearnerId === userId;
     const isStaff = user?.userTypes?.some((r: string) => ['global-admin', 'staff'].includes(r));
 
     if (!isOwner && !isStaff) {
@@ -659,7 +696,7 @@ export class ExamAttemptsService {
     }
 
     const exam = attempt.examId as any;
-    const learner = attempt.learnerId as any;
+    const learner = attemptLearnerId ? await Learner.findById(attemptLearnerId).lean() : null;
 
     // Only available for graded attempts
     if (attempt.status !== 'graded') {
@@ -690,11 +727,14 @@ export class ExamAttemptsService {
         ? (question.correctAnswer || question.correctAnswers?.[0] || null)
         : null;
 
+      // Select the first available question type for presentation
+      const presentationType = question.questionTypes?.[0] || 'multiple_choice';
+
       return {
         questionId: question._id.toString(),
         questionNumber: index + 1,
         questionText: question.questionText,
-        questionType: question.questionType.replace('-', '_'),
+        questionType: presentationType.replace('-', '_'),
         points: scoreData.maxPoints || question.points,
         scoreEarned: scoreData.scoreEarned || 0,
         userAnswer,
@@ -728,7 +768,7 @@ export class ExamAttemptsService {
     return {
       attemptId: attempt._id.toString(),
       examTitle: exam.title,
-      learnerName: learner.person.firstName && learner.person.lastName ? `${learner.person.firstName} ${learner.person.lastName}` : '',
+      learnerName: getLearnerDisplayName(learner),
       attemptNumber: attempt.attemptNumber,
       status: 'graded',
       score: attempt.score || 0,
@@ -926,13 +966,26 @@ export class ExamAttemptsService {
     // Execute query
     const [attempts, total] = await Promise.all([
       ExamResult.find(query)
-        .populate('learnerId', 'firstName lastName email')
         .sort(sortObj)
         .skip(skip)
         .limit(limit)
         .lean(),
       ExamResult.countDocuments(query)
     ]);
+
+    const learnerIds = attempts
+      .map((attempt: any) => attempt.learnerId?.toString())
+      .filter((id: string | undefined): id is string => Boolean(id));
+
+    const [learners, users] = learnerIds.length > 0
+      ? await Promise.all([
+        Learner.find({ _id: { $in: learnerIds } }, { person: 1 }).lean(),
+        User.find({ _id: { $in: learnerIds } }, { email: 1 }).lean()
+      ])
+      : [[], []];
+
+    const learnerMap = new Map(learners.map(learner => [learner._id.toString(), learner]));
+    const userMap = new Map(users.map(user => [user._id.toString(), user]));
 
     // Calculate statistics from completed attempts
     const completedAttempts = await ExamResult.find({
@@ -962,14 +1015,16 @@ export class ExamAttemptsService {
 
     // Format attempts
     const attemptsData = attempts.map((attempt: any) => {
-      const learner = attempt.learnerId || {};
+      const learnerId = attempt.learnerId?.toString() || '';
+      const learner = learnerMap.get(learnerId);
+      const learnerUser = userMap.get(learnerId);
       const requiresGrading = attempt.status === 'submitted';
 
       return {
         id: attempt._id.toString(),
-        learnerId: learner._id?.toString() || '',
-        learnerName: learner.person.firstName && learner.person.lastName ? `${learner.person.firstName} ${learner.person.lastName}` : '',
-        learnerEmail: learner.email || '',
+        learnerId,
+        learnerName: getLearnerDisplayName(learner),
+        learnerEmail: getLearnerContactEmail(learner, learnerUser),
         attemptNumber: attempt.attemptNumber,
         status: attempt.status === 'in-progress' ? 'in_progress' : attempt.status,
         score: attempt.score || 0,

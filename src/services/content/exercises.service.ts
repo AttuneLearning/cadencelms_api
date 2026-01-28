@@ -49,7 +49,7 @@ interface UpdateExerciseInput {
 interface AddQuestionInput {
   questionId?: string;
   questionText?: string;
-  questionType?: 'multiple-choice' | 'true-false' | 'short-answer' | 'essay' | 'matching';
+  questionTypes?: ('multiple_choice' | 'true-false' | 'short-answer' | 'essay' | 'matching')[];
   options?: string[];
   correctAnswer?: string | string[];
   points?: number;
@@ -418,10 +418,13 @@ export class ExercisesService {
       const question = questionMap.get(exerciseQuestion.questionId.toString());
       if (!question) return null;
 
+      // For presentation context, use first type from questionTypes array
+      const presentationType = question.questionTypes?.[0] || 'multiple_choice';
+
       const questionData: any = {
         id: question._id.toString(),
         questionText: question.questionText,
-        questionType: question.questionType,
+        questionType: presentationType,
         order: exerciseQuestion.order,
         points: exerciseQuestion.points,
         difficulty: question.difficulty || 'medium',
@@ -430,7 +433,7 @@ export class ExercisesService {
       };
 
       // Include options for multiple-choice and matching
-      if (question.questionType === 'multiple-choice' || question.questionType === 'matching') {
+      if (presentationType === 'multiple_choice' || presentationType === 'matching') {
         questionData.options = question.options || [];
       }
 
@@ -506,12 +509,15 @@ export class ExercisesService {
       }
     } else {
       // Mode 2: Create new question
-      if (!questionData.questionText || !questionData.questionType) {
-        throw ApiError.badRequest('questionText and questionType are required when creating new question');
+      if (!questionData.questionText || !questionData.questionTypes || questionData.questionTypes.length === 0) {
+        throw ApiError.badRequest('questionText and questionTypes are required when creating new question');
       }
 
-      // Validate question type specific requirements
-      if (questionData.questionType === 'multiple-choice' || questionData.questionType === 'matching') {
+      // Validate question type specific requirements (check if any type requires options)
+      const requiresOptions = questionData.questionTypes.some(
+        (t) => t === 'multiple_choice' || t === 'matching'
+      );
+      if (requiresOptions) {
         if (!questionData.options || questionData.options.length < 2 || questionData.options.length > 10) {
           throw ApiError.badRequest('Multiple choice questions must have 2-10 options');
         }
@@ -520,7 +526,7 @@ export class ExercisesService {
       // Create new question
       question = new Question({
         questionText: questionData.questionText,
-        questionType: questionData.questionType,
+        questionTypes: questionData.questionTypes,
         departmentId: departmentId,
         points: questionData.points || 10,
         options: questionData.options,
@@ -556,11 +562,11 @@ export class ExercisesService {
 
     await exercise.save();
 
-    // Build response
+    // Build response - return full questionTypes array for edit context
     const questionResponse: any = {
       id: question._id.toString(),
       questionText: question.questionText,
-      questionType: question.questionType,
+      questionTypes: question.questionTypes || [],
       order,
       points,
       difficulty: question.difficulty || 'medium',
@@ -649,13 +655,13 @@ export class ExercisesService {
             throw new Error('Question not found');
           }
         } else {
-          if (!questionData.questionText || !questionData.questionType) {
-            throw new Error('questionText and questionType are required');
+          if (!questionData.questionText || !questionData.questionTypes || questionData.questionTypes.length === 0) {
+            throw new Error('questionText and questionTypes are required');
           }
 
           question = new Question({
             questionText: questionData.questionText,
-            questionType: questionData.questionType,
+            questionTypes: questionData.questionTypes,
             departmentId: departmentId,
             points: questionData.points || 10,
             options: questionData.options,

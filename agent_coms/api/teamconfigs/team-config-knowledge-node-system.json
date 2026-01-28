@@ -1,0 +1,161 @@
+{
+  "team": {
+    "name": "API Team - Knowledge Node System",
+    "version": "1.0.0",
+    "description": "Adaptive learning foundation with cognitive depth levels and knowledge nodes",
+    "created": "2026-01-24"
+  },
+  "reference": {
+    "guidance": "./agent_coms/dev_guidance/FEATURE_DEVELOPMENT_CHECKLIST.md",
+    "spec": "agent_coms/api/specs/LEARNER_ACTIVITY_KNOWLEDGE_NODE_SPEC.md",
+    "implementationPlan": "agent_coms/api/specs/LEARNER_ACTIVITY_KNOWLEDGE_NODE_IMPLEMENTATION_PLAN.md",
+    "contracts": [
+      "contracts/api/cognitive-depth-levels.contract.ts",
+      "contracts/api/knowledge-nodes.contract.ts",
+      "contracts/api/questions.contract.ts"
+    ]
+  },
+  "currentPhase": {
+    "phase": 1,
+    "name": "Foundation",
+    "goal": "Establish cognitive depth level system as foundation for adaptive learning",
+    "deliverables": [
+      "CognitiveDepthLevel.model.ts",
+      "cognitive-depth-levels.service.ts",
+      "cognitive-depth-level.validator.ts",
+      "seed-cognitive-depth-levels.ts (DONE)",
+      "Unit tests for service"
+    ]
+  },
+  "agents": {
+    "qaArchitect": {
+      "id": "agent-qa-architect",
+      "model": "opus-4.5",
+      "role": "QA/Architect/Gate",
+      "responsibilities": [
+        "Review all code before completion",
+        "Enforce coding standards",
+        "Validate phase gate criteria",
+        "Ensure contracts match implementation"
+      ],
+      "gateApproval": {
+        "required": true,
+        "criteria": [
+          "Code compiles without errors (npx tsc --noEmit)",
+          "Tests pass",
+          "Follows project conventions",
+          "Contracts match implementation"
+        ]
+      }
+    },
+    "developers": [
+      {
+        "id": "agent-model-cognitive-depth",
+        "model": "sonnet",
+        "role": "CognitiveDepthLevel Model",
+        "task": "Create CognitiveDepthLevel.model.ts with schema and indexes",
+        "workingDirectory": "src/models/content/",
+        "contextFiles": [
+          "contracts/api/cognitive-depth-levels.contract.ts",
+          "scripts/seed-cognitive-depth-levels.ts",
+          "src/models/assessment/Question.model.ts"
+        ],
+        "requirements": [
+          "departmentId (nullable for system defaults)",
+          "slug, name, description",
+          "order (for progression sequence)",
+          "advanceThreshold, minAttempts",
+          "isActive, isDefault flags",
+          "Compound unique index: { slug: 1, departmentId: 1 }",
+          "Export interface ICognitiveDepthLevel"
+        ]
+      },
+      {
+        "id": "agent-service-cognitive-depth",
+        "model": "sonnet",
+        "role": "CognitiveDepthLevels Service",
+        "task": "Create cognitive-depth-levels.service.ts with CRUD and resolution logic",
+        "workingDirectory": "src/services/content/",
+        "contextFiles": [
+          "contracts/api/cognitive-depth-levels.contract.ts",
+          "src/services/content/questions.service.ts"
+        ],
+        "requirements": [
+          "create(departmentId, data) - create department level",
+          "update(departmentId, slug, data) - update department level",
+          "delete(departmentId, slug) - delete/revert to default",
+          "getForDepartment(departmentId) - merged list with defaults",
+          "resolveLevel(slug, departmentId) - get effective level",
+          "validateSlug(slug, departmentId) - check slug exists",
+          "getNextLevel(currentSlug, departmentId) - progression helper",
+          "getSystemDefaults() - list system defaults"
+        ]
+      },
+      {
+        "id": "agent-validator-cognitive-depth",
+        "model": "sonnet",
+        "role": "CognitiveDepthLevel Validator",
+        "task": "Create cognitive-depth-level.validator.ts with Joi schemas",
+        "workingDirectory": "src/validators/",
+        "contextFiles": [
+          "contracts/api/cognitive-depth-levels.contract.ts",
+          "src/validators/department-question.validator.ts"
+        ],
+        "requirements": [
+          "createSchema - validate create request",
+          "updateSchema - validate update request (partial)",
+          "Slug pattern: ^[a-z0-9-]+$",
+          "advanceThreshold: 0.0-1.0",
+          "minAttempts: 1-100",
+          "order: positive number"
+        ]
+      }
+    ]
+  },
+  "sharedContext": {
+    "terminology": {
+      "CognitiveDepthLevel": "Configurable learning progression level (exposure -> mastery)",
+      "System Default": "Level with departmentId: null, isDefault: true",
+      "Department Override": "Department-specific level that overrides system default",
+      "Level Resolution": "Department level first, fallback to system default"
+    },
+    "conventions": {
+      "naming": {
+        "models": "PascalCase.model.ts",
+        "services": "kebab-case.service.ts",
+        "validators": "kebab-case.validator.ts"
+      },
+      "commits": "feat(adaptive): <description>",
+      "coAuthor": "Co-Authored-By: Claude <noreply@anthropic.com>"
+    },
+    "defaultLevels": [
+      { "slug": "exposure", "order": 1, "advanceThreshold": 0.70, "minAttempts": 2 },
+      { "slug": "practice", "order": 2, "advanceThreshold": 0.80, "minAttempts": 3 },
+      { "slug": "proficiency", "order": 3, "advanceThreshold": 0.85, "minAttempts": 4 },
+      { "slug": "mastery", "order": 4, "advanceThreshold": 0.90, "minAttempts": 5 }
+    ]
+  },
+  "phaseGate": {
+    "phase1": {
+      "name": "Foundation Complete",
+      "criteria": [
+        "CognitiveDepthLevel model compiles",
+        "Service methods implemented",
+        "Validator schemas complete",
+        "Seed script seeds default levels",
+        "npx tsc --noEmit passes"
+      ],
+      "onPass": {
+        "commit": "feat(adaptive): complete phase 1 - Cognitive Depth Levels foundation"
+      }
+    }
+  },
+  "executionOrder": [
+    "1. Create CognitiveDepthLevel.model.ts",
+    "2. Create cognitive-depth-levels.service.ts",
+    "3. Create cognitive-depth-level.validator.ts",
+    "4. Verify seed script works with model",
+    "5. Run npx tsc --noEmit",
+    "6. QA review"
+  ]
+}

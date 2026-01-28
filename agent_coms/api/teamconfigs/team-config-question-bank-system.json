@@ -1,0 +1,230 @@
+{
+  "team": {
+    "name": "API Team - Question Bank System",
+    "version": "1.0.0",
+    "description": "Department-scoped Question Bank system with Learning Unit linking and adaptive testing",
+    "created": "2026-01-23"
+  },
+  "reference": {
+    "guidance": "./agent_coms/dev_guidance/FEATURE_DEVELOPMENT_CHECKLIST.md",
+    "implementationPlan": "agent_coms/api/specs/Question_Bank_System_Implementation.md",
+    "contracts": [
+      "contracts/api/question-banks.contract.ts",
+      "contracts/api/learning-unit-questions.contract.ts"
+    ],
+    "uiRequests": [
+      "agent_coms/messages/2026-01-23_ui_question_bank_api_proposal.md",
+      "agent_coms/messages/2026-01-23_ui_question_bank_implementation_timeline.md"
+    ],
+    "issueTracking": "agent_coms/api/issue_queue/API-ISS-008_question_bank_system.md"
+  },
+  "agents": {
+    "qaArchitect": {
+      "id": "agent-qa-architect",
+      "model": "opus-4.5",
+      "role": "QA/Architect/Gate",
+      "description": "Reviews all code, enforces architecture decisions, approves phase gates",
+      "responsibilities": [
+        "Review all PRs before merge",
+        "Enforce coding standards from FEATURE_DEVELOPMENT_CHECKLIST.md",
+        "Validate phase gate criteria met",
+        "Resolve architectural decisions",
+        "Approve contract exports to UI team",
+        "Ensure hierarchy validation prevents circular dependencies"
+      ],
+      "gateApproval": {
+        "required": true,
+        "criteria": [
+          "Code compiles without errors",
+          "Tests pass with >80% coverage",
+          "No TypeScript errors (npx tsc --noEmit)",
+          "Follows project conventions",
+          "Contracts match implementation"
+        ]
+      }
+    },
+    "developers": [
+      {
+        "id": "agent-models-question",
+        "model": "sonnet-4.5",
+        "role": "Question Model Specialist",
+        "description": "Extends Question model with new types and hierarchy",
+        "phaseAssignments": {
+          "phase1": ["1.1 - Extend Question.model.ts"]
+        },
+        "workingDirectories": ["src/models/assessment/"],
+        "contextFiles": [
+          "src/models/assessment/Question.model.ts",
+          "contracts/api/question-banks.contract.ts"
+        ]
+      },
+      {
+        "id": "agent-models-bank",
+        "model": "sonnet-4.5",
+        "role": "QuestionBank Model Specialist",
+        "description": "Updates QuestionBank with virtuals",
+        "phaseAssignments": {
+          "phase1": ["1.2 - Update QuestionBank.model.ts"]
+        },
+        "workingDirectories": ["src/models/assessment/"],
+        "contextFiles": ["src/models/assessment/QuestionBank.model.ts"]
+      },
+      {
+        "id": "agent-models-luq",
+        "model": "sonnet-4.5",
+        "role": "LearningUnitQuestion Model Specialist",
+        "description": "Creates link model for Question-to-LearningUnit",
+        "phaseAssignments": {
+          "phase1": ["1.3 - Create LearningUnitQuestion.model.ts"]
+        },
+        "workingDirectories": ["src/models/content/"],
+        "contextFiles": ["src/models/content/LearningUnit.model.ts"]
+      },
+      {
+        "id": "agent-models-progress",
+        "model": "sonnet-4.5",
+        "role": "Progress Model Specialist",
+        "description": "Creates learner question progress tracking model",
+        "phaseAssignments": {
+          "phase1": ["1.4 - Create LearnerQuestionProgress.model.ts"]
+        },
+        "workingDirectories": ["src/models/progress/"],
+        "contextFiles": ["src/models/progress/ContentProgress.model.ts"]
+      },
+      {
+        "id": "agent-settings-seed",
+        "model": "sonnet-4.5",
+        "role": "Settings Seed Specialist",
+        "description": "Creates question settings seed script",
+        "phaseAssignments": {
+          "phase1": ["1.5 - Create seed-question-settings.ts"]
+        },
+        "workingDirectories": ["scripts/"],
+        "contextFiles": ["scripts/seed-admin.ts"]
+      }
+    ]
+  },
+  "sharedContext": {
+    "projectStructure": {
+      "models": "src/models/ - Mongoose schemas (academic/, assessment/, content/, progress/)",
+      "services": "src/services/ - Business logic layer",
+      "controllers": "src/controllers/ - Express route handlers",
+      "routes": "src/routes/ - Express router definitions",
+      "validators": "src/validators/ - Joi validation schemas",
+      "contracts": "contracts/api/ - API contracts for UI team",
+      "seeds": "scripts/ - Database seed scripts"
+    },
+    "terminology": {
+      "QuestionBank": "Named collection of questions within a department",
+      "Question": "Single question with type-specific answer config",
+      "LearningUnitQuestion": "Link between Question and LearningUnit",
+      "LearnerQuestionProgress": "Per-learner tracking of question mastery",
+      "Hierarchy": "Parent/related/prerequisite relationships for adaptive testing"
+    },
+    "conventions": {
+      "naming": {
+        "models": "PascalCase.model.ts",
+        "services": "kebab-case.service.ts",
+        "controllers": "kebab-case.controller.ts",
+        "validators": "kebab-case.validator.ts"
+      },
+      "questionTypes": {
+        "format": "snake_case",
+        "values": ["multiple_choice", "multiple_select", "true_false", "short_answer", "long_answer", "matching", "flashcard", "fill_in_blank"]
+      },
+      "commits": "feat(question-bank): <description>",
+      "coAuthor": "Co-Authored-By: Claude <noreply@anthropic.com>"
+    },
+    "designPrinciples": {
+      "noBackwardsCompatibility": "Nothing in production, always ideal API design",
+      "departmentScoped": "All questions/banks scoped to departments",
+      "noCascadeDelete": "Return error with dependency list",
+      "hierarchyValidation": "Prevent circular dependencies",
+      "adminSettings": "Configurable defaults via database settings"
+    }
+  },
+  "adminSettings": {
+    "category": "question",
+    "defaults": {
+      "matchThreshold": { "default": 80, "min": 50, "max": 100 },
+      "bulkOperations": { "maxItems": 500, "maxBanksPerCopy": 10 }
+    }
+  },
+  "phaseGates": {
+    "phase1": {
+      "name": "Models Complete",
+      "approver": "agent-qa-architect",
+      "criteria": [
+        "All model schemas compile",
+        "Unit tests pass",
+        "Indexes created",
+        "TypeScript types exported",
+        "Hierarchy validation prevents circular dependencies"
+      ],
+      "requiredChecks": [
+        "npx tsc --noEmit"
+      ],
+      "onPass": {
+        "commit": "feat(question-bank): complete phase 1 - Models",
+        "notify": "QA/Architect for approval"
+      }
+    },
+    "phase2": {
+      "name": "Services Complete",
+      "approver": "agent-qa-architect",
+      "criteria": [
+        "All service methods implemented",
+        "Unit tests >80% coverage",
+        "No circular dependencies"
+      ],
+      "requiredChecks": [
+        "npm test -- --testPathPattern=services",
+        "npx tsc --noEmit"
+      ]
+    },
+    "phase3": {
+      "name": "API Layer Complete",
+      "isMilestone": true,
+      "milestoneName": "Priority 1 - UI Unblocked",
+      "approver": "agent-qa-architect",
+      "criteria": [
+        "All P1 endpoints functional",
+        "Integration tests pass",
+        "Old question routes removed"
+      ],
+      "requiredChecks": [
+        "npm run build",
+        "npm test",
+        "npx tsc --noEmit"
+      ],
+      "onPass": {
+        "tag": "question-bank-phase3-api-complete",
+        "notifyUITeam": true
+      }
+    }
+  },
+  "workflowRules": {
+    "commitFormat": "feat(question-bank): <description>",
+    "minTestCoverage": 80,
+    "modelsFirst": true,
+    "lazyTDD": true,
+    "phaseSequencing": "Agents work in parallel within phases, QA gate blocks next phase"
+  },
+  "parallelExecutionPlan": {
+    "wave1": {
+      "description": "Foundation - Models (Phase 1)",
+      "agents": ["agent-models-question", "agent-models-bank", "agent-models-luq", "agent-models-progress", "agent-settings-seed"],
+      "canRunParallel": true
+    },
+    "wave2": {
+      "description": "Business Logic (Phase 2)",
+      "agents": ["agent-services-1", "agent-services-2", "agent-services-3", "agent-services-4"],
+      "blockedBy": "wave1"
+    },
+    "wave3": {
+      "description": "API Layer (Phase 3)",
+      "agents": ["agent-controllers-1", "agent-controllers-2", "agent-controllers-3"],
+      "blockedBy": "wave2"
+    }
+  }
+}

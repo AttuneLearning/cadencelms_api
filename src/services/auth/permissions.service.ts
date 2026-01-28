@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import Role from '@/models/system/Role.model';
-import Permission from '@/models/system/Permission.model';
+import { AccessRight } from '@/models/AccessRight.model';
 import { User } from '@/models/auth/User.model';
 import { Staff } from '@/models/auth/Staff.model';
 import Department from '@/models/organization/Department.model';
@@ -8,99 +8,153 @@ import { ApiError } from '@/utils/ApiError';
 
 /**
  * Built-in role definitions with their permission sets
+ * Uses 3-part format: domain:resource:action
+ * Aligned with RoleDefinition model and seed-role-definitions.ts
  */
-const BUILT_IN_ROLES = {
+const BUILT_IN_ROLES: Record<string, { level: number; description: string; permissions: string[] }> = {
   'system-admin': {
     level: 100,
     description: 'Full system administrator with unrestricted access',
     permissions: [
-      'users:read', 'users:write', 'users:delete', 'users:manage',
-      'courses:read', 'courses:write', 'courses:delete', 'courses:manage',
-      'content:read', 'content:write', 'content:delete', 'content:manage',
-      'enrollments:read', 'enrollments:write', 'enrollments:delete', 'enrollments:manage',
-      'assessments:read', 'assessments:write', 'assessments:delete', 'assessments:manage',
-      'reports:read', 'reports:write', 'reports:manage',
-      'settings:read', 'settings:write', 'settings:manage',
-      'system:read', 'system:write', 'system:manage',
-      'permissions:read', 'permissions:write', 'permissions:delete'
+      'system:*',      // Wildcard - grants all permissions
+      'content:*',
+      'enrollment:*',
+      'staff:*',
+      'learner:*',
+      'reports:*',
+      'billing:*',
+      'audit:*'
     ]
   },
   'financial-admin': {
     level: 95,
     description: 'Financial administrator with full revenue configuration access',
     permissions: [
-      'users:read',
-      'courses:read',
-      'enrollments:read',
-      'reports:read', 'reports:write', 'reports:manage',
-      'revenue:read', 'revenue:write', 'revenue:manage',
-      'payouts:read', 'payouts:write', 'payouts:manage',
-      'settings:read', 'settings:write'
+      'billing:system:manage',
+      'billing:policies:manage',
+      'billing:reports:read',
+      'billing:refunds:manage',
+      'reports:financial:read',
+      'reports:financial:export'
     ]
   },
   'department-admin': {
     level: 80,
     description: 'Department administrator with department-scoped permissions',
     permissions: [
-      'users:read', 'users:write',
-      'courses:read', 'courses:write', 'courses:manage',
-      'content:read', 'content:write', 'content:manage',
-      'enrollments:read', 'enrollments:write', 'enrollments:manage',
-      'assessments:read', 'assessments:write',
-      'grades:override',
-      'reports:read', 'reports:write'
+      'content:courses:manage',
+      'content:programs:manage',
+      'content:lessons:manage',
+      'content:exams:manage',
+      'content:scorm:manage',
+      'content:courses:read',
+      'content:classes:manage',
+      'content:lessons:read',
+      'content:classes:read',
+      'content:classes:manage-own',
+      'staff:department:manage',
+      'learner:department:manage',
+      'learner:department:read',
+      'enrollment:department:manage',
+      'enrollment:department:read',
+      'reports:content:read',
+      'reports:department:read',
+      'reports:department:export',
+      'reports:class:read',
+      'reports:class:export',
+      'settings:department:manage',
+      'grades:department:read',
+      'grades:own-classes:manage'
     ]
   },
   'content-admin': {
     level: 70,
     description: 'Content library administrator',
     permissions: [
-      'content:read', 'content:write', 'content:delete', 'content:manage',
-      'courses:read', 'courses:write',
-      'reports:read'
+      'content:courses:manage',
+      'content:programs:manage',
+      'content:lessons:manage',
+      'content:exams:manage',
+      'content:scorm:manage',
+      'reports:content:read',
+      'analytics:courses:read',
+      'analytics:courses:export'
     ]
   },
   'instructor': {
     level: 60,
     description: 'Course instructor with teaching and grading capabilities',
     permissions: [
-      'users:read',
-      'courses:read', 'courses:write',
-      'content:read', 'content:write',
-      'enrollments:read', 'enrollments:write',
-      'assessments:read', 'assessments:write',
-      'reports:read'
+      'content:courses:read',
+      'content:lessons:read',
+      'content:classes:read',
+      'content:classes:manage-own',
+      'enrollment:department:read',
+      'learner:department:read',
+      'reports:class:read',
+      'reports:class:export',
+      'grades:department:read',
+      'grades:own-classes:manage'
     ]
   },
   'billing-admin': {
     level: 50,
     description: 'Billing and payment administrator',
     permissions: [
-      'users:read',
-      'courses:read',
-      'enrollments:read',
-      'reports:read', 'reports:write',
-      'revenue:read'
+      'billing:department:read',
+      'billing:department:manage',
+      'billing:invoices:manage',
+      'billing:payments:read',
+      'reports:billing-department:read'
     ]
   },
   'enrollment-admin': {
     level: 55,
     description: 'Enrollment and registration administrator',
     permissions: [
-      'users:read',
-      'courses:read',
-      'enrollments:read', 'enrollments:write', 'enrollments:manage',
-      'reports:read'
+      'enrollment:system:manage',
+      'enrollment:bulk:manage',
+      'enrollment:policies:manage',
+      'reports:enrollment:read'
     ]
   },
-  'learner': {
+  'course-taker': {
     level: 10,
-    description: 'Standard learner account',
+    description: 'Standard learner who enrolls in and completes courses',
     permissions: [
-      'courses:read',
-      'content:read',
-      'enrollments:read',
-      'assessments:read'
+      'content:courses:read',
+      'content:lessons:read',
+      'content:exams:attempt',
+      'enrollment:own:read',
+      'enrollment:own:update',
+      'learner:profile:read',
+      'learner:profile:update',
+      'learner:progress:read',
+      'learner:certificates:read',
+      'learner:certificates:download'
+    ]
+  },
+  'auditor': {
+    level: 10,
+    description: 'View-only access, cannot earn credit or complete exams',
+    permissions: [
+      'content:courses:read',
+      'content:lessons:read',
+      'learner:profile:read'
+    ]
+  },
+  'learner-supervisor': {
+    level: 15,
+    description: 'Elevated permissions for TAs, peer mentors, and learning assistants',
+    permissions: [
+      'content:courses:read',
+      'content:lessons:read',
+      'content:exams:attempt',
+      'enrollment:own:read',
+      'enrollment:department:read',
+      'learner:profile:read',
+      'learner:department:read',
+      'reports:department-progress:read'
     ]
   }
 };
@@ -141,41 +195,48 @@ interface CheckPermissionInput {
 
 export class PermissionsService {
   /**
-   * List all available permissions
+   * List all available permissions (access rights)
    * GET /api/v2/permissions
+   *
+   * Returns access rights in 3-part format: domain:resource:action
    */
   static async listPermissions(filters: ListPermissionsFilters): Promise<any> {
     const query: any = { isActive: true };
 
-    // Filter by category if provided
+    // Filter by category/domain if provided
     if (filters.category) {
-      query.group = filters.category;
+      query.domain = filters.category;
     }
 
-    // Get all permissions
-    const permissions = await Permission.find(query).sort({ group: 1, resource: 1, action: 1 });
+    // Get all access rights from AccessRight collection
+    const accessRights = await AccessRight.find(query).sort({ domain: 1, resource: 1, action: 1 });
 
-    // Format permissions with consistent structure
-    const formattedPermissions = permissions.map((perm) => ({
-      id: perm._id.toString(),
-      name: perm.name,
-      description: perm.description || '',
-      category: perm.group || 'system',
-      level: perm.action,
-      key: `${perm.resource}:${perm.action}`,
-      isSystemPermission: perm.isSystemPermission
+    // Format permissions with consistent structure using 3-part format
+    const formattedPermissions = accessRights.map((right) => ({
+      id: right._id.toString(),
+      name: right.name,  // Already in format: domain:resource:action
+      description: right.description || '',
+      category: right.domain,
+      level: right.action,
+      key: right.name,  // 3-part format: domain:resource:action
+      isSystemPermission: true,
+      isSensitive: right.isSensitive,
+      sensitiveCategory: right.sensitiveCategory
     }));
 
-    // Group permissions by category
-    const categorized: any = {
-      users: [],
-      courses: [],
+    // Group permissions by domain (category)
+    const categorized: Record<string, any[]> = {
       content: [],
-      enrollments: [],
-      assessments: [],
+      enrollment: [],
+      staff: [],
+      learner: [],
       reports: [],
       settings: [],
-      system: []
+      system: [],
+      billing: [],
+      audit: [],
+      grades: [],
+      analytics: []
     };
 
     formattedPermissions.forEach((perm) => {
@@ -301,18 +362,23 @@ export class PermissionsService {
     const ownPermissions = role.permissions;
     const effectivePermissions = [...new Set([...ownPermissions, ...inheritedPermissions])];
 
-    // Get detailed permission information
+    // Get detailed permission information using 3-part format
     const permissionDetails = await Promise.all(
       effectivePermissions.map(async (permKey) => {
-        const [resource, action] = permKey.split(':');
-        const perm = await Permission.findOne({ resource, action });
+        // Handle 3-part format: domain:resource:action
+        const parts = permKey.split(':');
+        const domain = parts[0];
+        const action = parts.length > 2 ? parts[2] : parts[1];
+
+        // Look up in AccessRight collection (3-part format)
+        const accessRight = await AccessRight.findOne({ name: permKey });
 
         return {
-          id: perm?._id.toString() || permKey,
+          id: accessRight?._id.toString() || permKey,
           key: permKey,
-          name: perm?.name || permKey,
-          description: perm?.description || '',
-          category: perm?.group || resource,
+          name: accessRight?.name || permKey,
+          description: accessRight?.description || '',
+          category: accessRight?.domain || domain,
           level: action,
           inherited: !ownPermissions.includes(permKey)
         };
@@ -417,13 +483,22 @@ export class PermissionsService {
       }
     }
 
-    // Validate all permissions exist
+    // Validate all permissions exist using 3-part format
     const permissionKeys = roleData.permissions;
+    const permissionPattern = /^[a-z]+:[a-z-]+:[a-z-]+$|^[a-z]+:\*$/;
+
     for (const key of permissionKeys) {
-      const [resource, action] = key.split(':');
-      const perm = await Permission.findOne({ resource, action });
-      if (!perm) {
-        throw ApiError.badRequest(`Invalid permission: ${key}`);
+      // Validate format
+      if (!permissionPattern.test(key)) {
+        throw ApiError.badRequest(`Invalid permission format: ${key}. Must be domain:resource:action or domain:*`);
+      }
+
+      // Check if permission exists in AccessRight collection (unless it's a wildcard)
+      if (!key.endsWith(':*')) {
+        const accessRight = await AccessRight.findOne({ name: key });
+        if (!accessRight) {
+          throw ApiError.badRequest(`Invalid permission: ${key}. Permission does not exist.`);
+        }
       }
     }
 
@@ -493,12 +568,21 @@ export class PermissionsService {
 
     // Update permissions if provided
     if (updateData.permissions !== undefined) {
-      // Validate all permissions exist
+      // Validate all permissions exist using 3-part format
+      const permissionPattern = /^[a-z]+:[a-z-]+:[a-z-]+$|^[a-z]+:\*$/;
+
       for (const key of updateData.permissions) {
-        const [resource, action] = key.split(':');
-        const perm = await Permission.findOne({ resource, action });
-        if (!perm) {
-          throw ApiError.badRequest(`Invalid permission: ${key}`);
+        // Validate format
+        if (!permissionPattern.test(key)) {
+          throw ApiError.badRequest(`Invalid permission format: ${key}. Must be domain:resource:action or domain:*`);
+        }
+
+        // Check if permission exists in AccessRight collection (unless it's a wildcard)
+        if (!key.endsWith(':*')) {
+          const accessRight = await AccessRight.findOne({ name: key });
+          if (!accessRight) {
+            throw ApiError.badRequest(`Invalid permission: ${key}. Permission does not exist.`);
+          }
         }
       }
       role.permissions = updateData.permissions;
@@ -666,22 +750,27 @@ export class PermissionsService {
       });
     }
 
-    // Categorize permissions
-    const byCategory: any = {
-      users: [],
-      courses: [],
+    // Categorize permissions by domain (first part of 3-part format)
+    const byDomain: Record<string, string[]> = {
       content: [],
-      enrollments: [],
-      assessments: [],
+      enrollment: [],
+      staff: [],
+      learner: [],
       reports: [],
       settings: [],
-      system: []
+      system: [],
+      billing: [],
+      audit: [],
+      grades: [],
+      analytics: []
     };
 
     Array.from(allPermissions).forEach((perm) => {
-      const [category] = perm.split(':');
-      if (byCategory[category]) {
-        byCategory[category].push(perm);
+      const [domain] = perm.split(':');
+      if (byDomain[domain]) {
+        byDomain[domain].push(perm);
+      } else {
+        byDomain[domain] = [perm];
       }
     });
 
@@ -711,7 +800,7 @@ export class PermissionsService {
       roles: roleDetails,
       permissions: {
         all: Array.from(allPermissions),
-        byCategory,
+        byDomain,
         byRole: permissionsByRole
       },
       departments,

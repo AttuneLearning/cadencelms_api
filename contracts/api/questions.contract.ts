@@ -1,11 +1,19 @@
 /**
  * Questions API Contracts
- * Version: 1.0.0
+ * Version: 1.1.0
  *
  * These contracts define the question bank management endpoints for the LMS API.
  * Both backend and UI teams use these as the source of truth.
  *
  * Phase 3: Content & Templates (High Priority)
+ *
+ * v1.1.0 Changes:
+ * - Added optional knowledgeNodeId for adaptive learning (links question to knowledge concept)
+ * - Added optional cognitiveDepth for adaptive learning (validated against cognitive depth levels)
+ * - These fields enable future adaptive question selection but are NOT required
+ * - Current question bank functionality works without these fields
+ *
+ * Related: LEARNER_ACTIVITY_KNOWLEDGE_NODE_SPEC.md, cognitive-depth-levels.contract.ts
  */
 
 export const QuestionsContracts = {
@@ -38,11 +46,11 @@ export const QuestionsContracts = {
           max: 100,
           description: 'Number of items per page'
         },
-        questionType: {
-          type: 'string',
+        questionTypes: {
+          type: 'string[]',
           required: false,
-          enum: ['multiple_choice', 'true_false', 'short_answer', 'essay', 'fill_blank'],
-          description: 'Filter by question type (can be comma-separated for multiple types)'
+          enum: ['multiple_choice', 'multiple_select', 'true_false', 'short_answer', 'long_answer', 'matching', 'flashcard', 'fill_in_blank'],
+          description: 'Filter by question types (array of types to include)'
         },
         tag: {
           type: 'string',
@@ -69,7 +77,18 @@ export const QuestionsContracts = {
           type: 'string',
           required: false,
           default: '-createdAt',
-          description: 'Sort field (prefix with - for desc). Options: createdAt, difficulty, points, questionType'
+          description: 'Sort field (prefix with - for desc). Options: createdAt, difficulty, points'
+        },
+        // Adaptive Learning Filters (Optional Enhancement)
+        knowledgeNodeId: {
+          type: 'ObjectId',
+          required: false,
+          description: '[Adaptive] Filter by knowledge node'
+        },
+        cognitiveDepth: {
+          type: 'string',
+          required: false,
+          description: '[Adaptive] Filter by cognitive depth level slug'
         }
       }
     },
@@ -84,7 +103,7 @@ export const QuestionsContracts = {
               {
                 id: 'ObjectId',
                 questionText: 'string',
-                questionType: 'multiple_choice|true_false|short_answer|essay|fill_blank',
+                questionTypes: 'QuestionType[] - array of available presentation types',
                 options: [
                   {
                     text: 'string',
@@ -97,6 +116,10 @@ export const QuestionsContracts = {
                 tags: 'string[]',
                 explanation: 'string | null',
                 department: 'ObjectId | null',
+                // Adaptive Learning Fields (Optional - null if not set)
+                knowledgeNodeId: 'ObjectId | null',
+                knowledgeNodeName: 'string | null (populated if knowledgeNodeId set)',
+                cognitiveDepth: 'string | null (cognitive depth slug)',
                 createdBy: 'ObjectId',
                 createdAt: 'Date',
                 updatedAt: 'Date'
@@ -123,7 +146,7 @@ export const QuestionsContracts = {
     example: {
       request: {
         query: {
-          questionType: 'multiple_choice',
+          questionTypes: ['multiple_choice'],
           difficulty: 'medium',
           department: '507f1f77bcf86cd799439012',
           page: 1,
@@ -137,7 +160,7 @@ export const QuestionsContracts = {
             {
               id: '507f1f77bcf86cd799439020',
               questionText: 'What is the capital of France?',
-              questionType: 'multiple_choice',
+              questionTypes: ['multiple_choice'],
               options: [
                 { text: 'London', isCorrect: false },
                 { text: 'Paris', isCorrect: true },
@@ -173,7 +196,7 @@ export const QuestionsContracts = {
       - Returns questions accessible to the authenticated user (department-scoped)
       - Global admins see all questions
       - Staff see questions from their departments
-      - Multiple question types can be requested: ?questionType=multiple_choice,essay
+      - Filter by question types using array: ?questionTypes[]=multiple_choice&questionTypes[]=long_answer
       - Search performs case-insensitive search on questionText field
       - Options array only populated for multiple_choice and true_false types
       - Tags are useful for categorizing questions by topic, subject, or difficulty
@@ -203,11 +226,11 @@ export const QuestionsContracts = {
           maxLength: 2000,
           description: 'The question text'
         },
-        questionType: {
-          type: 'string',
+        questionTypes: {
+          type: 'string[]',
           required: true,
-          enum: ['multiple_choice', 'true_false', 'short_answer', 'essay', 'fill_blank'],
-          description: 'Type of question'
+          enum: ['multiple_choice', 'multiple_select', 'true_false', 'short_answer', 'long_answer', 'matching', 'flashcard', 'fill_in_blank'],
+          description: 'Array of question presentation types this question supports'
         },
         options: {
           type: 'array',
@@ -264,6 +287,17 @@ export const QuestionsContracts = {
           type: 'ObjectId',
           required: false,
           description: 'Department ID (defaults to user\'s department)'
+        },
+        // Adaptive Learning Fields (Optional Enhancement)
+        knowledgeNodeId: {
+          type: 'ObjectId',
+          required: false,
+          description: '[Adaptive] Link question to a knowledge node for adaptive learning'
+        },
+        cognitiveDepth: {
+          type: 'string',
+          required: false,
+          description: '[Adaptive] Cognitive depth level slug (validated against CognitiveDepthLevel)'
         }
       }
     },
@@ -277,7 +311,7 @@ export const QuestionsContracts = {
           data: {
             id: 'ObjectId',
             questionText: 'string',
-            questionType: 'string',
+            questionTypes: 'QuestionType[]',
             options: 'array',
             correctAnswer: 'string | string[]',
             points: 'number',
@@ -285,6 +319,8 @@ export const QuestionsContracts = {
             tags: 'string[]',
             explanation: 'string | null',
             department: 'ObjectId | null',
+            knowledgeNodeId: 'ObjectId | null',
+            cognitiveDepth: 'string | null',
             createdBy: 'ObjectId',
             createdAt: 'Date',
             updatedAt: 'Date'
@@ -295,6 +331,8 @@ export const QuestionsContracts = {
         { status: 400, code: 'VALIDATION_ERROR', message: 'Invalid input data' },
         { status: 400, code: 'NO_CORRECT_ANSWER', message: 'Multiple choice questions must have at least one correct answer' },
         { status: 400, code: 'INVALID_OPTIONS', message: 'Options required for multiple_choice and true_false questions' },
+        { status: 400, code: 'INVALID_KNOWLEDGE_NODE', message: '[Adaptive] Knowledge node not found or not in department' },
+        { status: 400, code: 'INVALID_COGNITIVE_DEPTH', message: '[Adaptive] Cognitive depth level not found' },
         { status: 401, code: 'UNAUTHORIZED', message: 'Invalid or expired token' },
         { status: 403, code: 'FORBIDDEN', message: 'Insufficient permissions' },
         { status: 404, code: 'DEPARTMENT_NOT_FOUND', message: 'Department not found' }
@@ -304,7 +342,7 @@ export const QuestionsContracts = {
     example: {
       request: {
         questionText: 'Which of the following are programming languages?',
-        questionType: 'multiple_choice',
+        questionTypes: ['multiple_choice'],
         options: [
           { text: 'Python', isCorrect: true },
           { text: 'HTML', isCorrect: false },
@@ -323,7 +361,7 @@ export const QuestionsContracts = {
         data: {
           id: '507f1f77bcf86cd799439020',
           questionText: 'Which of the following are programming languages?',
-          questionType: 'multiple_choice',
+          questionTypes: ['multiple_choice'],
           options: [
             { text: 'Python', isCorrect: true },
             { text: 'HTML', isCorrect: false },
@@ -358,6 +396,13 @@ export const QuestionsContracts = {
       - Department defaults to user's primary department if not specified
       - Tags are normalized to lowercase
       - createdBy automatically set to authenticated user
+
+      ADAPTIVE LEARNING (Optional):
+      - knowledgeNodeId links question to a conceptual topic for adaptive selection
+      - cognitiveDepth stores the depth level slug
+      - Both fields are OPTIONAL - questions work without them
+      - When set, cognitiveDepth is validated against CognitiveDepthLevel collection
+      - See cognitive-depth-levels.contract.ts and knowledge-nodes.contract.ts
     `
   },
 
@@ -391,7 +436,7 @@ export const QuestionsContracts = {
           data: {
             id: 'ObjectId',
             questionText: 'string',
-            questionType: 'string',
+            questionTypes: 'QuestionType[]',
             options: 'array',
             correctAnswer: 'string | string[]',
             points: 'number',
@@ -399,6 +444,10 @@ export const QuestionsContracts = {
             tags: 'string[]',
             explanation: 'string | null',
             department: 'ObjectId | null',
+            // Adaptive Learning Fields
+            knowledgeNodeId: 'ObjectId | null',
+            knowledgeNode: '{ id, name, slug } | null (populated)',
+            cognitiveDepth: 'string | null',
             createdBy: 'ObjectId',
             createdAt: 'Date',
             updatedAt: 'Date',
@@ -421,7 +470,7 @@ export const QuestionsContracts = {
         data: {
           id: '507f1f77bcf86cd799439020',
           questionText: 'What is the capital of France?',
-          questionType: 'multiple_choice',
+          questionTypes: ['multiple_choice'],
           options: [
             { text: 'London', isCorrect: false },
             { text: 'Paris', isCorrect: true },
@@ -434,6 +483,9 @@ export const QuestionsContracts = {
           tags: ['geography', 'europe', 'capitals'],
           explanation: 'Paris is the capital and most populous city of France.',
           department: '507f1f77bcf86cd799439012',
+          knowledgeNodeId: null,
+          knowledgeNode: null,
+          cognitiveDepth: null,
           createdBy: '507f1f77bcf86cd799439011',
           createdAt: '2026-01-01T00:00:00.000Z',
           updatedAt: '2026-01-05T00:00:00.000Z',
@@ -483,11 +535,11 @@ export const QuestionsContracts = {
           minLength: 1,
           maxLength: 2000
         },
-        questionType: {
-          type: 'string',
+        questionTypes: {
+          type: 'string[]',
           required: false,
-          enum: ['multiple_choice', 'true_false', 'short_answer', 'essay', 'fill_blank'],
-          description: 'Changing type requires updating options/correctAnswer accordingly'
+          enum: ['multiple_choice', 'multiple_select', 'true_false', 'short_answer', 'long_answer', 'matching', 'flashcard', 'fill_in_blank'],
+          description: 'Array of question presentation types - add/remove types as answer data is configured'
         },
         options: {
           type: 'array',
@@ -537,6 +589,17 @@ export const QuestionsContracts = {
         department: {
           type: 'ObjectId',
           required: false
+        },
+        // Adaptive Learning Fields (Optional)
+        knowledgeNodeId: {
+          type: 'ObjectId | null',
+          required: false,
+          description: '[Adaptive] Link/unlink question to knowledge node (null to remove)'
+        },
+        cognitiveDepth: {
+          type: 'string | null',
+          required: false,
+          description: '[Adaptive] Set cognitive depth level slug (null to remove)'
         }
       }
     },
@@ -550,7 +613,7 @@ export const QuestionsContracts = {
           data: {
             id: 'ObjectId',
             questionText: 'string',
-            questionType: 'string',
+            questionTypes: 'QuestionType[]',
             options: 'array',
             correctAnswer: 'string | string[]',
             points: 'number',
@@ -558,6 +621,8 @@ export const QuestionsContracts = {
             tags: 'string[]',
             explanation: 'string | null',
             department: 'ObjectId | null',
+            knowledgeNodeId: 'ObjectId | null',
+            cognitiveDepth: 'string | null',
             createdBy: 'ObjectId',
             createdAt: 'Date',
             updatedAt: 'Date'
@@ -568,6 +633,8 @@ export const QuestionsContracts = {
         { status: 400, code: 'VALIDATION_ERROR', message: 'Invalid input data' },
         { status: 400, code: 'NO_CORRECT_ANSWER', message: 'Multiple choice questions must have at least one correct answer' },
         { status: 400, code: 'QUESTION_IN_USE', message: 'Question is currently in use in active assessments' },
+        { status: 400, code: 'INVALID_KNOWLEDGE_NODE', message: '[Adaptive] Knowledge node not found or not in department' },
+        { status: 400, code: 'INVALID_COGNITIVE_DEPTH', message: '[Adaptive] Cognitive depth level not found' },
         { status: 401, code: 'UNAUTHORIZED', message: 'Invalid or expired token' },
         { status: 403, code: 'FORBIDDEN', message: 'Insufficient permissions or access to this department' },
         { status: 404, code: 'QUESTION_NOT_FOUND', message: 'Question not found' }
@@ -587,7 +654,7 @@ export const QuestionsContracts = {
         data: {
           id: '507f1f77bcf86cd799439020',
           questionText: 'What is the capital city of France?',
-          questionType: 'multiple_choice',
+          questionTypes: ['multiple_choice'],
           options: [
             { text: 'London', isCorrect: false },
             { text: 'Paris', isCorrect: true },
@@ -611,10 +678,10 @@ export const QuestionsContracts = {
 
     notes: `
       - Only updates provided fields (partial update)
-      - Validates consistency between questionType and options/correctAnswer
+      - Validates that answer data exists for each type in questionTypes
       - Cannot update questions that are in use in active assessments (returns 400)
       - User must have access to the question's department
-      - Changing questionType requires updating options/correctAnswer to match
+      - Adding a type to questionTypes requires corresponding answer data to be configured
       - updatedAt automatically updated
       - Tags are normalized to lowercase
     `
@@ -710,10 +777,10 @@ export const QuestionsContracts = {
               minLength: 1,
               maxLength: 2000
             },
-            questionType: {
-              type: 'string',
+            questionTypes: {
+              type: 'string[]',
               required: true,
-              enum: ['multiple_choice', 'true_false', 'short_answer', 'essay', 'fill_blank']
+              enum: ['multiple_choice', 'multiple_select', 'true_false', 'short_answer', 'long_answer', 'matching', 'flashcard', 'fill_in_blank']
             },
             options: {
               type: 'array',
@@ -803,7 +870,7 @@ export const QuestionsContracts = {
         questions: [
           {
             questionText: 'What is 2 + 2?',
-            questionType: 'multiple_choice',
+            questionTypes: ['multiple_choice'],
             options: [
               { text: '3', isCorrect: false },
               { text: '4', isCorrect: true },
@@ -815,7 +882,7 @@ export const QuestionsContracts = {
           },
           {
             questionText: 'The Earth is round.',
-            questionType: 'true_false',
+            questionTypes: ['true_false'],
             options: [
               { text: 'True', isCorrect: true },
               { text: 'False', isCorrect: false }
@@ -826,7 +893,7 @@ export const QuestionsContracts = {
           },
           {
             questionText: 'Explain photosynthesis.',
-            questionType: 'essay',
+            questionTypes: ['long_answer', 'short_answer'],
             points: 5,
             difficulty: 'medium',
             tags: ['biology', 'science'],
@@ -869,8 +936,9 @@ export const QuestionsContracts = {
 
     notes: `
       - Accepts JSON array or CSV format
-      - CSV format should have headers: questionText, questionType, options, correctAnswer, points, difficulty, tags, explanation
+      - CSV format should have headers: questionText, questionTypes, options, correctAnswer, points, difficulty, tags, explanation
       - For CSV multiple_choice: options format: "option1(correct)|option2|option3(correct)"
+      - For CSV questionTypes: pipe-separated values (e.g., "multiple_choice|short_answer")
       - For CSV tags: comma-separated values
       - Validates each question individually
       - Continues processing even if some questions fail
@@ -880,6 +948,101 @@ export const QuestionsContracts = {
       - Maximum 1000 questions per bulk import
       - Duplicate detection based on questionText (case-insensitive)
       - Failed imports don't rollback successful ones
+    `
+  },
+
+  /**
+   * Bulk Update Questions (Department Scoped)
+   */
+  bulkUpdate: {
+    endpoint: '/api/v2/departments/:departmentId/questions/bulk',
+    method: 'PATCH' as const,
+    version: '1.0.0',
+    description: 'Bulk update questions in a department (adaptive fields supported)',
+
+    request: {
+      headers: {
+        'Authorization': 'Bearer <token>',
+        'Content-Type': 'application/json'
+      },
+      params: {
+        departmentId: { type: 'ObjectId', required: true, description: 'Department ID' }
+      },
+      body: {
+        questionIds: {
+          type: 'ObjectId[]',
+          required: true,
+          description: 'Array of question IDs to update'
+        },
+        updates: {
+          type: 'object',
+          required: true,
+          properties: {
+            cognitiveDepth: {
+              type: 'string | null',
+              required: false,
+              description: '[Adaptive] Set cognitive depth level slug (null to remove)'
+            }
+          }
+        }
+      }
+    },
+
+    response: {
+      success: {
+        status: 200,
+        body: {
+          success: 'boolean',
+          data: {
+            updated: 'number',
+            failed: 'number',
+            results: [
+              {
+                id: 'ObjectId',
+                status: 'updated | failed',
+                error: 'string | null'
+              }
+            ]
+          }
+        }
+      },
+      errors: [
+        { status: 400, code: 'VALIDATION_ERROR', message: 'Invalid input data' },
+        { status: 400, code: 'INVALID_COGNITIVE_DEPTH', message: 'Cognitive depth level not found' },
+        { status: 401, code: 'UNAUTHORIZED', message: 'Invalid or expired token' },
+        { status: 403, code: 'FORBIDDEN', message: 'Insufficient permissions or access to this department' },
+        { status: 404, code: 'DEPARTMENT_NOT_FOUND', message: 'Department not found' }
+      ]
+    },
+
+    example: {
+      request: {
+        params: { departmentId: '507f1f77bcf86cd799439012' },
+        body: {
+          questionIds: ['507f1f77bcf86cd799439020', '507f1f77bcf86cd799439021'],
+          updates: { cognitiveDepth: 'practice' }
+        }
+      },
+      response: {
+        success: true,
+        data: {
+          updated: 2,
+          failed: 0,
+          results: [
+            { id: '507f1f77bcf86cd799439020', status: 'updated', error: null },
+            { id: '507f1f77bcf86cd799439021', status: 'updated', error: null }
+          ]
+        }
+      }
+    },
+
+    permissions: ['content:assessments:manage'],
+
+    notes: `
+      - Only updates fields provided in updates
+      - Invalid question IDs are reported as failed
+      - cognitiveDepth is validated against CognitiveDepthLevel for the department
+      - No rollback across questions; partial success is allowed
     `
   }
 };
@@ -894,3 +1057,5 @@ export type QuestionDetailsResponse = typeof QuestionsContracts.getById.example.
 export type QuestionUpdateRequest = typeof QuestionsContracts.update.example.request;
 export type QuestionBulkImportRequest = typeof QuestionsContracts.bulkImport.example.request;
 export type QuestionBulkImportResponse = typeof QuestionsContracts.bulkImport.example.response;
+export type QuestionBulkUpdateRequest = typeof QuestionsContracts.bulkUpdate.example.request;
+export type QuestionBulkUpdateResponse = typeof QuestionsContracts.bulkUpdate.example.response;

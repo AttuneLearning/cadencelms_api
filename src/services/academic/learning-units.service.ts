@@ -4,7 +4,7 @@ import Module from '@/models/academic/Module.model';
 import { ApiError } from '@/utils/ApiError';
 
 interface ListLearningUnitsFilters {
-  category?: 'exposition' | 'practice' | 'assessment';
+  category?: string;
   isRequired?: boolean;
   page?: number;
   limit?: number;
@@ -14,7 +14,7 @@ interface ListLearningUnitsFilters {
 interface CreateLearningUnitData {
   title: string;
   description?: string;
-  category: 'exposition' | 'practice' | 'assessment';
+  category: string;
   contentType: string;
   contentId?: string;
   isRequired?: boolean;
@@ -26,7 +26,7 @@ interface CreateLearningUnitData {
 interface UpdateLearningUnitData {
   title?: string;
   description?: string;
-  category?: 'exposition' | 'practice' | 'assessment';
+  category?: string;
   contentType?: string;
   contentId?: string;
   isRequired?: boolean;

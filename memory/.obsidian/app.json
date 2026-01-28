@@ -1,0 +1,11 @@
+{
+  "alwaysUpdateLinks": true,
+  "newFileLocation": "current",
+  "newLinkFormat": "relative",
+  "showUnsupportedFiles": true,
+  "useMarkdownLinks": false,
+  "userIgnoreFilters": [
+    "node_modules",
+    ".git"
+  ]
+}

@@ -59,7 +59,7 @@ describe('ValidationService', () => {
       const invalidCourse: AICourseInput = {
         course: {
           title: '', // Invalid: empty
-          code: 'invalid', // Invalid: wrong format
+          code: 'CS-101', // Invalid: contains hyphen (non-alphanumeric)
           department: '', // Invalid: empty
           credits: -1, // Invalid: negative
         },
@@ -82,7 +82,8 @@ describe('ValidationService', () => {
     });
 
     it('should validate course code format', async () => {
-      const invalidCodes = ['cs101', 'C1', 'CS1234567', 'CS-101', '123ABC'];
+      // Course codes must be alphanumeric only (no special characters)
+      const invalidCodes = ['CS-101', 'CS 101', 'CS@101', 'CS.101'];
 
       for (const code of invalidCodes) {
         const course: AICourseInput = {
@@ -109,7 +110,8 @@ describe('ValidationService', () => {
         objectId: new Types.ObjectId(),
       });
 
-      const validCodes = ['CS101', 'MATH200', 'ENG301A', 'BIO101'];
+      // Valid codes: alphanumeric only (letters and numbers, case-insensitive)
+      const validCodes = ['CS101', 'MATH200', 'ENG301A', 'BIO101', 'cs101', 'IntroToPython', 'cog101'];
 
       for (const code of validCodes) {
         jest.clearAllMocks();
@@ -801,7 +803,7 @@ describe('ValidationService', () => {
         passingScore: 70,
         questions: [
           {
-            type: 'essay',
+            type: 'long_answer',
             questionText: 'Discuss the importance of testing.',
             points: 20,
             sampleAnswer: 'Testing is important because...',

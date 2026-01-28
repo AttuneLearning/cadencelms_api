@@ -7,7 +7,7 @@
   "properties": {
     "type": {
       "type": "string",
-      "enum": ["multiple_choice", "true_false", "essay", "short_answer", "fill_blank"],
+      "enum": ["multiple_choice", "true_false", "long_answer", "short_answer", "fill_blank"],
       "description": "Type of question determines which fields are required"
     },
     "questionText": {
@@ -125,7 +125,7 @@
     {
       "description": "Essay question with sample answer",
       "data": {
-        "type": "essay",
+        "type": "long_answer",
         "questionText": "Explain the MVC (Model-View-Controller) architectural pattern and discuss its advantages in web application development.",
         "points": 20,
         "sampleAnswer": "The MVC pattern separates an application into three interconnected components: Model (data and business logic), View (user interface), and Controller (handles input and updates model/view). Advantages include: separation of concerns, easier testing, parallel development, code reusability, and maintainability. For example, in a web app, the Model manages database interactions, the View renders HTML, and the Controller processes HTTP requests.",
@@ -201,7 +201,7 @@
     {
       "description": "Complex essay question",
       "data": {
-        "type": "essay",
+        "type": "long_answer",
         "questionText": "Compare and contrast SQL and NoSQL databases. Discuss use cases where each would be most appropriate, and provide specific examples of database systems in each category.",
         "points": 25,
         "sampleAnswer": "SQL databases (like MySQL, PostgreSQL) are relational, use structured schemas with tables and relationships, support ACID transactions, and use SQL query language. They excel at complex queries and maintaining data integrity. NoSQL databases (like MongoDB, Cassandra, Redis) are non-relational, schema-flexible, horizontally scalable, and use various data models (document, key-value, graph). Use SQL for: banking systems (ACID compliance critical), e-commerce (complex relationships), traditional business applications. Use NoSQL for: real-time analytics (speed and scalability), IoT systems (handling massive volumes), social networks (flexible data models), caching (key-value stores like Redis). Example: An e-commerce site might use PostgreSQL for transactions and user data, but MongoDB for product catalogs and Redis for session management.",

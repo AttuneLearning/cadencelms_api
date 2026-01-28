@@ -88,7 +88,7 @@ export interface IReportSchedule extends Document {
   lastRunAt?: Date;
   lastRunStatus?: string;
   lastRunJobId?: mongoose.Types.ObjectId;
-  nextRunAt?: Date;
+  nextRunAt?: Date | null;
   runCount: number;
   failureCount: number;
   consecutiveFailures: number;
@@ -440,7 +440,9 @@ ReportScheduleSchema.pre('save', async function (next) {
       this.isModified('isPaused')
     ) {
       if (this.isActive && !this.isPaused) {
-        this.nextRunAt = this.calculateNextRunTime() ?? undefined;
+        const nextRun = this.calculateNextRunTime();
+        // Preserve null for past one-time schedules, convert to undefined only for inactive/paused
+        this.nextRunAt = nextRun === null ? null : nextRun;
       } else {
         this.nextRunAt = undefined;
       }

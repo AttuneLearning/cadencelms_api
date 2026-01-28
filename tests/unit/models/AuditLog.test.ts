@@ -157,7 +157,7 @@ describeIfMongo('AuditLog Model', () => {
         userId: new mongoose.Types.ObjectId(),
       });
 
-      expect(log.entityType).toBe('Course');
+      expect(log.entityType).toBe('course');
     });
 
     it('should log Enrollment entity changes', async () => {
@@ -168,18 +168,18 @@ describeIfMongo('AuditLog Model', () => {
         userId: new mongoose.Types.ObjectId(),
       });
 
-      expect(log.entityType).toBe('Enrollment');
+      expect(log.entityType).toBe('enrollment');
     });
 
-    it('should support custom entity types', async () => {
+    it('should support setting entity type', async () => {
       const log = await createLog({
         action: 'update',
-        entityType: 'Setting',
+        entityType: 'setting',
         entityId: new mongoose.Types.ObjectId(),
         userId: new mongoose.Types.ObjectId(),
       });
 
-      expect(log.entityType).toBe('Setting');
+      expect(log.entityType).toBe('setting');
     });
   });
 
@@ -215,32 +215,36 @@ describeIfMongo('AuditLog Model', () => {
         entityId: new mongoose.Types.ObjectId(),
         userId: new mongoose.Types.ObjectId(),
         changes: {
-          title: 'Introduction to Programming',
-          code: 'CS101',
-          credits: 3,
+          after: {
+            title: 'Introduction to Programming',
+            code: 'CS101',
+            credits: 3,
+          },
         },
       });
 
-      expect(log.changes.title).toBe('Introduction to Programming');
-      expect(log.changes.code).toBe('CS101');
-      expect(log.changes.credits).toBe(3);
+      expect(log.changes.after.title).toBe('Introduction to Programming');
+      expect(log.changes.after.code).toBe('CS101');
+      expect(log.changes.after.credits).toBe(3);
     });
 
     it('should store deleted data for delete actions', async () => {
       const log = await createLog({
         action: 'delete',
-        entityType: 'Content',
+        entityType: 'content',
         entityId: new mongoose.Types.ObjectId(),
         userId: new mongoose.Types.ObjectId(),
         changes: {
-          title: 'Deleted Content',
-          contentType: 'video',
-          fileUrl: 'https://example.com/video.mp4',
+          before: {
+            title: 'Deleted Content',
+            contentType: 'video',
+            fileUrl: 'https://example.com/video.mp4',
+          },
         },
       });
 
-      expect(log.changes.title).toBe('Deleted Content');
-      expect(log.changes.contentType).toBe('video');
+      expect(log.changes.before.title).toBe('Deleted Content');
+      expect(log.changes.before.contentType).toBe('video');
     });
   });
 
@@ -276,10 +280,13 @@ describeIfMongo('AuditLog Model', () => {
         entityType: 'course',
         entityId: new mongoose.Types.ObjectId(),
         userId: new mongoose.Types.ObjectId(),
-        method: 'PUT',
+        request: {
+          method: 'PUT',
+          path: '/api/test',
+        },
       });
 
-      expect(log.method).toBe('PUT');
+      expect(log.request.method).toBe('PUT');
     });
 
     it('should capture request path', async () => {
@@ -288,10 +295,13 @@ describeIfMongo('AuditLog Model', () => {
         entityType: 'course',
         entityId: new mongoose.Types.ObjectId(),
         userId: new mongoose.Types.ObjectId(),
-        path: '/api/v2/courses/123',
+        request: {
+          method: 'PUT',
+          path: '/api/v2/courses/123',
+        },
       });
 
-      expect(log.path).toBe('/api/v2/courses/123');
+      expect(log.request.path).toBe('/api/v2/courses/123');
     });
 
     it('should capture all request context', async () => {
@@ -302,14 +312,16 @@ describeIfMongo('AuditLog Model', () => {
         userId: new mongoose.Types.ObjectId(),
         ipAddress: '192.168.1.50',
         userAgent: 'Mozilla/5.0...',
-        method: 'DELETE',
-        path: '/api/v2/enrollments/456',
+        request: {
+          method: 'DELETE',
+          path: '/api/v2/enrollments/456',
+        },
       });
 
       expect(log.ipAddress).toBe('192.168.1.50');
       expect(log.userAgent).toBeDefined();
-      expect(log.method).toBe('DELETE');
-      expect(log.path).toBe('/api/v2/enrollments/456');
+      expect(log.request.method).toBe('DELETE');
+      expect(log.request.path).toBe('/api/v2/enrollments/456');
     });
   });
 
@@ -317,7 +329,7 @@ describeIfMongo('AuditLog Model', () => {
     it('should store additional metadata', async () => {
       const log = await createLog({
         action: 'update',
-        entityType: 'Class',
+        entityType: 'class',
         entityId: new mongoose.Types.ObjectId(),
         userId: new mongoose.Types.ObjectId(),
         metadata: {
@@ -372,7 +384,7 @@ describeIfMongo('AuditLog Model', () => {
     it('should track scheduled task actions', async () => {
       const log = await createLog({
         action: 'update',
-        entityType: 'Report',
+        entityType: 'setting',
         entityId: new mongoose.Types.ObjectId(),
         metadata: {
           source: 'scheduled-task',
@@ -392,6 +404,10 @@ describeIfMongo('AuditLog Model', () => {
           entityType: 'user',
           entityId: new mongoose.Types.ObjectId(),
           userId: new mongoose.Types.ObjectId(),
+          description: 'Test action',
+          ipAddress: '192.168.1.1',
+          userAgent: 'Test Agent',
+          request: { method: 'POST', path: '/api/test' },
         })
       ).rejects.toThrow();
     });
@@ -402,16 +418,24 @@ describeIfMongo('AuditLog Model', () => {
           action: 'update',
           entityId: new mongoose.Types.ObjectId(),
           userId: new mongoose.Types.ObjectId(),
+          description: 'Test action',
+          ipAddress: '192.168.1.1',
+          userAgent: 'Test Agent',
+          request: { method: 'POST', path: '/api/test' },
         })
       ).rejects.toThrow();
     });
 
-    it('should require entityId', async () => {
+    it('should require description', async () => {
       await expect(
         AuditLog.create({
           action: 'update',
           entityType: 'user',
+          entityId: new mongoose.Types.ObjectId(),
           userId: new mongoose.Types.ObjectId(),
+          ipAddress: '192.168.1.1',
+          userAgent: 'Test Agent',
+          request: { method: 'POST', path: '/api/test' },
         })
       ).rejects.toThrow();
     });
@@ -461,16 +485,16 @@ describeIfMongo('AuditLog Model', () => {
     it('should efficiently query by performedBy', async () => {
       const userId = new mongoose.Types.ObjectId();
 
-      await AuditLog.create({
+      await createLog({
         action: 'update',
         entityType: 'course',
         entityId: new mongoose.Types.ObjectId(),
         userId: userId,
       });
 
-      await AuditLog.create({
+      await createLog({
         action: 'delete',
-        entityType: 'Content',
+        entityType: 'content',
         entityId: new mongoose.Types.ObjectId(),
         userId: userId,
       });
@@ -482,14 +506,14 @@ describeIfMongo('AuditLog Model', () => {
     it('should efficiently query by entityType and entityId', async () => {
       const entityId = new mongoose.Types.ObjectId();
 
-      await AuditLog.create({
+      await createLog({
         action: 'create',
         entityType: 'user',
         entityId,
         userId: new mongoose.Types.ObjectId(),
       });
 
-      await AuditLog.create({
+      await createLog({
         action: 'update',
         entityType: 'user',
         entityId,
@@ -504,12 +528,11 @@ describeIfMongo('AuditLog Model', () => {
       const startDate = new Date('2026-01-01');
       const endDate = new Date('2026-01-31');
 
-      await AuditLog.create({
+      await createLog({
         action: 'login',
         entityType: 'user',
         entityId: new mongoose.Types.ObjectId(),
         userId: new mongoose.Types.ObjectId(),
-        createdAt: new Date('2026-01-15'),
       });
 
       const logs = await AuditLog.find({

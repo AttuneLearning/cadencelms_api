@@ -644,7 +644,7 @@ export class ValidationService {
     }
 
     // Validate based on question type
-    const validTypes = ['multiple_choice', 'true_false', 'essay', 'short_answer', 'fill_blank'];
+    const validTypes = ['multiple_choice', 'true_false', 'long_answer', 'short_answer', 'fill_blank'];
     if (!validTypes.includes(question.type)) {
       errors.push({
         path: `${basePath}.type`,
@@ -667,7 +667,7 @@ export class ValidationService {
         this.validateTrueFalseQuestion(question, basePath, errors);
         break;
 
-      case 'essay':
+      case 'long_answer':
         // Essay questions don't require correctAnswer, just points and text
         // sampleAnswer is optional
         break;

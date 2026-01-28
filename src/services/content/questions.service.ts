@@ -14,6 +14,10 @@ interface ListQuestionsFilters {
   limit?: number;
   bankId?: string;
   bankIds?: string[];
+  // Adaptive learning filters (optional)
+  knowledgeNodeId?: string;
+  cognitiveDepth?: string;
+  hasKnowledgeNode?: boolean;
 }
 
 interface QuestionOption {
@@ -23,7 +27,7 @@ interface QuestionOption {
 
 interface CreateQuestionData {
   questionText: string;
-  questionType: QuestionType;
+  questionTypes: QuestionType[];
   options?: QuestionOption[];
   correctAnswer?: string | string[];
   points: number;
@@ -37,7 +41,7 @@ interface CreateQuestionData {
 
 interface UpdateQuestionData {
   questionText?: string;
-  questionType?: QuestionType;
+  questionTypes?: QuestionType[];
   options?: QuestionOption[];
   correctAnswer?: string | string[];
   points?: number;
@@ -50,7 +54,7 @@ interface UpdateQuestionData {
 
 interface BulkImportQuestion {
   questionText: string;
-  questionType: QuestionType;
+  questionTypes: QuestionType[];
   options?: QuestionOption[];
   correctAnswer?: string | string[];
   points: number;
@@ -95,19 +99,21 @@ export class QuestionsService {
     }
 
     // Question type filter - support comma-separated values
+    // Filters questions where questionTypes array contains any of the specified types
     if (filters.questionType) {
       const types = filters.questionType.split(',').map(t => t.trim());
       // Map contract format to model format
       const mappedTypes = types.map(type => {
         switch (type) {
-          case 'multiple_choice': return 'multiple-choice';
-          case 'true_false': return 'true-false';
-          case 'short_answer': return 'short-answer';
-          case 'fill_blank': return 'fill-blank';
+          case 'multiple_choice': return 'multiple_choice';
+          case 'true_false': return 'true_false';
+          case 'short_answer': return 'short_answer';
+          case 'fill_blank': return 'fill_in_blank';
           default: return type;
         }
       });
-      query.questionType = types.length === 1 ? mappedTypes[0] : { $in: mappedTypes };
+      // Use $in to match questions that have any of the specified types in their questionTypes array
+      query.questionTypes = { $in: mappedTypes };
     }
 
     // Tag filter
@@ -135,6 +141,25 @@ export class QuestionsService {
       query.questionBankIds = { $in: filters.bankIds };
     }
 
+    // Knowledge node filter
+    if (filters.knowledgeNodeId) {
+      query.knowledgeNodeId = new mongoose.Types.ObjectId(filters.knowledgeNodeId);
+    }
+
+    // Cognitive depth filter
+    if (filters.cognitiveDepth) {
+      query.cognitiveDepth = filters.cognitiveDepth.toLowerCase();
+    }
+
+    // Has knowledge node filter
+    if (filters.hasKnowledgeNode !== undefined) {
+      if (filters.hasKnowledgeNode) {
+        query.knowledgeNodeId = { $ne: null };
+      } else {
+        query.knowledgeNodeId = null;
+      }
+    }
+
     // Parse sort
     const sortField = filters.sort || '-createdAt';
     const sortDirection = sortField.startsWith('-') ? -1 : 1;
@@ -149,12 +174,12 @@ export class QuestionsService {
 
     // Format data - map model format back to contract format
     const questionsData = questions.map((question) => {
-      const mappedType = this.mapQuestionTypeToContract(question.questionType);
+      const mappedTypes = this.mapQuestionTypesToContract(question.questionTypes);
 
       return {
         id: question._id.toString(),
         questionText: question.questionText,
-        questionType: mappedType,
+        questionTypes: mappedTypes,
         options: this.formatOptions(question),
         correctAnswer: this.formatCorrectAnswer(question),
         points: question.points,
@@ -185,11 +210,12 @@ export class QuestionsService {
    * Create a new question
    */
   static async createQuestion(questionData: CreateQuestionData): Promise<any> {
-    // Map question type from contract format to model format
-    const mappedType = this.mapQuestionTypeFromContract(questionData.questionType as any);
+    // Map question types from contract format to model format
+    const mappedTypes = this.mapQuestionTypesFromContract(questionData.questionTypes);
 
-    // Validate based on question type
-    this.validateQuestionData(mappedType, questionData.options, questionData.correctAnswer);
+    // Validate based on question types (use first type for validation logic)
+    const primaryType = mappedTypes[0];
+    this.validateQuestionData(primaryType, questionData.options, questionData.correctAnswer);
 
     // Validate department if provided
     if (questionData.department) {
@@ -201,7 +227,7 @@ export class QuestionsService {
     // Prepare question document
     const questionDoc: any = {
       questionText: questionData.questionText,
-      questionType: mappedType,
+      questionTypes: mappedTypes,
       departmentId: questionData.department || null,
       points: questionData.points,
       difficulty: questionData.difficulty || 'medium',
@@ -214,8 +240,8 @@ export class QuestionsService {
       }
     };
 
-    // Handle options and correct answers based on type
-    if (mappedType === 'multiple-choice' || mappedType === 'true-false') {
+    // Handle options and correct answers based on primary type
+    if (primaryType === 'multiple_choice' || primaryType === 'true_false') {
       if (questionData.options) {
         questionDoc.options = questionData.options.map(opt => opt.text);
         const correctOptions = questionData.options.filter(opt => opt.isCorrect);
@@ -226,13 +252,13 @@ export class QuestionsService {
           questionDoc.correctAnswers = correctOptions.map(opt => opt.text);
         }
       }
-    } else if (mappedType === 'short-answer' || mappedType === 'fill-blank') {
+    } else if (primaryType === 'short_answer' || primaryType === 'fill_in_blank') {
       if (Array.isArray(questionData.correctAnswer)) {
         questionDoc.correctAnswers = questionData.correctAnswer;
       } else {
         questionDoc.correctAnswer = questionData.correctAnswer;
       }
-    } else if (mappedType === 'essay') {
+    } else if (primaryType === 'long_answer') {
       questionDoc.modelAnswer = typeof questionData.correctAnswer === 'string'
         ? questionData.correctAnswer
         : null;
@@ -242,12 +268,12 @@ export class QuestionsService {
     const question = await Question.create(questionDoc);
 
     // Format response
-    const mappedTypeContract = this.mapQuestionTypeToContract(question.questionType);
+    const mappedTypesContract = this.mapQuestionTypesToContract(question.questionTypes);
 
     return {
       id: question._id.toString(),
       questionText: question.questionText,
-      questionType: mappedTypeContract,
+      questionTypes: mappedTypesContract,
       options: this.formatOptions(question),
       correctAnswer: this.formatCorrectAnswer(question),
       points: question.points,
@@ -290,12 +316,12 @@ export class QuestionsService {
     // Get last used date from metadata
     const lastUsed = question.metadata?.lastUsed || null;
 
-    const mappedType = this.mapQuestionTypeToContract(question.questionType);
+    const mappedTypes = this.mapQuestionTypesToContract(question.questionTypes);
 
     return {
       id: question._id.toString(),
       questionText: question.questionText,
-      questionType: mappedType,
+      questionTypes: mappedTypes,
       options: this.formatOptions(question),
       correctAnswer: this.formatCorrectAnswer(question),
       points: question.points,
@@ -339,20 +365,21 @@ export class QuestionsService {
 
     if (inUseCount > 0) {
       // Allow minor updates, but warn about type changes
-      if (updateData.questionType && updateData.questionType !== question.questionType) {
+      if (updateData.questionTypes && JSON.stringify(updateData.questionTypes) !== JSON.stringify(question.questionTypes)) {
         throw ApiError.badRequest('Question is currently in use in active assessments');
       }
     }
 
-    // Map question type if provided
-    const mappedType = updateData.questionType
-      ? this.mapQuestionTypeFromContract(updateData.questionType as any)
-      : question.questionType;
+    // Map question types if provided
+    const mappedTypes = updateData.questionTypes
+      ? this.mapQuestionTypesFromContract(updateData.questionTypes)
+      : question.questionTypes;
+    const primaryType = mappedTypes[0];
 
     // Validate based on question type
-    if (updateData.questionType || updateData.options || updateData.correctAnswer) {
+    if (updateData.questionTypes || updateData.options || updateData.correctAnswer) {
       this.validateQuestionData(
-        mappedType,
+        primaryType,
         updateData.options || (question.options ? this.reconstructOptions(question) : undefined),
         updateData.correctAnswer || this.formatCorrectAnswer(question)
       );
@@ -367,7 +394,7 @@ export class QuestionsService {
 
     // Update fields
     if (updateData.questionText !== undefined) question.questionText = updateData.questionText;
-    if (updateData.questionType !== undefined) question.questionType = mappedType as any;
+    if (updateData.questionTypes !== undefined) question.questionTypes = mappedTypes;
     if (updateData.points !== undefined) question.points = updateData.points;
     if (updateData.difficulty !== undefined) question.difficulty = updateData.difficulty;
     if (updateData.tags !== undefined) question.tags = updateData.tags.map(tag => tag.toLowerCase());
@@ -375,8 +402,8 @@ export class QuestionsService {
     if (updateData.department !== undefined) question.departmentId = new mongoose.Types.ObjectId(updateData.department);
     if (updateData.questionBankIds !== undefined) question.questionBankIds = updateData.questionBankIds;
 
-    // Handle options and correct answers based on type
-    if (mappedType === 'multiple-choice' || mappedType === 'true-false') {
+    // Handle options and correct answers based on primary type
+    if (primaryType === 'multiple_choice' || primaryType === 'true_false') {
       if (updateData.options) {
         question.options = updateData.options.map(opt => opt.text);
         const correctOptions = updateData.options.filter(opt => opt.isCorrect);
@@ -389,7 +416,7 @@ export class QuestionsService {
           question.correctAnswer = undefined;
         }
       }
-    } else if (mappedType === 'short-answer' || mappedType === 'fill-blank') {
+    } else if (primaryType === 'short_answer' || primaryType === 'fill_in_blank') {
       if (updateData.correctAnswer !== undefined) {
         if (Array.isArray(updateData.correctAnswer)) {
           question.correctAnswers = updateData.correctAnswer;
@@ -399,7 +426,7 @@ export class QuestionsService {
           question.correctAnswers = undefined;
         }
       }
-    } else if (mappedType === 'essay') {
+    } else if (primaryType === 'long_answer') {
       if (updateData.correctAnswer !== undefined) {
         question.modelAnswer = typeof updateData.correctAnswer === 'string'
           ? updateData.correctAnswer
@@ -409,12 +436,12 @@ export class QuestionsService {
 
     await question.save();
 
-    const mappedTypeContract = this.mapQuestionTypeToContract(question.questionType);
+    const mappedTypesContract = this.mapQuestionTypesToContract(question.questionTypes);
 
     return {
       id: question._id.toString(),
       questionText: question.questionText,
-      questionType: mappedTypeContract,
+      questionTypes: mappedTypesContract,
       options: this.formatOptions(question),
       correctAnswer: this.formatCorrectAnswer(question),
       points: question.points,
@@ -505,11 +532,12 @@ export class QuestionsService {
       try {
         const questionData = questions[i];
 
-        // Map question type
-        const mappedType = this.mapQuestionTypeFromContract(questionData.questionType as any);
+        // Map question types
+        const mappedTypes = this.mapQuestionTypesFromContract(questionData.questionTypes);
+        const primaryType = mappedTypes[0];
 
         // Validate question data
-        this.validateQuestionData(mappedType, questionData.options, questionData.correctAnswer);
+        this.validateQuestionData(primaryType, questionData.options, questionData.correctAnswer);
 
         // Check for duplicate (case-insensitive questionText)
         const existingQuestion = await Question.findOne({
@@ -532,7 +560,7 @@ export class QuestionsService {
         // Prepare question document
         const questionDoc: any = {
           questionText: questionData.questionText,
-          questionType: mappedType,
+          questionTypes: mappedTypes,
           departmentId: targetDepartment,
           points: questionData.points,
           difficulty: questionData.difficulty || 'medium',
@@ -546,7 +574,7 @@ export class QuestionsService {
         };
 
         // Handle options and correct answers
-        if (mappedType === 'multiple-choice' || mappedType === 'true-false') {
+        if (primaryType === 'multiple_choice' || primaryType === 'true_false') {
           if (questionData.options) {
             questionDoc.options = questionData.options.map(opt => opt.text);
             const correctOptions = questionData.options.filter(opt => opt.isCorrect);
@@ -557,13 +585,13 @@ export class QuestionsService {
               questionDoc.correctAnswers = correctOptions.map(opt => opt.text);
             }
           }
-        } else if (mappedType === 'short-answer' || mappedType === 'fill-blank') {
+        } else if (primaryType === 'short_answer' || primaryType === 'fill_in_blank') {
           if (Array.isArray(questionData.correctAnswer)) {
             questionDoc.correctAnswers = questionData.correctAnswer;
           } else {
             questionDoc.correctAnswer = questionData.correctAnswer;
           }
-        } else if (mappedType === 'essay') {
+        } else if (primaryType === 'long_answer') {
           questionDoc.modelAnswer = typeof questionData.correctAnswer === 'string'
             ? questionData.correctAnswer
             : null;
@@ -618,7 +646,8 @@ export class QuestionsService {
   static async getQuestionsByBankIds(bankIds: string[], filters?: {
     tags?: string[];
     difficulty?: ('beginner' | 'intermediate' | 'advanced')[];
-    questionType?: string;
+    questionType?: string;      // Legacy single type filter
+    questionTypes?: string[];   // New array type filter
     limit?: number;
     random?: boolean;
   }): Promise<any[]> {
@@ -650,10 +679,12 @@ export class QuestionsService {
       query.difficulty = { $in: mappedDifficulty };
     }
 
-    // Apply question type filter
-    if (filters?.questionType) {
-      const mappedType = this.mapQuestionTypeFromContract(filters.questionType);
-      query.questionType = mappedType;
+    // Apply question type filter (support both single type and array)
+    const typeFilter = filters?.questionTypes || (filters?.questionType ? [filters.questionType] : null);
+    if (typeFilter && typeFilter.length > 0) {
+      const mappedTypes = typeFilter.map(t => this.mapQuestionTypeFromContract(t));
+      // Use $in to match questions that have any of these types in their questionTypes array
+      query.questionTypes = { $in: mappedTypes };
     }
 
     let questionsQuery = Question.find(query);
@@ -670,7 +701,7 @@ export class QuestionsService {
       return questions.map((question) => ({
         id: question._id.toString(),
         questionText: question.questionText,
-        questionType: this.mapQuestionTypeToContract(question.questionType),
+        questionTypes: this.mapQuestionTypesToContract(question.questionTypes),
         options: question.options ? question.options.map((opt: string) => ({
           text: opt,
           isCorrect: (question.correctAnswers || [question.correctAnswer]).includes(opt)
@@ -698,7 +729,7 @@ export class QuestionsService {
     return questions.map((question) => ({
       id: question._id.toString(),
       questionText: question.questionText,
-      questionType: this.mapQuestionTypeToContract(question.questionType),
+      questionTypes: this.mapQuestionTypesToContract(question.questionTypes),
       options: this.formatOptions(question),
       correctAnswer: this.formatCorrectAnswer(question),
       points: question.points,
@@ -761,12 +792,12 @@ export class QuestionsService {
       await bank.save();
     }
 
-    const mappedType = this.mapQuestionTypeToContract(question.questionType);
+    const mappedTypes = this.mapQuestionTypesToContract(question.questionTypes);
 
     return {
       id: question._id.toString(),
       questionText: question.questionText,
-      questionType: mappedType,
+      questionTypes: mappedTypes,
       options: this.formatOptions(question),
       correctAnswer: this.formatCorrectAnswer(question),
       points: question.points,
@@ -829,12 +860,12 @@ export class QuestionsService {
     bank.questionIds = bank.questionIds.filter(id => id.toString() !== questionId);
     await bank.save();
 
-    const mappedType = this.mapQuestionTypeToContract(question.questionType);
+    const mappedTypes = this.mapQuestionTypesToContract(question.questionTypes);
 
     return {
       id: question._id.toString(),
       questionText: question.questionText,
-      questionType: mappedType,
+      questionTypes: mappedTypes,
       options: this.formatOptions(question),
       correctAnswer: this.formatCorrectAnswer(question),
       points: question.points,
@@ -856,28 +887,34 @@ export class QuestionsService {
 
   /**
    * Map question type from contract format to model format
+   * Now identity mapping since both use snake_case
    */
   private static mapQuestionTypeFromContract(type: string): QuestionType {
-    switch (type) {
-      case 'multiple_choice': return 'multiple-choice';
-      case 'true_false': return 'true-false';
-      case 'short_answer': return 'short-answer';
-      case 'fill_blank': return 'fill-blank';
-      default: return type as QuestionType;
-    }
+    // Direct mapping - contract and model both use snake_case
+    return type as QuestionType;
+  }
+
+  /**
+   * Map question types array from contract format to model format
+   */
+  private static mapQuestionTypesFromContract(types: QuestionType[]): QuestionType[] {
+    return types.map(type => this.mapQuestionTypeFromContract(type));
   }
 
   /**
    * Map question type from model format to contract format
+   * Now identity mapping since both use snake_case
    */
   private static mapQuestionTypeToContract(type: QuestionType): string {
-    switch (type) {
-      case 'multiple-choice': return 'multiple_choice';
-      case 'true-false': return 'true_false';
-      case 'short-answer': return 'short_answer';
-      case 'fill-blank': return 'fill_blank';
-      default: return type;
-    }
+    // Direct mapping - contract and model both use snake_case
+    return type;
+  }
+
+  /**
+   * Map question types array from model format to contract format
+   */
+  private static mapQuestionTypesToContract(types: QuestionType[]): string[] {
+    return types.map(type => this.mapQuestionTypeToContract(type));
   }
 
   /**
@@ -888,7 +925,7 @@ export class QuestionsService {
     options?: QuestionOption[],
     correctAnswer?: string | string[]
   ): void {
-    if (questionType === 'multiple-choice') {
+    if (questionType === 'multiple_choice') {
       if (!options || options.length === 0) {
         throw ApiError.badRequest('Options required for multiple_choice questions');
       }
@@ -896,7 +933,7 @@ export class QuestionsService {
       if (correctOptions.length === 0) {
         throw ApiError.badRequest('Multiple choice questions must have at least one correct answer');
       }
-    } else if (questionType === 'true-false') {
+    } else if (questionType === 'true_false') {
       if (!options || options.length !== 2) {
         throw ApiError.badRequest('True/false questions must have exactly 2 options');
       }
@@ -904,7 +941,7 @@ export class QuestionsService {
       if (correctOptions.length !== 1) {
         throw ApiError.badRequest('True/false questions must have exactly one correct answer');
       }
-    } else if (questionType === 'short-answer' || questionType === 'fill-blank') {
+    } else if (questionType === 'short_answer' || questionType === 'fill_in_blank') {
       if (!correctAnswer || (Array.isArray(correctAnswer) && correctAnswer.length === 0)) {
         throw ApiError.badRequest(`Correct answer required for ${questionType} questions`);
       }
@@ -916,7 +953,11 @@ export class QuestionsService {
    * Format options for response
    */
   private static formatOptions(question: IQuestion): QuestionOption[] | undefined {
-    if (question.questionType !== 'multiple-choice' && question.questionType !== 'true-false') {
+    // Check if any of the question types support options
+    const hasOptionsType = question.questionTypes.some(
+      type => type === 'multiple_choice' || type === 'true_false'
+    );
+    if (!hasOptionsType) {
       return undefined;
     }
 
@@ -965,5 +1006,278 @@ export class QuestionsService {
       text: option,
       isCorrect: correctAnswers.includes(option)
     }));
+  }
+
+  /**
+   * =====================
+   * ADAPTIVE LEARNING METHODS
+   * =====================
+   */
+
+  /**
+   * Get questions by knowledge node
+   */
+  static async getByKnowledgeNode(
+    knowledgeNodeId: string,
+    options?: {
+      cognitiveDepth?: string;
+      questionTypes?: QuestionType[];
+      limit?: number;
+      excludeIds?: string[];
+    }
+  ): Promise<IQuestion[]> {
+    if (!mongoose.Types.ObjectId.isValid(knowledgeNodeId)) {
+      return [];
+    }
+
+    const query: Record<string, unknown> = {
+      knowledgeNodeId: new mongoose.Types.ObjectId(knowledgeNodeId),
+      isActive: true
+    };
+
+    if (options?.cognitiveDepth) {
+      query.cognitiveDepth = options.cognitiveDepth.toLowerCase();
+    }
+
+    if (options?.questionTypes && options.questionTypes.length > 0) {
+      query.questionTypes = { $in: options.questionTypes };
+    }
+
+    if (options?.excludeIds && options.excludeIds.length > 0) {
+      query._id = {
+        $nin: options.excludeIds.map((id) => new mongoose.Types.ObjectId(id))
+      };
+    }
+
+    let questionQuery = Question.find(query);
+
+    if (options?.limit) {
+      questionQuery = questionQuery.limit(options.limit);
+    }
+
+    return questionQuery;
+  }
+
+  /**
+   * Get questions by cognitive depth for a department
+   */
+  static async getByCognitiveDepth(
+    cognitiveDepth: string,
+    departmentId: string,
+    options?: {
+      limit?: number;
+      excludeIds?: string[];
+    }
+  ): Promise<IQuestion[]> {
+    const query: Record<string, unknown> = {
+      departmentId: new mongoose.Types.ObjectId(departmentId),
+      cognitiveDepth: cognitiveDepth.toLowerCase(),
+      isActive: true
+    };
+
+    if (options?.excludeIds && options.excludeIds.length > 0) {
+      query._id = {
+        $nin: options.excludeIds.map((id) => new mongoose.Types.ObjectId(id))
+      };
+    }
+
+    let questionQuery = Question.find(query);
+
+    if (options?.limit) {
+      questionQuery = questionQuery.limit(options.limit);
+    }
+
+    return questionQuery;
+  }
+
+  /**
+   * Get questions for adaptive selection
+   * Filters by knowledge node, cognitive depth, and optionally by question banks
+   */
+  static async getForAdaptiveSelection(
+    knowledgeNodeId: string,
+    cognitiveDepth: string,
+    options?: {
+      questionBankIds?: string[];
+      questionTypes?: QuestionType[];
+      excludeIds?: string[];
+      limit?: number;
+      random?: boolean;
+    }
+  ): Promise<IQuestion[]> {
+    if (!mongoose.Types.ObjectId.isValid(knowledgeNodeId)) {
+      return [];
+    }
+
+    const query: Record<string, unknown> = {
+      knowledgeNodeId: new mongoose.Types.ObjectId(knowledgeNodeId),
+      cognitiveDepth: cognitiveDepth.toLowerCase(),
+      isActive: true
+    };
+
+    // Filter by question banks if specified
+    if (options?.questionBankIds && options.questionBankIds.length > 0) {
+      query.questionBankIds = { $in: options.questionBankIds };
+    }
+
+    // Filter by question types if specified
+    if (options?.questionTypes && options.questionTypes.length > 0) {
+      query.questionTypes = { $in: options.questionTypes };
+    }
+
+    // Exclude specific questions
+    if (options?.excludeIds && options.excludeIds.length > 0) {
+      query._id = {
+        $nin: options.excludeIds.map((id) => new mongoose.Types.ObjectId(id))
+      };
+    }
+
+    // Random selection using aggregation
+    if (options?.random && options?.limit) {
+      return Question.aggregate([
+        { $match: query },
+        { $sample: { size: options.limit } }
+      ]);
+    }
+
+    let questionQuery = Question.find(query);
+
+    if (options?.limit) {
+      questionQuery = questionQuery.limit(options.limit);
+    }
+
+    return questionQuery;
+  }
+
+  /**
+   * Count questions by knowledge node and cognitive depth
+   * Useful for determining content coverage
+   */
+  static async countByNodeAndDepth(
+    knowledgeNodeId: string
+  ): Promise<Record<string, number>> {
+    if (!mongoose.Types.ObjectId.isValid(knowledgeNodeId)) {
+      return {};
+    }
+
+    const result = await Question.aggregate([
+      {
+        $match: {
+          knowledgeNodeId: new mongoose.Types.ObjectId(knowledgeNodeId),
+          isActive: true
+        }
+      },
+      {
+        $group: {
+          _id: '$cognitiveDepth',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const counts: Record<string, number> = {};
+    for (const item of result) {
+      if (item._id) {
+        counts[item._id] = item.count;
+      }
+    }
+
+    return counts;
+  }
+
+  /**
+   * Link a question to a knowledge node
+   */
+  static async linkToKnowledgeNode(
+    questionId: string,
+    knowledgeNodeId: string,
+    cognitiveDepth?: string
+  ): Promise<IQuestion | null> {
+    if (!mongoose.Types.ObjectId.isValid(questionId)) {
+      throw ApiError.notFound('Question not found');
+    }
+
+    const question = await Question.findById(questionId);
+    if (!question || !question.isActive) {
+      throw ApiError.notFound('Question not found');
+    }
+
+    question.knowledgeNodeId = new mongoose.Types.ObjectId(knowledgeNodeId);
+    if (cognitiveDepth) {
+      question.cognitiveDepth = cognitiveDepth.toLowerCase();
+    }
+
+    await question.save();
+    return question;
+  }
+
+  /**
+   * Unlink a question from its knowledge node
+   */
+  static async unlinkFromKnowledgeNode(questionId: string): Promise<IQuestion | null> {
+    if (!mongoose.Types.ObjectId.isValid(questionId)) {
+      throw ApiError.notFound('Question not found');
+    }
+
+    const question = await Question.findById(questionId);
+    if (!question || !question.isActive) {
+      throw ApiError.notFound('Question not found');
+    }
+
+    question.knowledgeNodeId = undefined;
+    question.cognitiveDepth = undefined;
+
+    await question.save();
+    return question;
+  }
+
+  /**
+   * Bulk update cognitive depth for multiple questions
+   */
+  static async bulkUpdateCognitiveDepth(
+    questionIds: string[],
+    cognitiveDepth: string,
+    departmentId: string
+  ): Promise<{ updated: number; failed: number; results: Array<{ id: string; status: string; error?: string }> }> {
+    const results: Array<{ id: string; status: string; error?: string }> = [];
+    let updated = 0;
+    let failed = 0;
+
+    for (const questionId of questionIds) {
+      try {
+        if (!mongoose.Types.ObjectId.isValid(questionId)) {
+          results.push({ id: questionId, status: 'failed', error: 'Invalid question ID' });
+          failed++;
+          continue;
+        }
+
+        const question = await Question.findById(questionId);
+        
+        if (!question || !question.isActive) {
+          results.push({ id: questionId, status: 'failed', error: 'Question not found' });
+          failed++;
+          continue;
+        }
+
+        // Verify question belongs to department
+        if (question.departmentId?.toString() !== departmentId) {
+          results.push({ id: questionId, status: 'failed', error: 'Question not in department' });
+          failed++;
+          continue;
+        }
+
+        // Update cognitive depth
+        question.cognitiveDepth = cognitiveDepth.toLowerCase();
+        await question.save();
+
+        results.push({ id: questionId, status: 'updated' });
+        updated++;
+      } catch (error: any) {
+        results.push({ id: questionId, status: 'failed', error: error.message || 'Unknown error' });
+        failed++;
+      }
+    }
+
+    return { updated, failed, results };
   }
 }

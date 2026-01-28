@@ -4,6 +4,7 @@ import { LearningUnitsService } from '@/services/academic/learning-units.service
 import LearningUnit from '@/models/content/LearningUnit.model';
 import Module from '@/models/academic/Module.model';
 import { describeIfMongo } from '../../helpers/mongo-guard';
+import { seedLearningUnitLookups } from '../../helpers/lookup-values';
 
 describeIfMongo('LearningUnitsService - Unit Tests', () => {
   let mongoServer: MongoMemoryServer;
@@ -12,6 +13,7 @@ describeIfMongo('LearningUnitsService - Unit Tests', () => {
     mongoServer = await MongoMemoryServer.create();
     const mongoUri = mongoServer.getUri();
     await mongoose.connect(mongoUri);
+    await seedLearningUnitLookups();
   });
 
   afterAll(async () => {
@@ -68,8 +70,8 @@ describeIfMongo('LearningUnitsService - Unit Tests', () => {
       moduleId,
       title: 'Test Learning Unit',
       description: 'A test learning unit',
-      type: 'video',
-      category: 'exposition',
+      type: 'media',
+      category: 'topic',
       isRequired: true,
       isReplayable: false,
       weight: 10,
@@ -117,9 +119,9 @@ describeIfMongo('LearningUnitsService - Unit Tests', () => {
 
     it('should filter by category', async () => {
       const module = await createTestModule();
-      await createTestLearningUnit(module._id, { title: 'Exposition Unit', category: 'exposition' });
+      await createTestLearningUnit(module._id, { title: 'Topic Unit', category: 'topic' });
       await createTestLearningUnit(module._id, { title: 'Practice Unit', category: 'practice', sequence: 2 });
-      await createTestLearningUnit(module._id, { title: 'Assessment Unit', category: 'assessment', sequence: 3 });
+      await createTestLearningUnit(module._id, { title: 'Graded Unit', category: 'graded', sequence: 3 });
 
       const result = await LearningUnitsService.listLearningUnits(module._id.toString(), {
         category: 'practice'
@@ -214,8 +216,8 @@ describeIfMongo('LearningUnitsService - Unit Tests', () => {
       const learningUnit = await createTestLearningUnit(module._id, {
         title: 'Test Unit',
         description: 'Test description',
-        category: 'exposition',
-        type: 'video'
+        category: 'topic',
+        type: 'media'
       });
 
       const result = await LearningUnitsService.getLearningUnit(learningUnit._id.toString());
@@ -223,7 +225,7 @@ describeIfMongo('LearningUnitsService - Unit Tests', () => {
       expect(result.id).toBe(learningUnit._id.toString());
       expect(result.title).toBe('Test Unit');
       expect(result.description).toBe('Test description');
-      expect(result.category).toBe('exposition');
+      expect(result.category).toBe('topic');
     });
 
     it('should throw 404 for non-existent learning unit', async () => {
@@ -259,15 +261,15 @@ describeIfMongo('LearningUnitsService - Unit Tests', () => {
         module._id.toString(),
         {
           title: 'New Unit',
-          category: 'exposition',
-          contentType: 'video'
+          category: 'topic',
+          contentType: 'media'
         },
         createdBy
       );
 
       expect(result.title).toBe('New Unit');
-      expect(result.category).toBe('exposition');
-      expect(result.contentType).toBe('video');
+      expect(result.category).toBe('topic');
+      expect(result.contentType).toBe('media');
       expect(result.moduleId).toBe(module._id.toString());
     });
 
@@ -281,7 +283,7 @@ describeIfMongo('LearningUnitsService - Unit Tests', () => {
         {
           title: 'Complete Unit',
           description: 'Full description',
-          category: 'assessment',
+          category: 'graded',
           contentType: 'exercise',
           contentId,
           isRequired: false,
@@ -294,7 +296,7 @@ describeIfMongo('LearningUnitsService - Unit Tests', () => {
 
       expect(result.title).toBe('Complete Unit');
       expect(result.description).toBe('Full description');
-      expect(result.category).toBe('assessment');
+      expect(result.category).toBe('graded');
       expect(result.isRequired).toBe(false);
       expect(result.isReplayable).toBe(true);
       expect(result.weight).toBe(25);
@@ -330,8 +332,8 @@ describeIfMongo('LearningUnitsService - Unit Tests', () => {
           nonExistentModuleId,
           {
             title: 'Test Unit',
-            category: 'exposition',
-            contentType: 'video'
+            category: 'topic',
+            contentType: 'media'
           },
           createdBy
         )
@@ -348,7 +350,7 @@ describeIfMongo('LearningUnitsService - Unit Tests', () => {
           {
             title: 'Test Unit',
             category: 'invalid' as any,
-            contentType: 'video'
+            contentType: 'media'
           },
           createdBy
         )
@@ -363,8 +365,8 @@ describeIfMongo('LearningUnitsService - Unit Tests', () => {
         module._id.toString(),
         {
           title: 'Default Values Unit',
-          category: 'exposition',
-          contentType: 'video'
+          category: 'topic',
+          contentType: 'media'
         },
         createdBy
       );
@@ -396,7 +398,7 @@ describeIfMongo('LearningUnitsService - Unit Tests', () => {
 
     it('should update category', async () => {
       const module = await createTestModule();
-      const learningUnit = await createTestLearningUnit(module._id, { category: 'exposition' });
+      const learningUnit = await createTestLearningUnit(module._id, { category: 'topic' });
 
       const result = await LearningUnitsService.updateLearningUnit(
         learningUnit._id.toString(),
@@ -652,8 +654,8 @@ describeIfMongo('LearningUnitsService - Unit Tests', () => {
           'invalid-module-id',
           {
             title: 'Test',
-            category: 'exposition',
-            contentType: 'video'
+            category: 'topic',
+            contentType: 'media'
           },
           createdBy
         )

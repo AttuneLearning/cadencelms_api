@@ -53,6 +53,54 @@ Add new entries at the TOP of this section.
 Keep entries in reverse chronological order (newest first).
 -->
 
+### [2026-01-23 17:38:14] POST - Learning Unit Type Lookup Update
+
+- **File:** `2026-01-23_api_learning_unit_type_lookup_update.md`
+- **Thread:** THR-CONTRACT-004
+- **Type:** complete
+- **Priority:** medium
+- **Target:** UI Team
+- **Summary:** Learning unit types now stored in LookupValue (media/document/scorm/custom/exercise/assessment/assignment); video deprecated
+- **Related Files Changed:**
+  - `scripts/seeds/constants.seed.ts` - added learning-unit-type lookup values and deprecated video
+  - `src/models/content/LearningUnit.model.ts` - type validation uses LookupValue
+  - `src/validators/learning-unit.validator.ts` - type validation uses LookupValue
+  - `src/controllers/academic/learning-units.controller.ts` - contentType validation uses LookupValue
+  - `contracts/api/learning-units.contract.ts` - updated type descriptions/examples
+  - `scripts/seeds/seed-sample-modules.ts` - updated learning unit types to media
+  - `tests/helpers/lookup-values.ts` - added learning unit type lookup seed
+  - `tests/**` - updated learning unit type expectations
+- **Rollback Notes:** Delete `messages/2026-01-23_api_learning_unit_type_lookup_update.md`
+
+### [2026-01-23 12:11:29] POST - Learning Unit Categories Corrected
+
+- **File:** `2026-01-23_api_learning_unit_categories_corrected.md`
+- **Thread:** THR-CONTRACT-003
+- **Type:** complete
+- **Priority:** medium
+- **Target:** UI Team
+- **Summary:** Learning unit categories now limited to topic/assignment/practice/graded via LookupValue; legacy categories deactivated
+- **Related Files Changed:**
+  - `scripts/seeds/constants.seed.ts` - updated learning-unit-category lookup values and deactivated legacy keys
+  - `contracts/api/learning-units.contract.ts` - updated category examples/counts
+  - `contracts/api/modules.contract.ts` - updated learning unit category examples
+  - `scripts/seeds/seed-sample-modules.ts` - updated sample categories
+  - `tests/helpers/lookup-values.ts` - updated test seed categories
+  - `tests/**` - updated learning unit category expectations
+- **Rollback Notes:** Delete `messages/2026-01-23_api_learning_unit_categories_corrected.md`
+
+### [2026-01-23 09:05:33] POST - Learning Unit Category Optional/Nullable
+
+- **File:** `2026-01-23_api_learning_unit_category_nullable.md`
+- **Thread:** THR-CONTRACT-002
+- **Type:** complete
+- **Priority:** low
+- **Target:** UI Team
+- **Summary:** Learning Unit contract now allows category to be optional/nullable
+- **Related Files Changed:**
+  - `contracts/api/learning-units.contract.ts` - category optional/nullable in request/response
+- **Rollback Notes:** Delete `messages/2026-01-23_api_learning_unit_category_nullable.md`
+
 ### [2026-01-14 00:15:00] POST - ISS-011 Implementation Complete
 
 - **File:** `2026-01-14_ISS-011_API_complete.md`

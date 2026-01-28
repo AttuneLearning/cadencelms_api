@@ -3,6 +3,10 @@ import { LearningUnitsService } from '@/services/academic/learning-units.service
 import { ApiResponse } from '@/utils/ApiResponse';
 import { asyncHandler } from '@/utils/asyncHandler';
 import { ApiError } from '@/utils/ApiError';
+import { getValidKeys } from '@/utils/lookup-validators';
+
+const LEARNING_UNIT_CATEGORY_LOOKUP = 'learning-unit-category';
+const LEARNING_UNIT_TYPE_LOOKUP = 'learning-unit-type';
 
 /**
  * Learning Units Controller
@@ -21,7 +25,7 @@ export const listLearningUnits = asyncHandler(async (req: Request, res: Response
   }
 
   const filters = {
-    category: req.query.category as 'exposition' | 'practice' | 'assessment' | undefined,
+    category: req.query.category as string | undefined,
     isRequired: req.query.isRequired !== undefined
       ? req.query.isRequired === 'true'
       : undefined,
@@ -40,8 +44,11 @@ export const listLearningUnits = asyncHandler(async (req: Request, res: Response
   }
 
   // Validate category
-  if (filters.category && !['exposition', 'practice', 'assessment'].includes(filters.category)) {
-    throw ApiError.badRequest('Invalid category. Must be one of: exposition, practice, assessment');
+  if (filters.category) {
+    const validCategories = await getValidKeys(LEARNING_UNIT_CATEGORY_LOOKUP);
+    if (!validCategories.includes(filters.category)) {
+      throw ApiError.badRequest(`Invalid category. Must be one of: ${validCategories.join(', ')}`);
+    }
   }
 
   const result = await LearningUnitsService.listLearningUnits(moduleId, filters);
@@ -95,12 +102,21 @@ export const createLearningUnit = asyncHandler(async (req: Request, res: Respons
     throw ApiError.badRequest('Learning unit title cannot exceed 200 characters');
   }
 
-  if (!category || !['exposition', 'practice', 'assessment'].includes(category)) {
-    throw ApiError.badRequest('Category is required and must be one of: exposition, practice, assessment');
+  if (!category) {
+    throw ApiError.badRequest('Category is required');
+  }
+
+  const validCategories = await getValidKeys(LEARNING_UNIT_CATEGORY_LOOKUP);
+  if (!validCategories.includes(category)) {
+    throw ApiError.badRequest(`Category must be one of: ${validCategories.join(', ')}`);
   }
 
   if (!contentType || typeof contentType !== 'string') {
     throw ApiError.badRequest('Content type is required');
+  }
+  const validTypes = await getValidKeys(LEARNING_UNIT_TYPE_LOOKUP);
+  if (!validTypes.includes(contentType)) {
+    throw ApiError.badRequest(`Content type must be one of: ${validTypes.join(', ')}`);
   }
 
   // Validate description length
@@ -140,7 +156,7 @@ export const createLearningUnit = asyncHandler(async (req: Request, res: Respons
   };
 
   // Get createdBy from authenticated user
-  const createdBy = (req as any).user?.id;
+  const createdBy = req.user?.userId;
   if (!createdBy) {
     throw ApiError.unauthorized('User context not found');
   }
@@ -182,8 +198,18 @@ export const updateLearningUnit = asyncHandler(async (req: Request, res: Respons
   }
 
   // Validate category if provided
-  if (category !== undefined && !['exposition', 'practice', 'assessment'].includes(category)) {
-    throw ApiError.badRequest('Category must be one of: exposition, practice, assessment');
+  if (category !== undefined) {
+    const validCategories = await getValidKeys(LEARNING_UNIT_CATEGORY_LOOKUP);
+    if (!validCategories.includes(category)) {
+      throw ApiError.badRequest(`Category must be one of: ${validCategories.join(', ')}`);
+    }
+  }
+  // Validate content type if provided
+  if (contentType !== undefined) {
+    const validTypes = await getValidKeys(LEARNING_UNIT_TYPE_LOOKUP);
+    if (!validTypes.includes(contentType)) {
+      throw ApiError.badRequest(`Content type must be one of: ${validTypes.join(', ')}`);
+    }
   }
 
   // Validate description if provided

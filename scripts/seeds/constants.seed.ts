@@ -9,7 +9,7 @@
  * - 4 Staff Roles
  * - 5 GlobalAdmin Roles
  *
- * Report System (112 values):
+ * Report System (98 values):
  * - 34 Activity Event Types (enrollment, content, assessment, SCORM, video, session, achievement)
  * - 12 Report Types (enrollment-summary, completion-rates, performance-analysis, etc.)
  * - 19 Measure Types (count, average, completion-rate, pass-rate, etc.)
@@ -19,7 +19,11 @@
  * - 10 Dimension Entities (learner, course, class, program, etc.)
  * - 4 Output Formats (pdf, excel, csv, json)
  *
- * Total: 113 lookup values (15 User Types/Roles + 98 Report System)
+ * Course Statuses (3 values)
+ * Learning Unit Categories (4 values)
+ * Learning Unit Types (7 values)
+ *
+ * Total: 127 lookup values (15 User Types/Roles + 98 Report System + 3 Course Statuses + 4 Learning Unit Categories + 7 Learning Unit Types)
  *
  * This script is idempotent - safe to run multiple times.
  * It will create missing records and skip existing ones.
@@ -285,6 +289,22 @@ const LOOKUP_VALUES = [
   { category: 'course-status', key: 'archived', parentLookupId: null, displayAs: 'Archived', description: 'Course is no longer active', sortOrder: 3, isActive: true, metadata: {} },
 
   // =========================================================================
+  // LEARNING UNIT CATEGORY VALUES
+  // =========================================================================
+  { category: 'learning-unit-category', key: 'topic', parentLookupId: null, displayAs: 'Topic', description: 'Instructional content delivery', sortOrder: 1, isActive: true, metadata: {} },
+  { category: 'learning-unit-category', key: 'assignment', parentLookupId: null, displayAs: 'Assignment', description: 'Learner submissions and coursework', sortOrder: 2, isActive: true, metadata: {} },
+  { category: 'learning-unit-category', key: 'practice', parentLookupId: null, displayAs: 'Practice', description: 'Reinforcement and practice activities', sortOrder: 3, isActive: true, metadata: {} },
+  { category: 'learning-unit-category', key: 'graded', parentLookupId: null, displayAs: 'Graded', description: 'Graded evaluation activities', sortOrder: 4, isActive: true, metadata: {} },
+
+  { category: 'learning-unit-type', key: 'media', parentLookupId: null, displayAs: 'Media', description: 'Video, audio, or other media content', sortOrder: 1, isActive: true, metadata: {} },
+  { category: 'learning-unit-type', key: 'document', parentLookupId: null, displayAs: 'Document', description: 'Readings and document-based content', sortOrder: 2, isActive: true, metadata: {} },
+  { category: 'learning-unit-type', key: 'scorm', parentLookupId: null, displayAs: 'SCORM', description: 'SCORM package content', sortOrder: 3, isActive: true, metadata: {} },
+  { category: 'learning-unit-type', key: 'custom', parentLookupId: null, displayAs: 'Custom', description: 'Custom interactive content', sortOrder: 4, isActive: true, metadata: {} },
+  { category: 'learning-unit-type', key: 'exercise', parentLookupId: null, displayAs: 'Exercise', description: 'Practice exercise content', sortOrder: 5, isActive: true, metadata: {} },
+  { category: 'learning-unit-type', key: 'assessment', parentLookupId: null, displayAs: 'Assessment', description: 'Assessment content', sortOrder: 6, isActive: true, metadata: {} },
+  { category: 'learning-unit-type', key: 'assignment', parentLookupId: null, displayAs: 'Assignment', description: 'Assignment content and submissions', sortOrder: 7, isActive: true, metadata: {} },
+
+  // =========================================================================
   // ACTIVITY EVENT TYPES (Report System)
   // =========================================================================
   // Enrollment Events
@@ -520,6 +540,22 @@ async function seedLookupValues(): Promise<void> {
 
   console.log('');
   console.log(`Lookup values seeded: ${created} created, ${updated} updated, ${skipped} skipped`);
+  const legacyLearningUnitCategories = ['exposition', 'assessment'];
+  const legacyUpdate = await LookupValue.updateMany(
+    { category: 'learning-unit-category', key: { $in: legacyLearningUnitCategories } },
+    { $set: { isActive: false } }
+  );
+  if (legacyUpdate.modifiedCount > 0) {
+    console.log(`Deactivated ${legacyUpdate.modifiedCount} legacy learning unit categories.`);
+  }
+  const legacyLearningUnitTypes = ['video'];
+  const legacyTypeUpdate = await LookupValue.updateMany(
+    { category: 'learning-unit-type', key: { $in: legacyLearningUnitTypes } },
+    { $set: { isActive: false } }
+  );
+  if (legacyTypeUpdate.modifiedCount > 0) {
+    console.log(`Deactivated ${legacyTypeUpdate.modifiedCount} legacy learning unit types.`);
+  }
   console.log(`Total lookup values in database: ${await LookupValue.countDocuments()}`);
 }
 
@@ -675,7 +711,7 @@ async function main(): Promise<void> {
     console.log('  - 4 Output Formats');
     console.log('  Subtotal: 98 values');
     console.log('');
-    console.log('  Total: 113 lookup values');
+    console.log('  Total: 127 lookup values');
     console.log('');
 
   } catch (error) {

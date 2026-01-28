@@ -3,7 +3,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface ISetting extends Document {
   key: string;
   value: any;
-  category: 'system' | 'email' | 'security' | 'features' | 'appearance' | 'limits';
+  category: 'system' | 'email' | 'security' | 'features' | 'appearance' | 'limits' | 'question';
   dataType: 'string' | 'number' | 'boolean' | 'object' | 'array' | 'json';
   description?: string;
   isPublic: boolean;
@@ -37,7 +37,7 @@ const settingSchema = new Schema<ISetting>(
     category: {
       type: String,
       required: true,
-      enum: ['system', 'email', 'security', 'features', 'appearance', 'limits'],
+      enum: ['system', 'email', 'security', 'features', 'appearance', 'limits', 'question'],
       index: true,
     },
     dataType: {

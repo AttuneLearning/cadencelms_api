@@ -116,6 +116,7 @@ Hand off and wait for response.
 
 **Spec:** `agent_coms/api/specs/UNIFIED_AUTHORIZATION_MODEL.md`
 **Contract:** `contracts/api/authorization.contract.ts`
+**Decision Doc:** `agent_coms/docs/architecture/decisions/ADR-AUTH-001-UNIFIED-AUTHORIZATION-MODEL.md`
 
 **Migration:**
 1. Phase 1: Add caching (non-breaking)
@@ -124,6 +125,20 @@ Hand off and wait for response.
 4. Phase 4: Remove deprecated
 
 **QA Checkpoint:** Run architecture review after each phase.
+
+### ADR-UI-FORM-001: Standardized Form Pattern (2026-01-22)
+
+**Decision:** Standardize all forms on the shadcn + React Hook Form pattern via `src/shared/ui/form.tsx`.
+
+**Context:** Mixed usage of `register()` and ad-hoc inputs caused inconsistent UX, validation messaging, and accessibility wiring.
+
+**Solution:**
+- Use `<Form {...form}>` with `FormProvider`.
+- Use `FormField` + `render` for all inputs.
+- Wrap inputs directly with `FormControl` to attach IDs and aria attributes.
+
+**Reference:** `api/agent_coms/dev_guidance/architecture/ui/UI_COMPONENT_LIBRARY.md`
+**Decision Doc:** `agent_coms/docs/architecture/decisions/ADR-UI-FORM-001-STANDARDIZED-FORM-PATTERN.md`
 
 ---
 
@@ -134,5 +149,8 @@ Unified authorization model adopted. See ADR-AUTH-001. All new authorization cod
 
 **2026-01-20 | P1 Violation**
 Invented `department:admin` permission. Fix: `content:programs:manage`. Always verify permissions exist.
+
+**2026-01-22 | UI Forms**
+Adopted shadcn + React Hook Form pattern as the standard. All forms should use `FormField` with `control` + `render`.
 
 ---

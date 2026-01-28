@@ -246,7 +246,7 @@ export const ModulesContracts = {
             },
             repeatableCategories: {
               type: 'array',
-              items: { type: 'string', enum: ['exposition', 'practice', 'assessment'] }
+              items: { type: 'string', description: 'LookupValue: learning-unit-category' }
             },
             showAllAvailable: { type: 'boolean', default: true },
             allowSkip: { type: 'boolean', default: false }
@@ -342,7 +342,7 @@ export const ModulesContracts = {
               belowMastery: true,
               learnerRequest: true
             },
-            repeatableCategories: ['practice', 'assessment'],
+            repeatableCategories: ['practice', 'graded'],
             showAllAvailable: true,
             allowSkip: false
           },
@@ -380,7 +380,7 @@ export const ModulesContracts = {
               belowMastery: true,
               learnerRequest: true
             },
-            repeatableCategories: ['practice', 'assessment'],
+            repeatableCategories: ['practice', 'graded'],
             showAllAvailable: true,
             allowSkip: false
           },
@@ -541,7 +541,7 @@ export const ModulesContracts = {
               belowMastery: true,
               learnerRequest: false
             },
-            repeatableCategories: ['practice', 'assessment'],
+            repeatableCategories: ['practice', 'graded'],
             showAllAvailable: true,
             allowSkip: false
           },
@@ -554,8 +554,8 @@ export const ModulesContracts = {
             {
               id: '507f1f77bcf86cd799439040',
               title: 'Introduction to Variables',
-              category: 'exposition',
-              type: 'video',
+              category: 'topic',
+              type: 'media',
               sequence: 1,
               isRequired: true
             }

@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import Joi from 'joi';
 import mongoose from 'mongoose';
 import { ApiError } from '@/utils/ApiError';
+import { getValidKeys } from '@/utils/lookup-validators';
 
 /**
  * Custom Joi validator for MongoDB ObjectId
@@ -19,20 +20,13 @@ const objectIdValidator = (value: string, helpers: Joi.CustomHelpers) => {
   return value;
 };
 
-/**
- * Valid learning unit categories
- */
-const VALID_CATEGORIES = ['exposition', 'practice', 'assessment'] as const;
-
-/**
- * Valid content types for learning units
- */
-const VALID_CONTENT_TYPES = ['video', 'document', 'scorm', 'custom', 'exercise', 'assessment'] as const;
+const LEARNING_UNIT_CATEGORY_LOOKUP = 'learning-unit-category';
+const LEARNING_UNIT_TYPE_LOOKUP = 'learning-unit-type';
 
 /**
  * Schema for creating a learning unit
  */
-const createLearningUnitSchema = Joi.object({
+const buildCreateLearningUnitSchema = (validCategories: string[], validTypes: string[]) => Joi.object({
   title: Joi.string()
     .required()
     .min(1)
@@ -56,19 +50,19 @@ const createLearningUnitSchema = Joi.object({
 
   category: Joi.string()
     .required()
-    .valid(...VALID_CATEGORIES)
+    .valid(...validCategories)
     .messages({
       'string.empty': 'Category is required',
-      'any.only': `Category must be one of: ${VALID_CATEGORIES.join(', ')}`,
+      'any.only': `Category must be one of: ${validCategories.join(', ')}`,
       'any.required': 'Category is required'
     }),
 
   contentType: Joi.string()
     .required()
-    .valid(...VALID_CONTENT_TYPES)
+    .valid(...validTypes)
     .messages({
       'string.empty': 'Content type is required',
-      'any.only': `Content type must be one of: ${VALID_CONTENT_TYPES.join(', ')}`,
+      'any.only': `Content type must be one of: ${validTypes.join(', ')}`,
       'any.required': 'Content type is required'
     }),
 
@@ -122,7 +116,7 @@ const createLearningUnitSchema = Joi.object({
 /**
  * Schema for updating a learning unit (all fields optional)
  */
-const updateLearningUnitSchema = Joi.object({
+const buildUpdateLearningUnitSchema = (validCategories: string[], validTypes: string[]) => Joi.object({
   title: Joi.string()
     .optional()
     .min(1)
@@ -146,16 +140,16 @@ const updateLearningUnitSchema = Joi.object({
 
   category: Joi.string()
     .optional()
-    .valid(...VALID_CATEGORIES)
+    .valid(...validCategories)
     .messages({
-      'any.only': `Category must be one of: ${VALID_CATEGORIES.join(', ')}`
+      'any.only': `Category must be one of: ${validCategories.join(', ')}`
     }),
 
   contentType: Joi.string()
     .optional()
-    .valid(...VALID_CONTENT_TYPES)
+    .valid(...validTypes)
     .messages({
-      'any.only': `Content type must be one of: ${VALID_CONTENT_TYPES.join(', ')}`
+      'any.only': `Content type must be one of: ${validTypes.join(', ')}`
     }),
 
   contentId: Joi.string()
@@ -246,8 +240,8 @@ const moveLearningUnitSchema = Joi.object({
  * Validates:
  * - title: required, 1-200 characters
  * - description: optional, max 2000 characters
- * - category: required, one of: exposition, practice, assessment
- * - contentType: required, one of: video, document, scorm, custom, exercise, assessment
+ * - category: required, must be a valid learning-unit-category lookup
+ * - contentType: required, must be a valid learning-unit-type lookup
  * - contentId: optional, valid ObjectId
  * - isRequired: optional, boolean (default true)
  * - isReplayable: optional, boolean (default false)
@@ -255,22 +249,29 @@ const moveLearningUnitSchema = Joi.object({
  * - estimatedDuration: optional, minutes
  * - metadata: optional, object
  */
-export const validateCreateLearningUnit = (
+export const validateCreateLearningUnit = async (
   req: Request,
   _res: Response,
   next: NextFunction
 ) => {
-  const { error } = createLearningUnitSchema.validate(req.body, {
-    abortEarly: false,
-    stripUnknown: true
-  });
+  try {
+    const validCategories = await getValidKeys(LEARNING_UNIT_CATEGORY_LOOKUP);
+    const validTypes = await getValidKeys(LEARNING_UNIT_TYPE_LOOKUP);
+    const createLearningUnitSchema = buildCreateLearningUnitSchema(validCategories, validTypes);
+    const { error } = createLearningUnitSchema.validate(req.body, {
+      abortEarly: false,
+      stripUnknown: true
+    });
 
-  if (error) {
-    const errorMessage = error.details.map(detail => detail.message).join(', ');
-    return next(new ApiError(422, errorMessage));
+    if (error) {
+      const errorMessage = error.details.map(detail => detail.message).join(', ');
+      return next(new ApiError(422, errorMessage));
+    }
+
+    next();
+  } catch (error) {
+    next(error);
   }
-
-  next();
 };
 
 /**
@@ -278,22 +279,29 @@ export const validateCreateLearningUnit = (
  *
  * All fields are optional. Validates same fields as create but none are required.
  */
-export const validateUpdateLearningUnit = (
+export const validateUpdateLearningUnit = async (
   req: Request,
   _res: Response,
   next: NextFunction
 ) => {
-  const { error } = updateLearningUnitSchema.validate(req.body, {
-    abortEarly: false,
-    stripUnknown: true
-  });
+  try {
+    const validCategories = await getValidKeys(LEARNING_UNIT_CATEGORY_LOOKUP);
+    const validTypes = await getValidKeys(LEARNING_UNIT_TYPE_LOOKUP);
+    const updateLearningUnitSchema = buildUpdateLearningUnitSchema(validCategories, validTypes);
+    const { error } = updateLearningUnitSchema.validate(req.body, {
+      abortEarly: false,
+      stripUnknown: true
+    });
 
-  if (error) {
-    const errorMessage = error.details.map(detail => detail.message).join(', ');
-    return next(new ApiError(422, errorMessage));
+    if (error) {
+      const errorMessage = error.details.map(detail => detail.message).join(', ');
+      return next(new ApiError(422, errorMessage));
+    }
+
+    next();
+  } catch (error) {
+    next(error);
   }
-
-  next();
 };
 
 /**

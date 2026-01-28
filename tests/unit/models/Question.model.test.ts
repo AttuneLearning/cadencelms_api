@@ -23,7 +23,7 @@ describe('Question Model', () => {
   describe('questionBankIds field', () => {
     const validQuestionData = {
       questionText: 'What is 2 + 2?',
-      questionType: 'multiple-choice' as const,
+      questionTypes: ['multiple_choice'],
       departmentId: new mongoose.Types.ObjectId(),
       points: 5,
       options: ['3', '4', '5', '6'],
@@ -219,7 +219,7 @@ describe('Question Model', () => {
 
       const question = await Question.create({
         questionText: 'Complete question with bank IDs',
-        questionType: 'multiple-choice',
+        questionTypes: ['multiple_choice'],
         departmentId,
         points: 10,
         options: ['Option A', 'Option B', 'Option C'],
@@ -230,7 +230,7 @@ describe('Question Model', () => {
       });
 
       expect(question.questionText).toBe('Complete question with bank IDs');
-      expect(question.questionType).toBe('multiple-choice');
+      expect(question.questionTypes).toEqual(['multiple_choice']);
       expect(question.points).toBe(10);
       expect(question.questionBankIds).toEqual(['bank-comprehensive']);
     });

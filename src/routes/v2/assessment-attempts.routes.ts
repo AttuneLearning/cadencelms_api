@@ -7,7 +7,7 @@ import {
   validateGradeQuestion
 } from '@/validators/assessment-attempt.validator';
 
-const router = Router();
+const router = Router({ mergeParams: true });
 
 /**
  * Assessment Attempts Routes

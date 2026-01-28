@@ -19,6 +19,7 @@ import {
   seedAccessRights,
   seedRoleDefinitions
 } from './seed-admin';
+import { seedCognitiveDepthLevels } from './seed-cognitive-depth-levels';
 
 import { User } from '../src/models/auth/User.model';
 import { Staff } from '../src/models/auth/Staff.model';
@@ -581,6 +582,9 @@ async function main() {
     console.log('Seeding access rights and role definitions...');
     await seedAccessRights();
     await seedRoleDefinitions();
+
+    console.log('Seeding cognitive depth levels...');
+    await seedCognitiveDepthLevels();
 
     console.log('Ensuring master department and admin user...');
     await createMasterDepartment();

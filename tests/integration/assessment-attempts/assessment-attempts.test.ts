@@ -13,6 +13,7 @@ import AssessmentAttempt from '@/models/progress/AssessmentAttempt.model';
 import ClassEnrollment from '@/models/enrollment/ClassEnrollment.model';
 import { hashPassword } from '@/utils/password';
 import { describeIfMongo } from '../../helpers/mongo-guard';
+import { refreshDepartmentCache } from '../../helpers/department-cache';
 
 /**
  * Assessment Attempts E2E Integration Tests
@@ -36,7 +37,8 @@ interface TestUserOptions {
   type: 'learner' | 'staff';
   roles?: string[];
   departmentId?: mongoose.Types.ObjectId;
-  accessRights?: string[];
+  globalRights?: string[];
+  departmentRights?: Record<string, string[]>;
 }
 
 interface TestAssessmentOptions {
@@ -54,7 +56,7 @@ interface TestAssessmentOptions {
 
 interface TestQuestionOptions {
   questionText?: string;
-  questionType: 'multiple-choice' | 'true-false' | 'short-answer' | 'essay' | 'fill-blank' | 'matching';
+  questionTypes: ('multiple_choice' | 'true_false' | 'short_answer' | 'long_answer' | 'fill_in_blank' | 'matching')[];
   departmentId: mongoose.Types.ObjectId;
   questionBankId: string;
   points?: number;
@@ -128,13 +130,29 @@ async function createTestUser(options: TestUserOptions): Promise<{
     });
   }
 
+  // Build department memberships for the token
+  const departmentMemberships = options.departmentId
+    ? [{ departmentId: options.departmentId.toString() }]
+    : [];
+
+  // Build department rights - default rights for staff based on roles
+  const departmentRights: Record<string, string[]> = options.departmentRights || {};
+  if (options.departmentId && !options.departmentRights) {
+    // Provide default rights based on role
+    if (options.roles?.includes('instructor')) {
+      departmentRights[options.departmentId.toString()] = ['grade:assessments', 'content:assessments:read'];
+    }
+  }
+
   const token = jwt.sign(
     {
       userId: userId.toString(),
       email: user.email,
+      type: 'access',
       roles: options.roles || [],
-      allAccessRights: options.accessRights || [],
-      type: 'access'
+      globalRights: options.globalRights || [],
+      departmentRights,
+      departmentMemberships
     },
     process.env.JWT_ACCESS_SECRET || 'test-secret',
     { expiresIn: '1h' }
@@ -190,27 +208,30 @@ async function createTestAssessment(options: TestAssessmentOptions): Promise<any
 async function createTestQuestion(options: TestQuestionOptions): Promise<any> {
   const questionData: any = {
     questionText: options.questionText || 'Test question?',
-    questionType: options.questionType,
+    questionTypes: options.questionTypes,
     departmentId: options.departmentId,
     points: options.points || 10,
     questionBankIds: [options.questionBankId],
     isActive: true
   };
 
-  if (options.questionType === 'multiple-choice') {
+  // Use the first question type for determining question-specific fields
+  const primaryType = options.questionTypes[0];
+
+  if (primaryType === 'multiple_choice') {
     questionData.options = options.options || ['Option A', 'Option B', 'Option C', 'Option D'];
     questionData.correctAnswer = options.correctAnswer || 'Option A';
-  } else if (options.questionType === 'true-false') {
+  } else if (primaryType === 'true_false') {
     questionData.options = ['true', 'false'];
     questionData.correctAnswer = options.correctAnswer || 'true';
-  } else if (options.questionType === 'short-answer') {
+  } else if (primaryType === 'short_answer') {
     questionData.correctAnswers = options.correctAnswers || ['correct answer'];
-  } else if (options.questionType === 'essay') {
+  } else if (primaryType === 'long_answer') {
     questionData.modelAnswer = 'This is a model answer for the essay question.';
     questionData.maxWordCount = 500;
-  } else if (options.questionType === 'fill-blank') {
+  } else if (primaryType === 'fill_in_blank') {
     questionData.correctAnswer = options.correctAnswer || 'blank';
-  } else if (options.questionType === 'matching') {
+  } else if (primaryType === 'matching') {
     questionData.matchingPairs = options.matchingPairs || {
       'Term A': 'Definition A',
       'Term B': 'Definition B'
@@ -247,7 +268,7 @@ async function createMultipleChoiceQuestions(
   for (let i = 0; i < count; i++) {
     const q = await createTestQuestion({
       questionText: `Multiple choice question ${i + 1}?`,
-      questionType: 'multiple-choice',
+      questionTypes: ['multiple_choice'],
       departmentId,
       questionBankId,
       points: 20,
@@ -271,7 +292,7 @@ async function createEssayQuestions(
   for (let i = 0; i < count; i++) {
     const q = await createTestQuestion({
       questionText: `Essay question ${i + 1}: Explain the concept in detail.`,
-      questionType: 'essay',
+      questionTypes: ['long_answer'],
       departmentId,
       questionBankId,
       points: 25
@@ -315,6 +336,9 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
       isVisible: true
     });
 
+    // Refresh department cache to pick up the new department
+    await refreshDepartmentCache();
+
     questionBankId = new mongoose.Types.ObjectId().toString();
 
     // Create learner
@@ -329,7 +353,9 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
       type: 'staff',
       roles: ['instructor'],
       departmentId: department._id,
-      accessRights: ['grade:assessments']
+      departmentRights: {
+        [department._id.toString()]: ['grade:assessments', 'content:assessments:read']
+      }
     });
   });
 
@@ -362,11 +388,11 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
 
       expect(startResponse.status).toBe(201);
       expect(startResponse.body.success).toBe(true);
-      expect(startResponse.body.data.attemptId).toBeDefined();
+      expect(startResponse.body.data._id).toBeDefined();
       expect(startResponse.body.data.status).toBe('in_progress');
       expect(startResponse.body.data.attemptNumber).toBe(1);
 
-      const attemptId = startResponse.body.data.attemptId;
+      const attemptId = startResponse.body.data._id;
 
       // Step 2: Save progress (first save)
       const firstSaveResponse = await request(app)
@@ -427,7 +453,7 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
         .set('Authorization', `Bearer ${learner.token}`)
         .send({ enrollmentId: enrollment._id.toString() });
 
-      const attemptId = startResponse.body.data.attemptId;
+      const attemptId = startResponse.body.data._id;
 
       // Submit with responses directly
       const submitResponse = await request(app)
@@ -453,7 +479,7 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
         .send({ enrollmentId: enrollment._id.toString() });
 
       await request(app)
-        .post(`/api/v2/assessments/${assessment._id}/attempts/${start1.body.data.attemptId}/submit`)
+        .post(`/api/v2/assessments/${assessment._id}/attempts/${start1.body.data._id}/submit`)
         .set('Authorization', `Bearer ${learner.token}`)
         .send({});
 
@@ -496,7 +522,7 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
         .set('Authorization', `Bearer ${learner.token}`)
         .send({ enrollmentId: enrollment._id.toString() });
 
-      const attemptId = startResponse.body.data.attemptId;
+      const attemptId = startResponse.body.data._id;
 
       // Answer 3 correct, 2 wrong
       const submitResponse = await request(app)
@@ -522,7 +548,7 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
     it('should auto-grade true/false questions correctly', async () => {
       const q1 = await createTestQuestion({
         questionText: 'True or false question 1',
-        questionType: 'true-false',
+        questionTypes: ['true_false'],
         departmentId: department._id,
         questionBankId,
         points: 10,
@@ -530,7 +556,7 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
       });
       const q2 = await createTestQuestion({
         questionText: 'True or false question 2',
-        questionType: 'true-false',
+        questionTypes: ['true_false'],
         departmentId: department._id,
         questionBankId,
         points: 10,
@@ -550,7 +576,7 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
         .set('Authorization', `Bearer ${learner.token}`)
         .send({ enrollmentId: enrollment._id.toString() });
 
-      const attemptId = startResponse.body.data.attemptId;
+      const attemptId = startResponse.body.data._id;
 
       // Answer both correctly
       const submitResponse = await request(app)
@@ -570,7 +596,7 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
     it('should auto-grade short answer questions with multiple correct answers', async () => {
       const question = await createTestQuestion({
         questionText: 'What is the capital of France?',
-        questionType: 'short-answer',
+        questionTypes: ['short_answer'],
         departmentId: department._id,
         questionBankId,
         points: 10,
@@ -590,7 +616,7 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
         .set('Authorization', `Bearer ${learner.token}`)
         .send({ enrollmentId: enrollment._id.toString() });
 
-      const attemptId = startResponse.body.data.attemptId;
+      const attemptId = startResponse.body.data._id;
 
       const submitResponse = await request(app)
         .post(`/api/v2/assessments/${assessment._id}/attempts/${attemptId}/submit`)
@@ -618,7 +644,7 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
         .set('Authorization', `Bearer ${learner.token}`)
         .send({ enrollmentId: enrollment._id.toString() });
 
-      const attemptId = startResponse.body.data.attemptId;
+      const attemptId = startResponse.body.data._id;
 
       // Answer only 1 question
       const submitResponse = await request(app)
@@ -660,7 +686,7 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
         .set('Authorization', `Bearer ${learner.token}`)
         .send({ enrollmentId: enrollment._id.toString() });
 
-      const attemptId = startResponse.body.data.attemptId;
+      const attemptId = startResponse.body.data._id;
 
       const submitResponse = await request(app)
         .post(`/api/v2/assessments/${assessment._id}/attempts/${attemptId}/submit`)
@@ -685,7 +711,7 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
         .set('Authorization', `Bearer ${learner.token}`)
         .send({ enrollmentId: enrollment._id.toString() });
 
-      const attemptId = startResponse.body.data.attemptId;
+      const attemptId = startResponse.body.data._id;
 
       await request(app)
         .post(`/api/v2/assessments/${assessment._id}/attempts/${attemptId}/submit`)
@@ -733,7 +759,7 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
         .set('Authorization', `Bearer ${learner.token}`)
         .send({ enrollmentId: enrollment._id.toString() });
 
-      const attemptId = startResponse.body.data.attemptId;
+      const attemptId = startResponse.body.data._id;
 
       await request(app)
         .post(`/api/v2/assessments/${assessment._id}/attempts/${attemptId}/submit`)
@@ -768,7 +794,7 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
         .set('Authorization', `Bearer ${learner.token}`)
         .send({ enrollmentId: enrollment._id.toString() });
 
-      const attemptId = startResponse.body.data.attemptId;
+      const attemptId = startResponse.body.data._id;
 
       await request(app)
         .post(`/api/v2/assessments/${assessment._id}/attempts/${attemptId}/submit`)
@@ -810,7 +836,7 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
         .set('Authorization', `Bearer ${learner.token}`)
         .send({ enrollmentId: enrollment._id.toString() });
 
-      const attemptId = startResponse.body.data.attemptId;
+      const attemptId = startResponse.body.data._id;
 
       // Manually expire the attempt by updating startedAt
       const pastTime = new Date(Date.now() - 120000); // 2 minutes ago
@@ -847,7 +873,7 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
         .set('Authorization', `Bearer ${learner.token}`)
         .send({ enrollmentId: enrollment._id.toString() });
 
-      const attemptId = startResponse.body.data.attemptId;
+      const attemptId = startResponse.body.data._id;
 
       const saveResponse = await request(app)
         .put(`/api/v2/assessments/${assessment._id}/attempts/${attemptId}/save`)
@@ -878,7 +904,7 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
         .set('Authorization', `Bearer ${learner.token}`)
         .send({ enrollmentId: enrollment._id.toString() });
 
-      const attemptId = startResponse.body.data.attemptId;
+      const attemptId = startResponse.body.data._id;
 
       const saveResponse = await request(app)
         .put(`/api/v2/assessments/${assessment._id}/attempts/${attemptId}/save`)
@@ -913,7 +939,7 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
         .send({ enrollmentId: enrollment._id.toString() });
 
       await request(app)
-        .post(`/api/v2/assessments/${assessment._id}/attempts/${start1.body.data.attemptId}/submit`)
+        .post(`/api/v2/assessments/${assessment._id}/attempts/${start1.body.data._id}/submit`)
         .set('Authorization', `Bearer ${learner.token}`)
         .send({});
 
@@ -924,7 +950,7 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
         .send({ enrollmentId: enrollment._id.toString() });
 
       await request(app)
-        .post(`/api/v2/assessments/${assessment._id}/attempts/${start2.body.data.attemptId}/submit`)
+        .post(`/api/v2/assessments/${assessment._id}/attempts/${start2.body.data._id}/submit`)
         .set('Authorization', `Bearer ${learner.token}`)
         .send({});
 
@@ -960,7 +986,7 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
         expect(startResponse.body.data.attemptNumber).toBe(i + 1);
 
         await request(app)
-          .post(`/api/v2/assessments/${assessment._id}/attempts/${startResponse.body.data.attemptId}/submit`)
+          .post(`/api/v2/assessments/${assessment._id}/attempts/${startResponse.body.data._id}/submit`)
           .set('Authorization', `Bearer ${learner.token}`)
           .send({});
       }
@@ -987,7 +1013,7 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
 
       // Submit first attempt
       await request(app)
-        .post(`/api/v2/assessments/${assessment._id}/attempts/${start1.body.data.attemptId}/submit`)
+        .post(`/api/v2/assessments/${assessment._id}/attempts/${start1.body.data._id}/submit`)
         .set('Authorization', `Bearer ${learner.token}`)
         .send({});
 
@@ -1044,7 +1070,7 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
         .set('Authorization', `Bearer ${learner.token}`)
         .send({ enrollmentId: enrollment._id.toString() });
 
-      const attemptId = startResponse.body.data.attemptId;
+      const attemptId = startResponse.body.data._id;
 
       // Submit first time
       await request(app)
@@ -1068,7 +1094,7 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
         .set('Authorization', `Bearer ${learner.token}`)
         .send({ enrollmentId: enrollment._id.toString() });
 
-      const attemptId = startResponse.body.data.attemptId;
+      const attemptId = startResponse.body.data._id;
 
       // Submit the attempt
       await request(app)
@@ -1127,13 +1153,13 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
       expect(response.body.message).toContain('enrollmentId');
     });
 
-    it('should return 400 for invalid responses format', async () => {
+    it('should return 422 for invalid responses format', async () => {
       const startResponse = await request(app)
         .post(`/api/v2/assessments/${assessment._id}/attempts/start`)
         .set('Authorization', `Bearer ${learner.token}`)
         .send({ enrollmentId: enrollment._id.toString() });
 
-      const attemptId = startResponse.body.data.attemptId;
+      const attemptId = startResponse.body.data._id;
 
       const saveResponse = await request(app)
         .put(`/api/v2/assessments/${assessment._id}/attempts/${attemptId}/save`)
@@ -1142,7 +1168,7 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
           responses: 'not an array'
         });
 
-      expect(saveResponse.status).toBe(400);
+      expect(saveResponse.status).toBe(422);
       expect(saveResponse.body.message).toContain('array');
     });
 
@@ -1177,7 +1203,7 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
         .set('Authorization', `Bearer ${learner.token}`)
         .send({ enrollmentId: enrollment._id.toString() });
 
-      const attemptId = startResponse.body.data.attemptId;
+      const attemptId = startResponse.body.data._id;
 
       await request(app)
         .post(`/api/v2/assessments/${essayAssessment._id}/attempts/${attemptId}/submit`)
@@ -1195,7 +1221,7 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
           feedback: 'Good job'
         });
 
-      expect(gradeResponse.status).toBe(400);
+      expect(gradeResponse.status).toBe(422);
       expect(gradeResponse.body.message).toContain('questionIndex');
     });
 
@@ -1213,7 +1239,7 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
         .set('Authorization', `Bearer ${learner.token}`)
         .send({ enrollmentId: enrollment._id.toString() });
 
-      const attemptId = startResponse.body.data.attemptId;
+      const attemptId = startResponse.body.data._id;
 
       await request(app)
         .post(`/api/v2/assessments/${essayAssessment._id}/attempts/${attemptId}/submit`)
@@ -1231,7 +1257,7 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
           feedback: 'Good job'
         });
 
-      expect(gradeResponse.status).toBe(400);
+      expect(gradeResponse.status).toBe(422);
       expect(gradeResponse.body.message).toContain('score');
     });
 
@@ -1249,7 +1275,7 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
         .set('Authorization', `Bearer ${learner.token}`)
         .send({ enrollmentId: enrollment._id.toString() });
 
-      const attemptId = startResponse.body.data.attemptId;
+      const attemptId = startResponse.body.data._id;
 
       await request(app)
         .post(`/api/v2/assessments/${essayAssessment._id}/attempts/${attemptId}/submit`)
@@ -1284,7 +1310,7 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
         .set('Authorization', `Bearer ${learner.token}`)
         .send({ enrollmentId: enrollment._id.toString() });
 
-      const attemptId = startResponse.body.data.attemptId;
+      const attemptId = startResponse.body.data._id;
 
       await request(app)
         .post(`/api/v2/assessments/${essayAssessment._id}/attempts/${attemptId}/submit`)
@@ -1301,7 +1327,7 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
           score: -5
         });
 
-      expect(gradeResponse.status).toBe(400);
+      expect(gradeResponse.status).toBe(422);
     });
   });
 
@@ -1312,7 +1338,7 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
       // Create mixed questions
       const mcQuestion = await createTestQuestion({
         questionText: 'Multiple choice question',
-        questionType: 'multiple-choice',
+        questionTypes: ['multiple_choice'],
         departmentId: department._id,
         questionBankId,
         points: 10,
@@ -1322,7 +1348,7 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
 
       const essayQuestion = await createTestQuestion({
         questionText: 'Essay question',
-        questionType: 'essay',
+        questionTypes: ['long_answer'],
         departmentId: department._id,
         questionBankId,
         points: 20
@@ -1330,7 +1356,7 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
 
       const tfQuestion = await createTestQuestion({
         questionText: 'True/false question',
-        questionType: 'true-false',
+        questionTypes: ['true_false'],
         departmentId: department._id,
         questionBankId,
         points: 10,
@@ -1351,7 +1377,7 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
         .set('Authorization', `Bearer ${learner.token}`)
         .send({ enrollmentId: enrollment._id.toString() });
 
-      const attemptId = startResponse.body.data.attemptId;
+      const attemptId = startResponse.body.data._id;
 
       const submitResponse = await request(app)
         .post(`/api/v2/assessments/${assessment._id}/attempts/${attemptId}/submit`)

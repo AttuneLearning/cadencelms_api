@@ -76,7 +76,7 @@ export const listQuestions = asyncHandler(async (req: Request, res: Response) =>
 export const createQuestion = asyncHandler(async (req: Request, res: Response) => {
   const {
     questionText,
-    questionType,
+    questionTypes,
     options,
     correctAnswer,
     points,
@@ -95,13 +95,15 @@ export const createQuestion = asyncHandler(async (req: Request, res: Response) =
     throw ApiError.badRequest('Question text cannot exceed 2000 characters');
   }
 
-  if (!questionType || typeof questionType !== 'string') {
-    throw ApiError.badRequest('Question type is required');
+  if (!questionTypes || !Array.isArray(questionTypes) || questionTypes.length === 0) {
+    throw ApiError.badRequest('Question types is required and must be a non-empty array');
   }
 
-  const validTypes = ['multiple_choice', 'true_false', 'short_answer', 'essay', 'fill_blank'];
-  if (!validTypes.includes(questionType)) {
-    throw ApiError.badRequest(`Invalid question type. Must be one of: ${validTypes.join(', ')}`);
+  const validTypes = ['multiple_choice', 'multiple_select', 'true_false', 'short_answer', 'long_answer', 'matching', 'flashcard', 'fill_in_blank'];
+  for (const type of questionTypes) {
+    if (!validTypes.includes(type)) {
+      throw ApiError.badRequest(`Invalid question type: ${type}. Must be one of: ${validTypes.join(', ')}`);
+    }
   }
 
   if (points === undefined || typeof points !== 'number' || points < 0.1) {
@@ -166,7 +168,7 @@ export const createQuestion = asyncHandler(async (req: Request, res: Response) =
 
   const questionData = {
     questionText: questionText.trim(),
-    questionType: questionType as any,
+    questionTypes: questionTypes as any,
     options,
     correctAnswer,
     points,
@@ -206,7 +208,7 @@ export const updateQuestion = asyncHandler(async (req: Request, res: Response) =
   const { id } = req.params;
   const {
     questionText,
-    questionType,
+    questionTypes,
     options,
     correctAnswer,
     points,
@@ -226,14 +228,16 @@ export const updateQuestion = asyncHandler(async (req: Request, res: Response) =
     }
   }
 
-  // Validate questionType if provided
-  if (questionType !== undefined) {
-    if (typeof questionType !== 'string') {
-      throw ApiError.badRequest('Question type must be a string');
+  // Validate questionTypes if provided
+  if (questionTypes !== undefined) {
+    if (!Array.isArray(questionTypes) || questionTypes.length === 0) {
+      throw ApiError.badRequest('Question types must be a non-empty array');
     }
-    const validTypes = ['multiple_choice', 'true_false', 'short_answer', 'essay', 'fill_blank'];
-    if (!validTypes.includes(questionType)) {
-      throw ApiError.badRequest(`Invalid question type. Must be one of: ${validTypes.join(', ')}`);
+    const validTypes = ['multiple_choice', 'multiple_select', 'true_false', 'short_answer', 'long_answer', 'matching', 'flashcard', 'fill_in_blank'];
+    for (const type of questionTypes) {
+      if (!validTypes.includes(type)) {
+        throw ApiError.badRequest(`Invalid question type: ${type}. Must be one of: ${validTypes.join(', ')}`);
+      }
     }
   }
 
@@ -304,7 +308,7 @@ export const updateQuestion = asyncHandler(async (req: Request, res: Response) =
 
   const updateData = {
     questionText: questionText !== undefined ? questionText.trim() : undefined,
-    questionType,
+    questionTypes,
     options,
     correctAnswer,
     points,
@@ -365,6 +369,8 @@ export const bulkImportQuestions = asyncHandler(async (req: Request, res: Respon
   }
 
   // Validate each question in the array
+  const validTypes = ['multiple_choice', 'multiple_select', 'true_false', 'short_answer', 'long_answer', 'matching', 'flashcard', 'fill_in_blank'];
+
   for (let i = 0; i < questions.length; i++) {
     const q = questions[i];
 
@@ -376,13 +382,14 @@ export const bulkImportQuestions = asyncHandler(async (req: Request, res: Respon
       throw ApiError.badRequest(`Question at index ${i}: questionText cannot exceed 2000 characters`);
     }
 
-    if (!q.questionType || typeof q.questionType !== 'string') {
-      throw ApiError.badRequest(`Question at index ${i}: questionType is required`);
+    if (!q.questionTypes || !Array.isArray(q.questionTypes) || q.questionTypes.length === 0) {
+      throw ApiError.badRequest(`Question at index ${i}: questionTypes is required and must be a non-empty array`);
     }
 
-    const validTypes = ['multiple_choice', 'true_false', 'short_answer', 'essay', 'fill_blank'];
-    if (!validTypes.includes(q.questionType)) {
-      throw ApiError.badRequest(`Question at index ${i}: invalid questionType`);
+    for (const type of q.questionTypes) {
+      if (!validTypes.includes(type)) {
+        throw ApiError.badRequest(`Question at index ${i}: invalid questionType: ${type}`);
+      }
     }
 
     if (q.points === undefined || typeof q.points !== 'number' || q.points < 0.1) {

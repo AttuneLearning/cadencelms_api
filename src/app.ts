@@ -22,8 +22,13 @@ import listsRoutes from './routes/lists.routes';
 // Phase 2 routes
 import programsRoutes from './routes/programs.routes';
 import coursesRoutes from './routes/courses.routes';
-import courseSegmentsRoutes from './routes/course-segments.routes';
+// courseSegmentsRoutes removed - replaced by modulesRoutes
 import modulesRoutes from './routes/v2/modules.routes';
+import learningUnitsRoutes from './routes/v2/learning-units.routes';
+import learningUnitQuestionsRoutes from './routes/v2/learning-unit-questions.routes';
+import assessmentAttemptsRoutes from './routes/v2/assessment-attempts.routes';
+import aiQuizRoutes from './routes/v2/ai-quiz.routes';
+import learnerQuestionProgressRoutes from './routes/v2/learner-question-progress.routes';
 import classesRoutes from './routes/classes.routes';
 
 // Phase 3 routes
@@ -32,6 +37,8 @@ import exercisesRoutes from './routes/exercises.routes';
 import questionsRoutes from './routes/questions.routes';
 import templatesRoutes from './routes/templates.routes';
 import certificateTemplatesRoutes from './routes/certificate-templates.routes';
+import departmentQuestionBanksRoutes from './routes/department-question-banks.routes';
+import departmentQuestionsRoutes from './routes/department-questions.routes';
 
 // Phase 4 routes
 import enrollmentsRoutes from './routes/enrollments.routes';
@@ -57,6 +64,14 @@ import adminRoutes from './routes/admin.routes';
 
 // Additional routes
 import programLevelsRoutes from './routes/program-levels.routes';
+
+// Adaptive Learning routes (Knowledge Node System)
+import cognitiveDepthLevelsRoutes from './routes/cognitive-depth-levels.routes';
+import courseCognitiveDepthLevelsRoutes from './routes/course-cognitive-depth-levels.routes';
+import departmentAdaptiveSettingsRoutes from './routes/department-adaptive-settings.routes';
+import knowledgeNodesRoutes from './routes/knowledge-nodes.routes';
+import learnerKnowledgeProgressRoutes from './routes/learner-knowledge-progress.routes';
+import adaptiveSelectionRoutes from './routes/adaptive-selection.routes';
 
 const app: Application = express();
 
@@ -107,6 +122,11 @@ app.use('/api/v2/programs', programsRoutes);
 app.use('/api/v2/courses', coursesRoutes); // Main courses routes
 app.use('/api/v2/courses', modulesRoutes); // New modules routes with completionCriteria/presentationRules
 // Note: courseSegmentsRoutes replaced by modulesRoutes for /courses/:courseId/modules endpoints
+app.use('/api/v2/modules/:moduleId/learning-units', learningUnitsRoutes); // Learning units nested under modules
+app.use('/api/v2/learning-units/:learningUnitId/questions', learningUnitQuestionsRoutes); // Question linking for learning units
+app.use('/api/v2/assessments/:assessmentId/attempts', assessmentAttemptsRoutes); // Assessment attempts
+app.use('/api/v2/learning-units/:learningUnitId/ai-quiz', aiQuizRoutes); // AI Quiz shell endpoints (501)
+app.use('/api/v2/learning-units/:learningUnitId/progress/:learnerId/questions', learnerQuestionProgressRoutes); // Learner question progress tracking
 app.use('/api/v2/classes', classesRoutes);
 
 // API routes - Phase 3
@@ -115,6 +135,8 @@ app.use('/api/v2/content/exercises', exercisesRoutes);
 app.use('/api/v2/questions', questionsRoutes);
 app.use('/api/v2/templates', templatesRoutes);
 app.use('/api/v2/certificate-templates', certificateTemplatesRoutes);
+app.use('/api/v2/departments/:departmentId/question-banks', departmentQuestionBanksRoutes); // Question banks nested under departments
+app.use('/api/v2/departments/:departmentId/questions', departmentQuestionsRoutes); // Department-scoped questions
 
 // API routes - Phase 4
 app.use('/api/v2/enrollments', enrollmentsRoutes);
@@ -140,6 +162,14 @@ app.use('/api/v2/admin', adminRoutes);
 
 // API routes - Additional
 app.use('/api/v2/program-levels', programLevelsRoutes);
+
+// API routes - Adaptive Learning (Knowledge Node System)
+app.use('/api/v2', cognitiveDepthLevelsRoutes); // Cognitive depth levels (system and department-specific)
+app.use('/api/v2/courses/:courseId/cognitive-depth-levels', courseCognitiveDepthLevelsRoutes); // Course-level depth overrides
+app.use('/api/v2/departments/:departmentId/adaptive-settings', departmentAdaptiveSettingsRoutes); // Department adaptive settings
+app.use('/api/v2/departments/:departmentId/knowledge-nodes', knowledgeNodesRoutes); // Knowledge nodes nested under departments
+app.use('/api/v2', learnerKnowledgeProgressRoutes); // Learner knowledge progress (multiple base paths)
+app.use('/api/v2/adaptive', adaptiveSelectionRoutes); // Adaptive question selection
 
 // 404 handler
 app.use(notFoundHandler);

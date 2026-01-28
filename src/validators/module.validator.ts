@@ -1,12 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
 import Joi from 'joi';
 import { ApiError } from '@/utils/ApiError';
+import { getValidKeys } from '@/utils/lookup-validators';
 
 // Helper for MongoDB ObjectId validation
 const objectIdPattern = /^[0-9a-fA-F]{24}$/;
 const objectIdSchema = Joi.string().pattern(objectIdPattern).messages({
   'string.pattern.base': '{{#label}} must be a valid ObjectId'
 });
+
+const LEARNING_UNIT_CATEGORY_LOOKUP = 'learning-unit-category';
 
 // Completion criteria schema
 const completionCriteriaSchema = Joi.object({
@@ -69,7 +72,7 @@ const repeatOnSchema = Joi.object({
 });
 
 // Presentation rules schema
-const presentationRulesSchema = Joi.object({
+const buildPresentationRulesSchema = (validCategories: string[]) => Joi.object({
   presentationMode: Joi.string()
     .valid('prescribed', 'learner_choice', 'random')
     .required()
@@ -123,10 +126,10 @@ const presentationRulesSchema = Joi.object({
   repeatOn: repeatOnSchema.optional(),
 
   repeatableCategories: Joi.array()
-    .items(Joi.string().valid('exposition', 'practice', 'assessment'))
+    .items(Joi.string().valid(...validCategories))
     .optional()
     .messages({
-      'any.only': 'repeatableCategories items must be one of: exposition, practice, assessment'
+      'any.only': `repeatableCategories items must be one of: ${validCategories.join(', ')}`
     }),
 
   showAllAvailable: Joi.boolean().optional(),
@@ -135,7 +138,7 @@ const presentationRulesSchema = Joi.object({
 });
 
 // Create module schema
-const createModuleSchema = Joi.object({
+const buildCreateModuleSchema = (validCategories: string[]) => Joi.object({
   title: Joi.string()
     .min(1)
     .max(200)
@@ -166,7 +169,7 @@ const createModuleSchema = Joi.object({
 
   completionCriteria: completionCriteriaSchema.optional(),
 
-  presentationRules: presentationRulesSchema.optional(),
+  presentationRules: buildPresentationRulesSchema(validCategories).optional(),
 
   isPublished: Joi.boolean()
     .optional()
@@ -240,7 +243,7 @@ const completionCriteriaUpdateSchema = Joi.object({
   requireAllExpositions: Joi.boolean().optional()
 });
 
-const presentationRulesUpdateSchema = Joi.object({
+const buildPresentationRulesUpdateSchema = (validCategories: string[]) => Joi.object({
   presentationMode: Joi.string()
     .valid('prescribed', 'learner_choice', 'random')
     .optional()
@@ -286,10 +289,10 @@ const presentationRulesUpdateSchema = Joi.object({
   repeatOn: repeatOnSchema.optional(),
 
   repeatableCategories: Joi.array()
-    .items(Joi.string().valid('exposition', 'practice', 'assessment'))
+    .items(Joi.string().valid(...validCategories))
     .optional()
     .messages({
-      'any.only': 'repeatableCategories items must be one of: exposition, practice, assessment'
+      'any.only': `repeatableCategories items must be one of: ${validCategories.join(', ')}`
     }),
 
   showAllAvailable: Joi.boolean().optional(),
@@ -297,7 +300,7 @@ const presentationRulesUpdateSchema = Joi.object({
   allowSkip: Joi.boolean().optional()
 });
 
-const updateModuleSchema = Joi.object({
+const buildUpdateModuleSchema = (validCategories: string[]) => Joi.object({
   title: Joi.string()
     .min(1)
     .max(200)
@@ -326,7 +329,7 @@ const updateModuleSchema = Joi.object({
 
   completionCriteria: completionCriteriaUpdateSchema.optional(),
 
-  presentationRules: presentationRulesUpdateSchema.optional(),
+  presentationRules: buildPresentationRulesUpdateSchema(validCategories).optional(),
 
   isPublished: Joi.boolean().optional(),
 
@@ -388,23 +391,29 @@ const reorderModulesSchema = Joi.object({
  * - estimatedDuration (optional, minutes)
  * - objectives (optional, array of strings)
  */
-export const validateCreateModule = (
+export const validateCreateModule = async (
   req: Request,
   _res: Response,
   next: NextFunction
 ) => {
-  const { error, value } = createModuleSchema.validate(req.body, {
-    abortEarly: false,
-    stripUnknown: true
-  });
+  try {
+    const validCategories = await getValidKeys(LEARNING_UNIT_CATEGORY_LOOKUP);
+    const createModuleSchema = buildCreateModuleSchema(validCategories);
+    const { error, value } = createModuleSchema.validate(req.body, {
+      abortEarly: false,
+      stripUnknown: true
+    });
 
-  if (error) {
-    const errorMessage = error.details.map(detail => detail.message).join(', ');
-    return next(new ApiError(422, errorMessage));
+    if (error) {
+      const errorMessage = error.details.map(detail => detail.message).join(', ');
+      return next(new ApiError(422, errorMessage));
+    }
+
+    req.body = value;
+    next();
+  } catch (error) {
+    next(error);
   }
-
-  req.body = value;
-  next();
 };
 
 /**
@@ -413,23 +422,29 @@ export const validateCreateModule = (
  * All fields are optional for partial updates.
  * Validates same fields as create but without required constraints.
  */
-export const validateUpdateModule = (
+export const validateUpdateModule = async (
   req: Request,
   _res: Response,
   next: NextFunction
 ) => {
-  const { error, value } = updateModuleSchema.validate(req.body, {
-    abortEarly: false,
-    stripUnknown: true
-  });
+  try {
+    const validCategories = await getValidKeys(LEARNING_UNIT_CATEGORY_LOOKUP);
+    const updateModuleSchema = buildUpdateModuleSchema(validCategories);
+    const { error, value } = updateModuleSchema.validate(req.body, {
+      abortEarly: false,
+      stripUnknown: true
+    });
 
-  if (error) {
-    const errorMessage = error.details.map(detail => detail.message).join(', ');
-    return next(new ApiError(422, errorMessage));
+    if (error) {
+      const errorMessage = error.details.map(detail => detail.message).join(', ');
+      return next(new ApiError(422, errorMessage));
+    }
+
+    req.body = value;
+    next();
+  } catch (error) {
+    next(error);
   }
-
-  req.body = value;
-  next();
 };
 
 /**

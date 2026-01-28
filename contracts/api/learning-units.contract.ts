@@ -3,7 +3,7 @@
  * Version: 1.0.0
  *
  * These contracts define the LearningUnit entity - individual pieces of content/activities within modules.
- * Learning units are categorized as exposition (instructional), practice, or assessment.
+ * Learning units are categorized as topic (instructional), assignment, practice, or graded.
  *
  * Nested under /modules/:moduleId/learning-units
  */
@@ -30,14 +30,12 @@ export const LearningUnitsContracts = {
         category: {
           type: 'string',
           required: false,
-          enum: ['exposition', 'practice', 'assessment'],
-          description: 'Filter by category'
+          description: 'Filter by category (LookupValue: learning-unit-category)'
         },
         type: {
           type: 'string',
           required: false,
-          enum: ['scorm', 'custom', 'exercise', 'video', 'document', 'assessment'],
-          description: 'Filter by content type'
+          description: 'Filter by content type (LookupValue: learning-unit-type; e.g. media, document, scorm, custom, exercise, assessment, assignment)'
         },
         isRequired: {
           type: 'boolean',
@@ -60,9 +58,9 @@ export const LearningUnitsContracts = {
                 id: 'ObjectId',
                 title: 'string',
                 description: 'string | null',
-                type: 'scorm | custom | exercise | video | document | assessment',
+                type: 'string',
                 contentId: 'ObjectId | null',
-                category: 'exposition | practice | assessment',
+                category: 'string | null',
                 isRequired: 'boolean',
                 isReplayable: 'boolean',
                 weight: 'number',
@@ -75,9 +73,10 @@ export const LearningUnitsContracts = {
             ],
             totalCount: 'number',
             categoryCounts: {
-              exposition: 'number',
+              topic: 'number',
+              assignment: 'number',
               practice: 'number',
-              assessment: 'number'
+              graded: 'number'
             }
           }
         }
@@ -92,7 +91,7 @@ export const LearningUnitsContracts = {
     example: {
       request: {
         params: { moduleId: '507f1f77bcf86cd799439012' },
-        query: { category: 'exposition' }
+        query: { category: 'topic' }
       },
       response: {
         success: true,
@@ -104,9 +103,9 @@ export const LearningUnitsContracts = {
               id: '507f1f77bcf86cd799439040',
               title: 'Introduction to Variables',
               description: 'Learn about variable types and declarations',
-              type: 'video',
+              type: 'media',
               contentId: '507f1f77bcf86cd799439050',
-              category: 'exposition',
+              category: 'topic',
               isRequired: true,
               isReplayable: true,
               weight: 10,
@@ -119,9 +118,10 @@ export const LearningUnitsContracts = {
           ],
           totalCount: 1,
           categoryCounts: {
-            exposition: 1,
+            topic: 1,
+            assignment: 0,
             practice: 0,
-            assessment: 0
+            graded: 0
           }
         }
       }
@@ -132,7 +132,7 @@ export const LearningUnitsContracts = {
     notes: `
       - Returns learning units in sequence order
       - Learners only see active learning units
-      - Category filters: exposition (instructional), practice (exercises), assessment (quizzes/exams)
+      - Category filters come from LookupValue category: learning-unit-category
       - weight is used for module completion calculation (0-100)
       - estimatedDuration is in minutes
     `
@@ -173,8 +173,7 @@ export const LearningUnitsContracts = {
         type: {
           type: 'string',
           required: true,
-          enum: ['scorm', 'custom', 'exercise', 'video', 'document', 'assessment'],
-          description: 'Content type'
+          description: 'Content type (LookupValue: learning-unit-type; e.g. media, document, scorm, custom, exercise, assessment, assignment)'
         },
         contentId: {
           type: 'ObjectId',
@@ -182,10 +181,9 @@ export const LearningUnitsContracts = {
           description: 'Reference to content/exercise/assessment'
         },
         category: {
-          type: 'string',
-          required: true,
-          enum: ['exposition', 'practice', 'assessment'],
-          description: 'Learning unit category'
+          type: 'string | null',
+          required: false,
+          description: 'Learning unit category (LookupValue: learning-unit-category)'
         },
         isRequired: {
           type: 'boolean',
@@ -255,7 +253,7 @@ export const LearningUnitsContracts = {
             description: 'string | null',
             type: 'string',
             contentId: 'ObjectId | null',
-            category: 'string',
+            category: 'string | null',
             isRequired: 'boolean',
             isReplayable: 'boolean',
             weight: 'number',
@@ -289,7 +287,7 @@ export const LearningUnitsContracts = {
           description: 'Test your knowledge of variables',
           type: 'exercise',
           contentId: '507f1f77bcf86cd799439060',
-          category: 'assessment',
+          category: 'graded',
           isRequired: true,
           isReplayable: false,
           weight: 30,
@@ -314,7 +312,7 @@ export const LearningUnitsContracts = {
           description: 'Test your knowledge of variables',
           type: 'exercise',
           contentId: '507f1f77bcf86cd799439060',
-          category: 'assessment',
+          category: 'graded',
           isRequired: true,
           isReplayable: false,
           weight: 30,
@@ -344,8 +342,9 @@ export const LearningUnitsContracts = {
       - Sequence auto-assigned as max(existing) + 1 if not provided
       - Type must match contentId if provided
       - Category determines how this contributes to module completion
+      - Content type values come from LookupValue category: learning-unit-type (media, document, scorm, custom, exercise, assessment, assignment)
       - weight must be 0-100, used for percentage-based completion
-      - For assessment category, settings.passingScore is recommended
+      - For graded category, settings.passingScore is recommended
       - estimatedDuration is in minutes
     `
   },
@@ -385,7 +384,7 @@ export const LearningUnitsContracts = {
             type: 'string',
             contentId: 'ObjectId | null',
             content: 'object | null',
-            category: 'string',
+            category: 'string | null',
             isRequired: 'boolean',
             isReplayable: 'boolean',
             weight: 'number',
@@ -447,9 +446,9 @@ export const LearningUnitsContracts = {
       body: {
         title: { type: 'string', required: false, minLength: 1, maxLength: 200 },
         description: { type: 'string', required: false, maxLength: 2000 },
-        type: { type: 'string', required: false, enum: ['scorm', 'custom', 'exercise', 'video', 'document', 'assessment'] },
+        type: { type: 'string', required: false, description: 'LookupValue: learning-unit-type' },
         contentId: { type: 'ObjectId', required: false },
-        category: { type: 'string', required: false, enum: ['exposition', 'practice', 'assessment'] },
+        category: { type: 'string | null', required: false },
         isRequired: { type: 'boolean', required: false },
         isReplayable: { type: 'boolean', required: false },
         weight: { type: 'number', required: false, min: 0, max: 100 },

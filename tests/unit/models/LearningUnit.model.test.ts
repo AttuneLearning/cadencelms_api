@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import LearningUnit from '@/models/content/LearningUnit.model';
 import { describeIfMongo } from '../../helpers/mongo-guard';
+import { seedLearningUnitLookups } from '../../helpers/lookup-values';
 
 describeIfMongo('LearningUnit Model', () => {
   let mongoServer: MongoMemoryServer;
@@ -12,6 +13,7 @@ describeIfMongo('LearningUnit Model', () => {
   beforeAll(async () => {
     mongoServer = await MongoMemoryServer.create();
     await mongoose.connect(mongoServer.getUri());
+    await seedLearningUnitLookups();
   });
 
   afterAll(async () => {
@@ -34,16 +36,16 @@ describeIfMongo('LearningUnit Model', () => {
       const learningUnit = await LearningUnit.create({
         moduleId: testModuleId,
         title: 'Introduction to Variables',
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         sequence: 1,
         isActive: true
       });
 
       expect(learningUnit.moduleId).toEqual(testModuleId);
       expect(learningUnit.title).toBe('Introduction to Variables');
-      expect(learningUnit.type).toBe('video');
-      expect(learningUnit.category).toBe('exposition');
+      expect(learningUnit.type).toBe('media');
+      expect(learningUnit.category).toBe('topic');
       expect(learningUnit.sequence).toBe(1);
       expect(learningUnit.isActive).toBe(true);
     });
@@ -51,8 +53,8 @@ describeIfMongo('LearningUnit Model', () => {
     it('should require moduleId field', async () => {
       const learningUnit = new LearningUnit({
         title: 'Introduction to Variables',
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         sequence: 1,
         isActive: true
       });
@@ -63,8 +65,8 @@ describeIfMongo('LearningUnit Model', () => {
     it('should require title field', async () => {
       const learningUnit = new LearningUnit({
         moduleId: testModuleId,
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         sequence: 1,
         isActive: true
       });
@@ -76,7 +78,7 @@ describeIfMongo('LearningUnit Model', () => {
       const learningUnit = new LearningUnit({
         moduleId: testModuleId,
         title: 'Introduction to Variables',
-        category: 'exposition',
+        category: 'topic',
         sequence: 1,
         isActive: true
       });
@@ -88,7 +90,7 @@ describeIfMongo('LearningUnit Model', () => {
       const learningUnit = new LearningUnit({
         moduleId: testModuleId,
         title: 'Introduction to Variables',
-        type: 'video',
+        type: 'media',
         sequence: 1,
         isActive: true
       });
@@ -100,8 +102,8 @@ describeIfMongo('LearningUnit Model', () => {
       const learningUnit = new LearningUnit({
         moduleId: testModuleId,
         title: 'Introduction to Variables',
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         isActive: true
       });
 
@@ -110,7 +112,7 @@ describeIfMongo('LearningUnit Model', () => {
   });
 
   describe('Type Enum Validation', () => {
-    const validTypes = ['scorm', 'custom', 'exercise', 'video', 'document', 'assessment'];
+    const validTypes = ['scorm', 'custom', 'exercise', 'media', 'document', 'assessment', 'assignment'];
 
     validTypes.forEach(type => {
       it(`should accept valid type: ${type}`, async () => {
@@ -118,7 +120,7 @@ describeIfMongo('LearningUnit Model', () => {
           moduleId: testModuleId,
           title: 'Test Learning Unit',
           type: type as any,
-          category: 'exposition',
+          category: 'topic',
           sequence: 1,
           isActive: true
         });
@@ -132,7 +134,7 @@ describeIfMongo('LearningUnit Model', () => {
         moduleId: testModuleId,
         title: 'Test Learning Unit',
         type: 'invalid-type' as any,
-        category: 'exposition',
+        category: 'topic',
         sequence: 1,
         isActive: true
       });
@@ -142,14 +144,14 @@ describeIfMongo('LearningUnit Model', () => {
   });
 
   describe('Category Enum Validation', () => {
-    const validCategories = ['exposition', 'practice', 'assessment'];
+    const validCategories = ['topic', 'assignment', 'practice', 'graded'];
 
     validCategories.forEach(category => {
       it(`should accept valid category: ${category}`, async () => {
         const learningUnit = await LearningUnit.create({
           moduleId: testModuleId,
           title: 'Test Learning Unit',
-          type: 'video',
+          type: 'media',
           category: category as any,
           sequence: 1,
           isActive: true
@@ -163,7 +165,7 @@ describeIfMongo('LearningUnit Model', () => {
       const learningUnit = new LearningUnit({
         moduleId: testModuleId,
         title: 'Test Learning Unit',
-        type: 'video',
+        type: 'media',
         category: 'invalid-category' as any,
         sequence: 1,
         isActive: true
@@ -178,8 +180,8 @@ describeIfMongo('LearningUnit Model', () => {
       const learningUnit = await LearningUnit.create({
         moduleId: testModuleId,
         title: 'Test Learning Unit',
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         sequence: 1,
         isActive: true
       });
@@ -191,8 +193,8 @@ describeIfMongo('LearningUnit Model', () => {
       const learningUnit = await LearningUnit.create({
         moduleId: testModuleId,
         title: 'Test Learning Unit',
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         sequence: 1,
         isActive: true
       });
@@ -204,8 +206,8 @@ describeIfMongo('LearningUnit Model', () => {
       const learningUnit = await LearningUnit.create({
         moduleId: testModuleId,
         title: 'Test Learning Unit',
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         sequence: 1,
         isActive: true
       });
@@ -217,8 +219,8 @@ describeIfMongo('LearningUnit Model', () => {
       const learningUnit = await LearningUnit.create({
         moduleId: testModuleId,
         title: 'Test Learning Unit',
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         sequence: 1,
         isActive: true,
         isRequired: false,
@@ -237,8 +239,8 @@ describeIfMongo('LearningUnit Model', () => {
       const learningUnit = await LearningUnit.create({
         moduleId: testModuleId,
         title: 'Test Learning Unit',
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         sequence: 1,
         isActive: true,
         weight: 0
@@ -251,8 +253,8 @@ describeIfMongo('LearningUnit Model', () => {
       const learningUnit = await LearningUnit.create({
         moduleId: testModuleId,
         title: 'Test Learning Unit',
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         sequence: 1,
         isActive: true,
         weight: 100
@@ -265,8 +267,8 @@ describeIfMongo('LearningUnit Model', () => {
       const learningUnit = await LearningUnit.create({
         moduleId: testModuleId,
         title: 'Test Learning Unit',
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         sequence: 1,
         isActive: true,
         weight: 75
@@ -279,8 +281,8 @@ describeIfMongo('LearningUnit Model', () => {
       const learningUnit = new LearningUnit({
         moduleId: testModuleId,
         title: 'Test Learning Unit',
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         sequence: 1,
         isActive: true,
         weight: -1
@@ -293,8 +295,8 @@ describeIfMongo('LearningUnit Model', () => {
       const learningUnit = new LearningUnit({
         moduleId: testModuleId,
         title: 'Test Learning Unit',
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         sequence: 1,
         isActive: true,
         weight: 101
@@ -310,8 +312,8 @@ describeIfMongo('LearningUnit Model', () => {
         moduleId: testModuleId,
         title: 'Test Learning Unit',
         description: 'A detailed description',
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         sequence: 1,
         isActive: true
       });
@@ -323,8 +325,8 @@ describeIfMongo('LearningUnit Model', () => {
       const learningUnit = await LearningUnit.create({
         moduleId: testModuleId,
         title: 'Test Learning Unit',
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         contentId: testContentId,
         sequence: 1,
         isActive: true
@@ -340,8 +342,8 @@ describeIfMongo('LearningUnit Model', () => {
       const learningUnit = await LearningUnit.create({
         moduleId: testModuleId,
         title: 'Test Learning Unit',
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         sequence: 1,
         isActive: true,
         availableFrom: now,
@@ -357,7 +359,7 @@ describeIfMongo('LearningUnit Model', () => {
         moduleId: testModuleId,
         title: 'Test Learning Unit',
         type: 'assessment',
-        category: 'assessment',
+        category: 'graded',
         sequence: 1,
         isActive: true,
         settings: {
@@ -384,8 +386,8 @@ describeIfMongo('LearningUnit Model', () => {
       const learningUnit = await LearningUnit.create({
         moduleId: testModuleId,
         title: 'Test Learning Unit',
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         sequence: 1,
         isActive: true,
         estimatedDuration: 45
@@ -398,8 +400,8 @@ describeIfMongo('LearningUnit Model', () => {
       const learningUnit = await LearningUnit.create({
         moduleId: testModuleId,
         title: 'Test Learning Unit',
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         sequence: 1,
         isActive: true,
         metadata: {
@@ -418,8 +420,8 @@ describeIfMongo('LearningUnit Model', () => {
       const learningUnit = await LearningUnit.create({
         moduleId: testModuleId,
         title: 'Test Learning Unit',
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         sequence: 1,
         isActive: true,
         createdBy: testCreatedBy
@@ -434,8 +436,8 @@ describeIfMongo('LearningUnit Model', () => {
       const learningUnit = await LearningUnit.create({
         moduleId: testModuleId,
         title: 'Test Learning Unit',
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         sequence: 1,
         isActive: true
       });
@@ -450,8 +452,8 @@ describeIfMongo('LearningUnit Model', () => {
       const learningUnit = await LearningUnit.create({
         moduleId: testModuleId,
         title: 'Test Learning Unit',
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         sequence: 1,
         isActive: true
       });
@@ -521,9 +523,9 @@ describeIfMongo('LearningUnit Model', () => {
       // Create test data
       await LearningUnit.create({
         moduleId: testModuleId,
-        title: 'Unit 1 - Exposition',
-        type: 'video',
-        category: 'exposition',
+        title: 'Unit 1 - Topic',
+        type: 'media',
+        category: 'topic',
         sequence: 1,
         isActive: true
       });
@@ -539,9 +541,9 @@ describeIfMongo('LearningUnit Model', () => {
 
       await LearningUnit.create({
         moduleId: testModuleId,
-        title: 'Unit 3 - Assessment',
+        title: 'Unit 3 - Graded',
         type: 'assessment',
-        category: 'assessment',
+        category: 'graded',
         sequence: 3,
         isActive: true
       });
@@ -550,8 +552,8 @@ describeIfMongo('LearningUnit Model', () => {
       await LearningUnit.create({
         moduleId: otherModuleId,
         title: 'Other Module Unit',
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         sequence: 1,
         isActive: true
       });
@@ -560,35 +562,35 @@ describeIfMongo('LearningUnit Model', () => {
     it('should find learning units by moduleId', async () => {
       const units = await LearningUnit.find({ moduleId: testModuleId }).sort({ sequence: 1 });
       expect(units).toHaveLength(3);
-      expect(units[0].title).toBe('Unit 1 - Exposition');
+      expect(units[0].title).toBe('Unit 1 - Topic');
       expect(units[1].title).toBe('Unit 2 - Practice');
-      expect(units[2].title).toBe('Unit 3 - Assessment');
+      expect(units[2].title).toBe('Unit 3 - Graded');
     });
 
     it('should find learning units by category', async () => {
-      const expositionUnits = await LearningUnit.find({
+      const topicUnits = await LearningUnit.find({
         moduleId: testModuleId,
-        category: 'exposition'
+        category: 'topic'
       });
-      expect(expositionUnits).toHaveLength(1);
-      expect(expositionUnits[0].category).toBe('exposition');
+      expect(topicUnits).toHaveLength(1);
+      expect(topicUnits[0].category).toBe('topic');
     });
 
     it('should find learning units by type', async () => {
-      const videoUnits = await LearningUnit.find({
+      const mediaUnits = await LearningUnit.find({
         moduleId: testModuleId,
-        type: 'video'
+        type: 'media'
       });
-      expect(videoUnits).toHaveLength(1);
-      expect(videoUnits[0].type).toBe('video');
+      expect(mediaUnits).toHaveLength(1);
+      expect(mediaUnits[0].type).toBe('media');
     });
 
     it('should find active learning units', async () => {
       await LearningUnit.create({
         moduleId: testModuleId,
         title: 'Inactive Unit',
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         sequence: 4,
         isActive: false
       });
@@ -615,8 +617,8 @@ describeIfMongo('LearningUnit Model', () => {
       const learningUnit = new LearningUnit({
         moduleId: testModuleId,
         title: 'Test Learning Unit',
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         sequence: 0,
         isActive: true
       });
@@ -628,8 +630,8 @@ describeIfMongo('LearningUnit Model', () => {
       const learningUnit = await LearningUnit.create({
         moduleId: testModuleId,
         title: 'Test Learning Unit',
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         sequence: 1,
         isActive: true
       });
@@ -641,8 +643,8 @@ describeIfMongo('LearningUnit Model', () => {
       const learningUnit = await LearningUnit.create({
         moduleId: testModuleId,
         title: 'Test Learning Unit',
-        type: 'video',
-        category: 'exposition',
+        type: 'media',
+        category: 'topic',
         sequence: 999,
         isActive: true
       });

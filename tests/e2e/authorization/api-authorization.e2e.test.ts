@@ -146,7 +146,7 @@ describeIfMongo('E2E Authorization API Tests', () => {
         userType: 'global-admin',
         displayName: 'System Administrator',
         description: 'Full system access',
-        accessRights: ['system:*', 'content:*', 'enrollment:*'],
+        accessRights: ['system:*', 'content:*', 'enrollment:*', 'reports:*', 'learner:*', 'grades:*'],
         isActive: true
       },
       {
@@ -533,6 +533,9 @@ describeIfMongo('E2E Authorization API Tests', () => {
       isActive: true
     });
 
+    // Learner is a member of otherDepartment (not topLevelDepartment where test courses are)
+    // This gives them content:courses:read access (passes middleware) but they can't see
+    // draft/archived courses from topLevelDepartment (only published courses)
     learner1 = await Learner.create({
       _id: learner1User._id,
       person: {
@@ -551,20 +554,26 @@ describeIfMongo('E2E Authorization API Tests', () => {
         languagePreference: 'en',
         dateOfBirth: new Date('2000-01-01')
       },
-      departmentMemberships: []
+      departmentMemberships: [{
+        departmentId: otherDepartment._id,
+        roles: ['course-taker'],
+        isPrimary: true,
+        isActive: true,
+        joinedAt: new Date()
+      }]
     });
 
-    // Learner token with global content:courses:read (no department membership)
-    // This allows viewing published courses but not draft/archived courses
     learner1Token = jwt.sign(
       {
         userId: learner1User._id.toString(),
         email: learner1User.email,
         type: 'access',
         roles: ['course-taker'],
-        globalRights: ['content:courses:read', 'content:lessons:read', 'grades:own:read'],
-        departmentRights: {},
-        departmentMemberships: []
+        globalRights: [],
+        departmentRights: {
+          [otherDepartment._id.toString()]: ['content:courses:read', 'content:lessons:read', 'grades:own:read']
+        },
+        departmentMemberships: [{ departmentId: otherDepartment._id.toString() }]
       },
       process.env.JWT_ACCESS_SECRET || 'test-secret',
       { expiresIn: '1h' }
@@ -796,16 +805,20 @@ describeIfMongo('E2E Authorization API Tests', () => {
           .expect(403);
       });
 
-      it('should block content-admin from editing published course', async () => {
-        await request(app)
+      it('should allow content-admin with manage permission to edit published course', async () => {
+        // In the unified authorization system, content-admin with content:courses:manage
+        // can edit published courses (access rights based, not role based)
+        const response = await request(app)
           .put(`/api/v2/courses/${publishedCourse._id}`)
           .set('Authorization', `Bearer ${contentAdminToken}`)
           .send({
-            title: 'Attempted Update',
+            title: 'Updated by Content Admin',
             code: 'CS201',
             department: topLevelDepartment._id.toString()
           })
-          .expect(403);
+          .expect(200);
+
+        expect(response.body.success).toBe(true);
       });
 
       it('should block anyone from editing archived course', async () => {

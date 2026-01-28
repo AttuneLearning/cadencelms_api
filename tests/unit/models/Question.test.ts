@@ -34,19 +34,19 @@ describeIfMongo('Question Model', () => {
     it('should create valid question', async () => {
       const question = await Question.create({
         questionText: 'What is 2 + 2?',
-        questionType: 'multiple-choice',
+        questionTypes: ['multiple_choice'],
         departmentId: testDept._id,
         points: 5
       });
 
       expect(question.questionText).toBe('What is 2 + 2?');
-      expect(question.questionType).toBe('multiple-choice');
+      expect(question.questionTypes).toEqual(['multiple_choice']);
       expect(question.points).toBe(5);
     });
 
     it('should require questionText field', async () => {
       const question = new Question({
-        questionType: 'multiple-choice',
+        questionTypes: ['multiple_choice'],
         departmentId: testDept._id,
         points: 5
       });
@@ -54,20 +54,20 @@ describeIfMongo('Question Model', () => {
       await expect(question.save()).rejects.toThrow(/questionText/);
     });
 
-    it('should require questionType field', async () => {
+    it('should require questionTypes field', async () => {
       const question = new Question({
         questionText: 'What is 2 + 2?',
         departmentId: testDept._id,
         points: 5
       });
 
-      await expect(question.save()).rejects.toThrow(/questionType/);
+      await expect(question.save()).rejects.toThrow(/questionTypes/);
     });
 
     it('should require departmentId field', async () => {
       const question = new Question({
         questionText: 'What is 2 + 2?',
-        questionType: 'multiple-choice',
+        questionTypes: ['multiple_choice'],
         points: 5
       });
 
@@ -77,17 +77,17 @@ describeIfMongo('Question Model', () => {
     it('should require points field', async () => {
       const question = new Question({
         questionText: 'What is 2 + 2?',
-        questionType: 'multiple-choice',
+        questionTypes: ['multiple_choice'],
         departmentId: testDept._id
       });
 
       await expect(question.save()).rejects.toThrow(/points/);
     });
 
-    it('should validate questionType enum', async () => {
+    it('should validate questionTypes enum', async () => {
       const question = new Question({
         questionText: 'Test question',
-        questionType: 'invalid-type',
+        questionTypes: ['invalid-type'],
         departmentId: testDept._id,
         points: 5
       });
@@ -96,24 +96,24 @@ describeIfMongo('Question Model', () => {
     });
 
     it('should accept valid question types', async () => {
-      const types = ['multiple-choice', 'true-false', 'short-answer', 'essay', 'fill-blank', 'matching'];
+      const types = ['multiple_choice', 'true_false', 'short_answer', 'long_answer', 'fill_in_blank', 'matching'];
 
       for (const type of types) {
         const question = await Question.create({
           questionText: `Question of type ${type}`,
-          questionType: type,
+          questionTypes: [type],
           departmentId: testDept._id,
           points: 5
         });
 
-        expect(question.questionType).toBe(type);
+        expect(question.questionTypes).toEqual([type]);
       }
     });
 
     it('should validate points is positive', async () => {
       const question = new Question({
         questionText: 'Test question',
-        questionType: 'multiple-choice',
+        questionTypes: ['multiple_choice'],
         departmentId: testDept._id,
         points: 0
       });
@@ -126,7 +126,7 @@ describeIfMongo('Question Model', () => {
     it('should store multiple choice options', async () => {
       const question = await Question.create({
         questionText: 'What is the capital of France?',
-        questionType: 'multiple-choice',
+        questionTypes: ['multiple_choice'],
         departmentId: testDept._id,
         points: 5,
         options: ['Paris', 'London', 'Berlin', 'Madrid']
@@ -138,7 +138,7 @@ describeIfMongo('Question Model', () => {
     it('should store correct answer', async () => {
       const question = await Question.create({
         questionText: 'What is 2 + 2?',
-        questionType: 'multiple-choice',
+        questionTypes: ['multiple_choice'],
         departmentId: testDept._id,
         points: 5,
         options: ['3', '4', '5', '6'],
@@ -151,7 +151,7 @@ describeIfMongo('Question Model', () => {
     it('should store multiple correct answers', async () => {
       const question = await Question.create({
         questionText: 'Select all prime numbers',
-        questionType: 'multiple-choice',
+        questionTypes: ['multiple_choice'],
         departmentId: testDept._id,
         points: 10,
         options: ['2', '3', '4', '5', '6'],
@@ -166,7 +166,7 @@ describeIfMongo('Question Model', () => {
     it('should create true/false question', async () => {
       const question = await Question.create({
         questionText: 'TypeScript is a superset of JavaScript',
-        questionType: 'true-false',
+        questionTypes: ['true_false'],
         departmentId: testDept._id,
         points: 2,
         correctAnswer: 'true'
@@ -180,18 +180,18 @@ describeIfMongo('Question Model', () => {
     it('should create short answer question', async () => {
       const question = await Question.create({
         questionText: 'Define polymorphism',
-        questionType: 'short-answer',
+        questionTypes: ['short_answer'],
         departmentId: testDept._id,
         points: 10
       });
 
-      expect(question.questionType).toBe('short-answer');
+      expect(question.questionTypes).toEqual(['short_answer']);
     });
 
     it('should create essay question with word limit', async () => {
       const question = await Question.create({
         questionText: 'Discuss the impact of cloud computing',
-        questionType: 'essay',
+        questionTypes: ['long_answer'],
         departmentId: testDept._id,
         points: 25,
         maxWordCount: 500
@@ -203,7 +203,7 @@ describeIfMongo('Question Model', () => {
     it('should store model answer', async () => {
       const question = await Question.create({
         questionText: 'What is recursion?',
-        questionType: 'short-answer',
+        questionTypes: ['short_answer'],
         departmentId: testDept._id,
         points: 10,
         modelAnswer: 'A function that calls itself'
@@ -217,7 +217,7 @@ describeIfMongo('Question Model', () => {
     it('should create fill-blank question', async () => {
       const question = await Question.create({
         questionText: 'The time complexity of binary search is ____',
-        questionType: 'fill-blank',
+        questionTypes: ['fill_in_blank'],
         departmentId: testDept._id,
         points: 5,
         correctAnswer: 'O(log n)'
@@ -229,7 +229,7 @@ describeIfMongo('Question Model', () => {
     it('should allow multiple acceptable answers', async () => {
       const question = await Question.create({
         questionText: 'JavaScript was created by ____',
-        questionType: 'fill-blank',
+        questionTypes: ['fill_in_blank'],
         departmentId: testDept._id,
         points: 5,
         correctAnswers: ['Brendan Eich', 'Eich']
@@ -243,7 +243,7 @@ describeIfMongo('Question Model', () => {
     it('should store matching pairs', async () => {
       const question = await Question.create({
         questionText: 'Match the data structure to its operation',
-        questionType: 'matching',
+        questionTypes: ['matching'],
         departmentId: testDept._id,
         points: 10,
         matchingPairs: {
@@ -265,7 +265,7 @@ describeIfMongo('Question Model', () => {
     it('should store difficulty level', async () => {
       const question = await Question.create({
         questionText: 'Advanced recursion question',
-        questionType: 'essay',
+        questionTypes: ['long_answer'],
         departmentId: testDept._id,
         points: 20,
         difficulty: 'hard'
@@ -277,7 +277,7 @@ describeIfMongo('Question Model', () => {
     it('should validate difficulty enum', async () => {
       const question = new Question({
         questionText: 'Test',
-        questionType: 'multiple-choice',
+        questionTypes: ['multiple_choice'],
         departmentId: testDept._id,
         points: 5,
         difficulty: 'impossible'
@@ -289,7 +289,7 @@ describeIfMongo('Question Model', () => {
     it('should store tags', async () => {
       const question = await Question.create({
         questionText: 'Test question',
-        questionType: 'multiple-choice',
+        questionTypes: ['multiple_choice'],
         departmentId: testDept._id,
         points: 5,
         tags: ['algorithms', 'sorting', 'complexity']
@@ -301,7 +301,7 @@ describeIfMongo('Question Model', () => {
     it('should store explanation', async () => {
       const question = await Question.create({
         questionText: 'What is Big O notation?',
-        questionType: 'short-answer',
+        questionTypes: ['short_answer'],
         departmentId: testDept._id,
         points: 10,
         explanation: 'Big O describes the upper bound of time complexity'
@@ -313,7 +313,7 @@ describeIfMongo('Question Model', () => {
     it('should store hints', async () => {
       const question = await Question.create({
         questionText: 'Solve the sorting problem',
-        questionType: 'essay',
+        questionTypes: ['long_answer'],
         departmentId: testDept._id,
         points: 15,
         hints: ['Consider divide and conquer', 'Think about merge sort']
@@ -327,7 +327,7 @@ describeIfMongo('Question Model', () => {
     it('should default to active', async () => {
       const question = await Question.create({
         questionText: 'Test question',
-        questionType: 'multiple-choice',
+        questionTypes: ['multiple_choice'],
         departmentId: testDept._id,
         points: 5
       });
@@ -338,7 +338,7 @@ describeIfMongo('Question Model', () => {
     it('should allow deactivation', async () => {
       const question = await Question.create({
         questionText: 'Old question',
-        questionType: 'multiple-choice',
+        questionTypes: ['multiple_choice'],
         departmentId: testDept._id,
         points: 5,
         isActive: false
@@ -352,7 +352,7 @@ describeIfMongo('Question Model', () => {
     it('should store custom metadata', async () => {
       const question = await Question.create({
         questionText: 'Test question',
-        questionType: 'multiple-choice',
+        questionTypes: ['multiple_choice'],
         departmentId: testDept._id,
         points: 5,
         metadata: {
@@ -372,7 +372,7 @@ describeIfMongo('Question Model', () => {
     it('should auto-generate timestamps', async () => {
       const question = await Question.create({
         questionText: 'Test question',
-        questionType: 'multiple-choice',
+        questionTypes: ['multiple_choice'],
         departmentId: testDept._id,
         points: 5
       });
@@ -386,7 +386,7 @@ describeIfMongo('Question Model', () => {
     it('should find questions by department', async () => {
       await Question.create({
         questionText: 'Question 1',
-        questionType: 'multiple-choice',
+        questionTypes: ['multiple_choice'],
         departmentId: testDept._id,
         points: 5
       });
@@ -398,26 +398,26 @@ describeIfMongo('Question Model', () => {
     it('should find questions by type', async () => {
       await Question.create({
         questionText: 'MC Question',
-        questionType: 'multiple-choice',
+        questionTypes: ['multiple_choice'],
         departmentId: testDept._id,
         points: 5
       });
 
       await Question.create({
         questionText: 'Essay Question',
-        questionType: 'essay',
+        questionTypes: ['long_answer'],
         departmentId: testDept._id,
         points: 20
       });
 
-      const mcQuestions = await Question.find({ questionType: 'multiple-choice' });
+      const mcQuestions = await Question.find({ questionTypes: 'multiple_choice' });
       expect(mcQuestions).toHaveLength(1);
     });
 
     it('should find questions by difficulty', async () => {
       await Question.create({
         questionText: 'Easy Q',
-        questionType: 'multiple-choice',
+        questionTypes: ['multiple_choice'],
         departmentId: testDept._id,
         points: 5,
         difficulty: 'easy'
@@ -425,7 +425,7 @@ describeIfMongo('Question Model', () => {
 
       await Question.create({
         questionText: 'Hard Q',
-        questionType: 'essay',
+        questionTypes: ['long_answer'],
         departmentId: testDept._id,
         points: 20,
         difficulty: 'hard'
@@ -438,7 +438,7 @@ describeIfMongo('Question Model', () => {
     it('should find active questions only', async () => {
       await Question.create({
         questionText: 'Active Q',
-        questionType: 'multiple-choice',
+        questionTypes: ['multiple_choice'],
         departmentId: testDept._id,
         points: 5,
         isActive: true
@@ -446,7 +446,7 @@ describeIfMongo('Question Model', () => {
 
       await Question.create({
         questionText: 'Inactive Q',
-        questionType: 'multiple-choice',
+        questionTypes: ['multiple_choice'],
         departmentId: testDept._id,
         points: 5,
         isActive: false

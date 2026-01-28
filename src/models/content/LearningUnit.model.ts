@@ -1,15 +1,16 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import { validateLookupValue } from '@/utils/lookup-validators';
 
 export interface ILearningUnit extends Document {
   moduleId: mongoose.Types.ObjectId;
   title: string;
   description?: string;
 
-  type: 'scorm' | 'custom' | 'exercise' | 'video' | 'document' | 'assessment';
+  type: string;
   contentId?: mongoose.Types.ObjectId;
 
   // New fields from UI spec
-  category: 'exposition' | 'practice' | 'assessment';
+  category: string;
   isRequired: boolean;
   isReplayable: boolean;
   weight: number;
@@ -55,10 +56,6 @@ const learningUnitSchema = new Schema<ILearningUnit>(
     },
     type: {
       type: String,
-      enum: {
-        values: ['scorm', 'custom', 'exercise', 'video', 'document', 'assessment'],
-        message: 'Invalid type: {VALUE}'
-      },
       required: [true, 'Type is required'],
       index: true
     },
@@ -68,10 +65,6 @@ const learningUnitSchema = new Schema<ILearningUnit>(
     },
     category: {
       type: String,
-      enum: {
-        values: ['exposition', 'practice', 'assessment'],
-        message: 'Invalid category: {VALUE}'
-      },
       required: [true, 'Category is required']
     },
     isRequired: {
@@ -132,6 +125,33 @@ const learningUnitSchema = new Schema<ILearningUnit>(
 // Compound indexes for efficient querying
 learningUnitSchema.index({ moduleId: 1, sequence: 1 });
 learningUnitSchema.index({ moduleId: 1, category: 1 });
+
+const LEARNING_UNIT_CATEGORY_LOOKUP = 'learning-unit-category';
+const LEARNING_UNIT_TYPE_LOOKUP = 'learning-unit-type';
+
+learningUnitSchema.pre('validate', async function(next) {
+  try {
+    if (this.category) {
+      const isValid = await validateLookupValue(LEARNING_UNIT_CATEGORY_LOOKUP, this.category);
+      if (!isValid) {
+        throw new Error(
+          `Invalid category: "${this.category}". Must be a registered learning-unit-category in LookupValue.`
+        );
+      }
+    }
+    if (this.type) {
+      const isValid = await validateLookupValue(LEARNING_UNIT_TYPE_LOOKUP, this.type);
+      if (!isValid) {
+        throw new Error(
+          `Invalid type: "${this.type}". Must be a registered learning-unit-type in LookupValue.`
+        );
+      }
+    }
+    next();
+  } catch (error) {
+    next(error as Error);
+  }
+});
 
 const LearningUnit = mongoose.model<ILearningUnit>('LearningUnit', learningUnitSchema);
 

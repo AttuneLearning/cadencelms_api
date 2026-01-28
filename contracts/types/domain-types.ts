@@ -208,7 +208,15 @@ export interface ProgramEnrollment extends AuditableEntity {
 // Assessments
 // ============================================================================
 
-export type QuestionType = 'multiple-choice' | 'true-false' | 'short-answer' | 'essay' | 'matching';
+export type QuestionType =
+  | 'multiple_choice'
+  | 'multiple_select'
+  | 'true_false'
+  | 'short_answer'
+  | 'long_answer'
+  | 'matching'
+  | 'flashcard'
+  | 'fill_in_blank';
 
 export interface Exam extends AuditableEntity {
   courseId: string;
@@ -224,7 +232,7 @@ export interface Exam extends AuditableEntity {
 export interface Question extends AuditableEntity {
   examId: string;
   questionText: string;
-  questionType: QuestionType;
+  questionTypes: QuestionType[];
   points: number;
   options?: QuestionOption[];
   correctAnswer?: string;

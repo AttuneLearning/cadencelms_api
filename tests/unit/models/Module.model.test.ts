@@ -4,6 +4,7 @@ import Module from '@/models/academic/Module.model';
 import Course from '@/models/academic/Course.model';
 import Department from '@/models/organization/Department.model';
 import { describeIfMongo } from '../../helpers/mongo-guard';
+import { seedLearningUnitLookups } from '../../helpers/lookup-values';
 
 describeIfMongo('Module Model', () => {
   let mongoServer: MongoMemoryServer;
@@ -14,6 +15,7 @@ describeIfMongo('Module Model', () => {
   beforeAll(async () => {
     mongoServer = await MongoMemoryServer.create();
     await mongoose.connect(mongoServer.getUri());
+    await seedLearningUnitLookups();
   });
 
   afterAll(async () => {
@@ -512,7 +514,7 @@ describeIfMongo('Module Model', () => {
           repetitionMode: 'until_mastery',
           masteryThreshold: 90,
           repeatOn: { failedAttempt: false, belowMastery: true, learnerRequest: false },
-          repeatableCategories: ['practice', 'assessment'],
+          repeatableCategories: ['practice', 'graded'],
           showAllAvailable: true,
           allowSkip: false
         },
@@ -559,7 +561,7 @@ describeIfMongo('Module Model', () => {
           repetitionMode: 'until_passed',
           maxRepetitions: 3,
           repeatOn: { failedAttempt: true, belowMastery: false, learnerRequest: false },
-          repeatableCategories: ['assessment'],
+          repeatableCategories: ['graded'],
           showAllAvailable: true,
           allowSkip: false
         },
@@ -582,7 +584,7 @@ describeIfMongo('Module Model', () => {
           repetitionMode: 'until_passed',
           maxRepetitions: null,
           repeatOn: { failedAttempt: true, belowMastery: false, learnerRequest: false },
-          repeatableCategories: ['assessment'],
+          repeatableCategories: ['graded'],
           showAllAvailable: true,
           allowSkip: false
         },
@@ -605,7 +607,7 @@ describeIfMongo('Module Model', () => {
           repetitionMode: 'spaced',
           cooldownBetweenRepetitions: 24,
           repeatOn: { failedAttempt: false, belowMastery: false, learnerRequest: true },
-          repeatableCategories: ['exposition', 'practice'],
+          repeatableCategories: ['topic', 'practice'],
           showAllAvailable: true,
           allowSkip: false
         },
@@ -648,7 +650,7 @@ describeIfMongo('Module Model', () => {
           presentationMode: 'learner_choice',
           repetitionMode: 'until_passed',
           repeatOn: { failedAttempt: true, belowMastery: false, learnerRequest: false },
-          repeatableCategories: ['exposition', 'practice', 'assessment'],
+          repeatableCategories: ['topic', 'assignment', 'practice', 'graded'],
           showAllAvailable: true,
           allowSkip: false
         },
@@ -658,10 +660,11 @@ describeIfMongo('Module Model', () => {
         createdBy: testUserId
       });
 
-      expect(module.presentationRules.repeatableCategories).toHaveLength(3);
-      expect(module.presentationRules.repeatableCategories).toContain('exposition');
+      expect(module.presentationRules.repeatableCategories).toHaveLength(4);
+      expect(module.presentationRules.repeatableCategories).toContain('topic');
+      expect(module.presentationRules.repeatableCategories).toContain('assignment');
       expect(module.presentationRules.repeatableCategories).toContain('practice');
-      expect(module.presentationRules.repeatableCategories).toContain('assessment');
+      expect(module.presentationRules.repeatableCategories).toContain('graded');
     });
 
     it('should reject invalid repeatableCategories', async () => {
