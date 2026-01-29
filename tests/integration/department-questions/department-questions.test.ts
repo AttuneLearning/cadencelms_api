@@ -189,14 +189,11 @@ describeIfMongo('Department Questions API', () => {
         expect(response.body.data.text).toBe('What is 2 + 2?');
         expect(response.body.data.points).toBe(10);
         expect(response.body.data.difficulty).toBe('easy');
-        expect(response.body.data.options).toHaveLength(3);
-        // Verify options have the correct structure with isCorrect property
-        expect(response.body.data.options.every((o: any) => typeof o.isCorrect === 'boolean')).toBe(true);
-        // The options are returned with id, text, and isCorrect properties
-        const optionTexts = response.body.data.options.map((o: any) => o.text);
-        expect(optionTexts).toContain('3');
-        expect(optionTexts).toContain('4');
-        expect(optionTexts).toContain('5');
+        // New format: correctAnswers + distractors
+        expect(response.body.data.correctAnswers).toContain('4');
+        expect(response.body.data.distractors).toHaveLength(2);
+        expect(response.body.data.distractors).toContain('3');
+        expect(response.body.data.distractors).toContain('5');
       });
 
       it('should reject multiple_choice without options', async () => {
@@ -266,7 +263,9 @@ describeIfMongo('Department Questions API', () => {
 
         expect(response.status).toBe(201);
         expect(response.body.data.questionTypes).toContain('true_false');
-        expect(response.body.data.options).toHaveLength(2);
+        // New format: correctAnswers + distractors
+        expect(response.body.data.correctAnswers).toContain('True');
+        expect(response.body.data.distractors).toContain('False');
       });
 
       it('should reject true_false with more than 2 options', async () => {
@@ -803,8 +802,8 @@ describeIfMongo('Department Questions API', () => {
           points: 10,
           difficulty: 'easy',
           tags: ['math', 'arithmetic'],
-          options: ['A', 'B', 'C'],
-          correctAnswer: 'A',
+          correctAnswers: ['A'],
+          distractors: ['B', 'C'],
           isActive: true,
           questionBankIds: [testQuestionBank._id.toString()]
         },
@@ -815,8 +814,8 @@ describeIfMongo('Department Questions API', () => {
           points: 15,
           difficulty: 'medium',
           tags: ['math'],
-          options: ['X', 'Y', 'Z'],
-          correctAnswer: 'Y',
+          correctAnswers: ['Y'],
+          distractors: ['X', 'Z'],
           isActive: true,
           questionBankIds: []
         },
@@ -827,7 +826,7 @@ describeIfMongo('Department Questions API', () => {
           points: 20,
           difficulty: 'hard',
           tags: ['geography'],
-          acceptedAnswers: ['Paris'],
+          correctAnswers: ['Paris'],
           matchThreshold: 80,
           isActive: true,
           questionBankIds: []
@@ -839,8 +838,8 @@ describeIfMongo('Department Questions API', () => {
           points: 5,
           difficulty: 'easy',
           tags: ['science'],
-          options: ['True', 'False'],
-          correctAnswer: 'True',
+          correctAnswers: ['True'],
+          trueFalseData: { correctValue: true },
           isActive: true,
           questionBankIds: []
         },
@@ -1071,8 +1070,8 @@ describeIfMongo('Department Questions API', () => {
         difficulty: 'medium',
         tags: ['test', 'retrieval'],
         explanation: 'This is the explanation',
-        options: ['A', 'B', 'C'],
-        correctAnswer: 'B',
+        correctAnswers: ['B'],
+        distractors: ['A', 'C'],
         isActive: true,
         questionBankIds: [testQuestionBank._id.toString()]
       });
@@ -1094,20 +1093,17 @@ describeIfMongo('Department Questions API', () => {
       expect(response.body.data.tags).toEqual(['test', 'retrieval']);
     });
 
-    it('should include options for multiple_choice', async () => {
+    it('should include correctAnswers and distractors for multiple_choice', async () => {
       const response = await request(app)
         .get(`/api/v2/departments/${testDepartment._id}/questions/${testQuestion._id}`)
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(200);
-      expect(response.body.data.options).toHaveLength(3);
-      // Verify options have the correct structure
-      expect(response.body.data.options.every((o: any) => typeof o.isCorrect === 'boolean')).toBe(true);
-      // The options should contain A, B, C
-      const optionTexts = response.body.data.options.map((o: any) => o.text);
-      expect(optionTexts).toContain('A');
-      expect(optionTexts).toContain('B');
-      expect(optionTexts).toContain('C');
+      // New format uses correctAnswers + distractors instead of options
+      expect(response.body.data.correctAnswers).toContain('B');
+      expect(response.body.data.distractors).toHaveLength(2);
+      expect(response.body.data.distractors).toContain('A');
+      expect(response.body.data.distractors).toContain('C');
     });
 
     it('should include usageCount', async () => {
@@ -1142,8 +1138,8 @@ describeIfMongo('Department Questions API', () => {
         questionTypes: ['multiple_choice'],
         departmentId: otherDept._id,
         points: 10,
-        options: ['A', 'B'],
-        correctAnswer: 'A',
+        correctAnswers: ['A'],
+        distractors: ['B'],
         isActive: true
       });
 
@@ -1179,8 +1175,8 @@ describeIfMongo('Department Questions API', () => {
         points: 10,
         difficulty: 'easy',
         tags: ['original'],
-        options: ['A', 'B', 'C'],
-        correctAnswer: 'A',
+        correctAnswers: ['A'],
+        distractors: ['B', 'C'],
         isActive: true,
         questionBankIds: []
       });
@@ -1262,8 +1258,11 @@ describeIfMongo('Department Questions API', () => {
           });
 
         expect(response.status).toBe(200);
-        expect(response.body.data.options).toHaveLength(3);
-        expect(response.body.data.options.find((o: any) => o.text === 'Y').isCorrect).toBe(true);
+        // New format: correctAnswers + distractors
+        expect(response.body.data.correctAnswers).toContain('Y');
+        expect(response.body.data.distractors).toHaveLength(2);
+        expect(response.body.data.distractors).toContain('X');
+        expect(response.body.data.distractors).toContain('Z');
       });
 
       it('should reject update with no correct option', async () => {
@@ -1366,8 +1365,8 @@ describeIfMongo('Department Questions API', () => {
         questionTypes: ['multiple_choice'],
         departmentId: testDepartment._id,
         points: 10,
-        options: ['A', 'B'],
-        correctAnswer: 'A',
+        correctAnswers: ['A'],
+        distractors: ['B'],
         isActive: true,
         questionBankIds: [testQuestionBank._id.toString()]
       });
@@ -1607,8 +1606,13 @@ describeIfMongo('Department Questions API', () => {
 
       expect(response.status).toBe(201);
       expect(response.body.data.questionTypes).toContain('multiple_select');
-      const correctOptions = response.body.data.options.filter((o: any) => o.isCorrect);
-      expect(correctOptions).toHaveLength(3);
+      // New format: correctAnswers contains all correct options
+      expect(response.body.data.correctAnswers).toHaveLength(3);
+      expect(response.body.data.correctAnswers).toContain('2');
+      expect(response.body.data.correctAnswers).toContain('3');
+      expect(response.body.data.correctAnswers).toContain('5');
+      expect(response.body.data.distractors).toHaveLength(1);
+      expect(response.body.data.distractors).toContain('4');
     });
   });
 });

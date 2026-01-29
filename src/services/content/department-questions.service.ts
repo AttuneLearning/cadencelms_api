@@ -858,11 +858,14 @@ export class DepartmentQuestionsService {
         if (data.options) {
           doc.options = data.options.map(opt => opt.text);
           const correctOptions = data.options.filter(opt => opt.isCorrect);
+          const incorrectOptions = data.options.filter(opt => !opt.isCorrect);
           if (correctOptions.length === 1) {
             doc.correctAnswer = correctOptions[0].text;
           } else {
             doc.correctAnswers = correctOptions.map(opt => opt.text);
           }
+          // Also store distractors explicitly
+          doc.distractors = incorrectOptions.map(opt => opt.text);
         }
         break;
 
@@ -931,6 +934,7 @@ export class DepartmentQuestionsService {
         if (data.options !== undefined) {
           question.options = data.options.map(opt => opt.text);
           const correctOptions = data.options.filter(opt => opt.isCorrect);
+          const incorrectOptions = data.options.filter(opt => !opt.isCorrect);
           if (correctOptions.length === 1) {
             question.correctAnswer = correctOptions[0].text;
             question.correctAnswers = undefined;
@@ -938,6 +942,8 @@ export class DepartmentQuestionsService {
             question.correctAnswers = correctOptions.map(opt => opt.text);
             question.correctAnswer = undefined;
           }
+          // Also update distractors to keep in sync with options
+          question.distractors = incorrectOptions.map(opt => opt.text);
         }
         break;
 
@@ -1080,13 +1086,25 @@ export class DepartmentQuestionsService {
       case 'multiple_choice':
       case 'multiple_select':
       case 'true_false':
-        if (question.options && question.options.length > 0) {
-          const correctAnswers = question.correctAnswers || (question.correctAnswer ? [question.correctAnswer] : []);
-          response.options = question.options.map((opt, index) => ({
-            id: `opt_${index}`,
-            text: opt,
-            isCorrect: correctAnswers.includes(opt)
-          }));
+        // Build correctAnswers from various stored formats
+        const correctAnswers: string[] = question.correctAnswers && question.correctAnswers.length > 0
+          ? question.correctAnswers
+          : question.correctAnswer
+            ? [question.correctAnswer]
+            : [];
+        response.correctAnswers = correctAnswers;
+
+        // Build distractors: explicit distractors field, or compute from options - correctAnswers
+        if (question.distractors && question.distractors.length > 0) {
+          response.distractors = question.distractors;
+        } else if (question.options && question.options.length > 0) {
+          response.distractors = question.options.filter(opt => !correctAnswers.includes(opt));
+        } else {
+          response.distractors = [];
+        }
+        // Also include trueFalseData for true_false questions
+        if (primaryType === 'true_false' && question.trueFalseData) {
+          response.trueFalseData = question.trueFalseData;
         }
         break;
 
