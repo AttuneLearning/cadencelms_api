@@ -1,8 +1,25 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-export type ExerciseType = 'quiz' | 'exam' | 'practice' | 'assessment';
+export type ExerciseType = 'quiz' | 'exam' | 'practice' | 'assessment' | 'flashcard' | 'matching';
 export type ExerciseStatus = 'draft' | 'published' | 'archived';
 export type DifficultyLevel = 'easy' | 'medium' | 'hard';
+
+/**
+ * Configuration for matching exercises
+ * Each question contributes one match pair:
+ * - questionText → Column A (the prompt)
+ * - correctAnswers[0] → Column B (the answer)
+ */
+export interface IMatchingConfig {
+  questionIds: mongoose.Types.ObjectId[]; // Questions to include as pairs
+  shuffleColumnB: boolean;                // Randomize answer positions
+  allowPartialCredit: boolean;            // Score based on correct count
+  showFeedbackOnDrop: boolean;            // Immediate feedback or after submit
+  maxAttempts?: number;                   // null = unlimited
+  timeLimit?: number;                     // Seconds, null = unlimited
+  columnALabel?: string;                  // e.g., "Organelle"
+  columnBLabel?: string;                  // e.g., "Function"
+}
 
 export interface IExerciseQuestion {
   questionId: mongoose.Types.ObjectId;
@@ -29,6 +46,8 @@ export interface IExercise extends Document {
   createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
+  // Matching exercise configuration
+  matchingConfig?: IMatchingConfig;
 }
 
 const ExerciseQuestionSchema = new Schema<IExerciseQuestion>(
@@ -52,6 +71,56 @@ const ExerciseQuestionSchema = new Schema<IExerciseQuestion>(
   { _id: false }
 );
 
+/**
+ * Schema for matching exercise configuration
+ */
+const MatchingConfigSchema = new Schema<IMatchingConfig>(
+  {
+    questionIds: {
+      type: [Schema.Types.ObjectId],
+      ref: 'Question',
+      required: [true, 'questionIds is required for matching exercises'],
+      validate: {
+        validator: function (v: mongoose.Types.ObjectId[]) {
+          return v && v.length >= 2;
+        },
+        message: 'Matching exercises require at least 2 question pairs'
+      }
+    },
+    shuffleColumnB: {
+      type: Boolean,
+      default: true
+    },
+    allowPartialCredit: {
+      type: Boolean,
+      default: true
+    },
+    showFeedbackOnDrop: {
+      type: Boolean,
+      default: false
+    },
+    maxAttempts: {
+      type: Number,
+      min: [1, 'maxAttempts must be at least 1']
+    },
+    timeLimit: {
+      type: Number,
+      min: [0, 'timeLimit cannot be negative']
+    },
+    columnALabel: {
+      type: String,
+      trim: true,
+      maxlength: [100, 'columnALabel cannot exceed 100 characters']
+    },
+    columnBLabel: {
+      type: String,
+      trim: true,
+      maxlength: [100, 'columnBLabel cannot exceed 100 characters']
+    }
+  },
+  { _id: false }
+);
+
 const ExerciseSchema = new Schema<IExercise>(
   {
     title: {
@@ -70,7 +139,7 @@ const ExerciseSchema = new Schema<IExercise>(
       type: String,
       required: [true, 'type is required'],
       enum: {
-        values: ['quiz', 'exam', 'practice', 'assessment'],
+        values: ['quiz', 'exam', 'practice', 'assessment', 'flashcard', 'matching'],
         message: '{VALUE} is not a valid exercise type'
       },
       index: true
@@ -150,6 +219,11 @@ const ExerciseSchema = new Schema<IExercise>(
       required: [true, 'createdBy is required'],
       ref: 'User',
       index: true
+    },
+    // Matching exercise configuration (only for type='matching')
+    matchingConfig: {
+      type: MatchingConfigSchema,
+      default: undefined
     }
   },
   {

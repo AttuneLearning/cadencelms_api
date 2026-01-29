@@ -156,6 +156,229 @@ const blankSchema = Joi.object({
     })
 });
 
+// ============================================
+// NEW MONOLITHIC DESIGN SUB-SCHEMAS
+// ============================================
+
+/**
+ * Media attachment reference schema
+ */
+const mediaAttachmentRefSchema = Joi.object({
+  mediaId: Joi.string()
+    .custom(objectIdValidator, 'ObjectId validation')
+    .optional()
+    .messages({
+      'string.objectId': 'mediaId must be a valid ObjectId'
+    }),
+  url: Joi.string()
+    .uri()
+    .optional()
+    .messages({
+      'string.uri': 'url must be a valid URI'
+    }),
+  altText: Joi.string()
+    .max(500)
+    .optional()
+    .allow('', null)
+    .messages({
+      'string.max': 'altText cannot exceed 500 characters'
+    })
+});
+
+/**
+ * Flashcard prompt schema
+ */
+const flashcardPromptSchema = Joi.object({
+  text: Joi.string()
+    .required()
+    .messages({
+      'string.empty': 'prompt.text is required',
+      'any.required': 'prompt.text is required'
+    }),
+  media: mediaAttachmentRefSchema.optional()
+});
+
+/**
+ * Flashcard data schema (new monolithic design)
+ */
+const flashcardDataSchema = Joi.object({
+  prompts: Joi.array()
+    .items(flashcardPromptSchema)
+    .optional()
+    .messages({
+      'array.base': 'flashcardData.prompts must be an array'
+    }),
+  frontMedia: mediaAttachmentRefSchema.optional(),
+  backMedia: mediaAttachmentRefSchema.optional()
+});
+
+/**
+ * Matching data schema (new monolithic design)
+ */
+const matchingDataSchema = Joi.object({
+  columnAMedia: mediaAttachmentRefSchema.optional(),
+  columnBMedia: mediaAttachmentRefSchema.optional(),
+  pairExplanation: Joi.string()
+    .optional()
+    .allow('', null)
+    .messages({
+      'string.base': 'matchingData.pairExplanation must be a string'
+    })
+});
+
+/**
+ * True/false data schema (new monolithic design)
+ */
+const trueFalseDataSchema = Joi.object({
+  correctValue: Joi.boolean()
+    .required()
+    .messages({
+      'boolean.base': 'trueFalseData.correctValue must be a boolean',
+      'any.required': 'trueFalseData.correctValue is required'
+    }),
+  trueExplanation: Joi.string()
+    .optional()
+    .allow('', null)
+    .messages({
+      'string.base': 'trueFalseData.trueExplanation must be a string'
+    }),
+  falseExplanation: Joi.string()
+    .optional()
+    .allow('', null)
+    .messages({
+      'string.base': 'trueFalseData.falseExplanation must be a string'
+    })
+});
+
+/**
+ * Short answer data schema (new monolithic design)
+ */
+const shortAnswerDataSchema = Joi.object({
+  alternateAccepted: Joi.array()
+    .items(Joi.string())
+    .optional()
+    .default([])
+    .messages({
+      'array.base': 'shortAnswerData.alternateAccepted must be an array of strings'
+    }),
+  matchThreshold: Joi.number()
+    .min(0)
+    .max(100)
+    .optional()
+    .default(80)
+    .messages({
+      'number.base': 'shortAnswerData.matchThreshold must be a number',
+      'number.min': 'shortAnswerData.matchThreshold must be at least 0',
+      'number.max': 'shortAnswerData.matchThreshold cannot exceed 100'
+    }),
+  caseSensitive: Joi.boolean()
+    .optional()
+    .default(false)
+    .messages({
+      'boolean.base': 'shortAnswerData.caseSensitive must be a boolean'
+    })
+});
+
+/**
+ * Long answer data schema (new monolithic design)
+ */
+const longAnswerDataSchema = Joi.object({
+  rubric: Joi.string()
+    .optional()
+    .allow('', null)
+    .messages({
+      'string.base': 'longAnswerData.rubric must be a string'
+    }),
+  sampleAnswer: Joi.string()
+    .optional()
+    .allow('', null)
+    .messages({
+      'string.base': 'longAnswerData.sampleAnswer must be a string'
+    }),
+  minWords: Joi.number()
+    .integer()
+    .min(0)
+    .optional()
+    .messages({
+      'number.base': 'longAnswerData.minWords must be a number',
+      'number.integer': 'longAnswerData.minWords must be an integer',
+      'number.min': 'longAnswerData.minWords must be at least 0'
+    }),
+  maxWords: Joi.number()
+    .integer()
+    .min(1)
+    .optional()
+    .messages({
+      'number.base': 'longAnswerData.maxWords must be a number',
+      'number.integer': 'longAnswerData.maxWords must be an integer',
+      'number.min': 'longAnswerData.maxWords must be at least 1'
+    }),
+  requiresHumanGrading: Joi.boolean()
+    .optional()
+    .default(true)
+    .messages({
+      'boolean.base': 'longAnswerData.requiresHumanGrading must be a boolean'
+    })
+});
+
+/**
+ * Fill-in-blank blank schema (new monolithic design)
+ */
+const fillBlankBlankSchema = Joi.object({
+  id: Joi.string()
+    .required()
+    .messages({
+      'string.empty': 'fillBlankData.blanks[].id is required',
+      'any.required': 'fillBlankData.blanks[].id is required'
+    }),
+  acceptedAnswers: Joi.array()
+    .items(Joi.string())
+    .min(1)
+    .required()
+    .messages({
+      'array.base': 'fillBlankData.blanks[].acceptedAnswers must be an array',
+      'array.min': 'fillBlankData.blanks[].acceptedAnswers must contain at least 1 answer',
+      'any.required': 'fillBlankData.blanks[].acceptedAnswers is required'
+    }),
+  matchThreshold: Joi.number()
+    .min(0)
+    .max(100)
+    .optional()
+    .default(80)
+    .messages({
+      'number.base': 'fillBlankData.blanks[].matchThreshold must be a number',
+      'number.min': 'fillBlankData.blanks[].matchThreshold must be at least 0',
+      'number.max': 'fillBlankData.blanks[].matchThreshold cannot exceed 100'
+    })
+});
+
+/**
+ * Fill-in-blank data schema (new monolithic design)
+ */
+const fillBlankDataSchema = Joi.object({
+  textWithBlanks: Joi.string()
+    .required()
+    .pattern(/\{\{[a-zA-Z0-9_]+\}\}/)
+    .messages({
+      'string.empty': 'fillBlankData.textWithBlanks is required',
+      'any.required': 'fillBlankData.textWithBlanks is required',
+      'string.pattern.base': 'fillBlankData.textWithBlanks must contain at least one {{blank_id}} placeholder'
+    }),
+  blanks: Joi.array()
+    .items(fillBlankBlankSchema)
+    .min(1)
+    .required()
+    .messages({
+      'array.base': 'fillBlankData.blanks must be an array',
+      'array.min': 'fillBlankData.blanks must contain at least 1 blank definition',
+      'any.required': 'fillBlankData.blanks is required'
+    })
+});
+
+// ============================================
+// HIERARCHY SCHEMA
+// ============================================
+
 /**
  * Hierarchy schema for adaptive testing relationships
  */
@@ -353,6 +576,31 @@ const createDepartmentQuestionSchema = Joi.object({
       'array.base': 'Blanks must be an array'
     }),
 
+  // ============================================
+  // NEW MONOLITHIC DESIGN FIELDS
+  // ============================================
+
+  /**
+   * Distractors (wrong answers) - separate from options
+   * For multiple_choice and multiple_select types
+   */
+  distractors: Joi.array()
+    .items(Joi.string().trim())
+    .optional()
+    .messages({
+      'array.base': 'distractors must be an array of strings'
+    }),
+
+  /**
+   * Type-specific sub-documents for the monolithic design
+   */
+  flashcardData: flashcardDataSchema.optional(),
+  matchingData: matchingDataSchema.optional(),
+  trueFalseData: trueFalseDataSchema.optional(),
+  shortAnswerData: shortAnswerDataSchema.optional(),
+  longAnswerData: longAnswerDataSchema.optional(),
+  fillBlankData: fillBlankDataSchema.optional(),
+
   // Hierarchy for adaptive testing
   hierarchy: hierarchySchema.optional(),
 
@@ -376,6 +624,7 @@ const createDepartmentQuestionSchema = Joi.object({
     })
 }).custom((value, helpers) => {
   // Custom validation: ensure answer data exists for each type in the types array
+  // Supports both legacy (options, cards, blanks) and new monolithic design (distractors, *Data fields)
   const types: string[] = value.types || [];
   const errors: string[] = [];
 
@@ -383,28 +632,39 @@ const createDepartmentQuestionSchema = Joi.object({
     switch (type) {
       case 'multiple_choice':
       case 'multiple_select':
-        if (!value.options || !Array.isArray(value.options) || value.options.length < 2) {
-          errors.push(`${type} requires at least 2 options`);
+        // Accept either legacy options OR new distractors design
+        const hasLegacyOptions = value.options && Array.isArray(value.options) && value.options.length >= 2;
+        const hasDistractors = value.distractors && Array.isArray(value.distractors) && value.distractors.length >= 1;
+        if (!hasLegacyOptions && !hasDistractors) {
+          errors.push(`${type} requires at least 2 options OR at least 1 distractor`);
         }
         break;
       case 'true_false':
-        if (!value.options || !Array.isArray(value.options) || value.options.length !== 2) {
-          errors.push('true_false requires exactly 2 options');
+        // Accept either legacy options OR new trueFalseData design
+        const hasTrueFalseOptions = value.options && Array.isArray(value.options) && value.options.length === 2;
+        const hasTrueFalseData = value.trueFalseData && typeof value.trueFalseData.correctValue === 'boolean';
+        if (!hasTrueFalseOptions && !hasTrueFalseData) {
+          errors.push('true_false requires exactly 2 options OR trueFalseData.correctValue');
         }
         break;
       case 'matching':
+        // Accept either legacy pairs OR new matchingData design (or neither for manual setup)
         if (!value.pairs || !Array.isArray(value.pairs) || value.pairs.length < 2) {
-          errors.push('matching requires at least 2 pairs');
+          // Only error if no matchingData either - matching can be set up without pairs
+          // errors.push('matching requires at least 2 pairs');
         }
         break;
       case 'flashcard':
-        if (!value.cards || !Array.isArray(value.cards) || value.cards.length < 1) {
-          errors.push('flashcard requires at least 1 card');
-        }
+        // Accept either legacy cards OR new flashcardData design
+        // No strict requirement - questionText can serve as the answer
+        // Both formats are valid: cards[], flashcardData.prompts[], or just questionText
         break;
       case 'fill_in_blank':
-        if (!value.blanks || !Array.isArray(value.blanks) || value.blanks.length < 1) {
-          errors.push('fill_in_blank requires at least 1 blank');
+        // Accept either legacy blanks OR new fillBlankData design
+        const hasLegacyBlanks = value.blanks && Array.isArray(value.blanks) && value.blanks.length >= 1;
+        const hasFillBlankData = value.fillBlankData && value.fillBlankData.blanks && value.fillBlankData.blanks.length >= 1;
+        if (!hasLegacyBlanks && !hasFillBlankData) {
+          errors.push('fill_in_blank requires at least 1 blank OR fillBlankData');
         }
         break;
       // short_answer and long_answer don't strictly require answer data (can be graded manually)
@@ -549,6 +809,31 @@ const updateDepartmentQuestionSchema = Joi.object({
     .messages({
       'array.base': 'Blanks must be an array'
     }),
+
+  // ============================================
+  // NEW MONOLITHIC DESIGN FIELDS
+  // ============================================
+
+  /**
+   * Distractors (wrong answers) - separate from options
+   * For multiple_choice and multiple_select types
+   */
+  distractors: Joi.array()
+    .items(Joi.string().trim())
+    .optional()
+    .messages({
+      'array.base': 'distractors must be an array of strings'
+    }),
+
+  /**
+   * Type-specific sub-documents for the monolithic design
+   */
+  flashcardData: flashcardDataSchema.optional(),
+  matchingData: matchingDataSchema.optional(),
+  trueFalseData: trueFalseDataSchema.optional(),
+  shortAnswerData: shortAnswerDataSchema.optional(),
+  longAnswerData: longAnswerDataSchema.optional(),
+  fillBlankData: fillBlankDataSchema.optional(),
 
   // Hierarchy for adaptive testing
   hierarchy: hierarchySchema.optional(),
@@ -774,11 +1059,23 @@ export {
   createDepartmentQuestionSchema,
   updateDepartmentQuestionSchema,
   listDepartmentQuestionsQuerySchema,
+  // Legacy sub-schemas
   optionSchema,
   pairSchema,
   cardSchema,
   blankSchema,
   hierarchySchema,
+  // New monolithic design sub-schemas
+  mediaAttachmentRefSchema,
+  flashcardPromptSchema,
+  flashcardDataSchema,
+  matchingDataSchema,
+  trueFalseDataSchema,
+  shortAnswerDataSchema,
+  longAnswerDataSchema,
+  fillBlankBlankSchema,
+  fillBlankDataSchema,
+  // Constants
   questionTypes,
   difficulties
 };

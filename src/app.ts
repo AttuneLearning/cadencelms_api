@@ -33,7 +33,9 @@ import classesRoutes from './routes/classes.routes';
 
 // Phase 3 routes
 import contentRoutes from './routes/content.routes';
+import mediaRoutes from './routes/media.routes';
 import exercisesRoutes from './routes/exercises.routes';
+import matchingExerciseRoutes from './routes/matching-exercise.routes';
 import questionsRoutes from './routes/questions.routes';
 import templatesRoutes from './routes/templates.routes';
 import certificateTemplatesRoutes from './routes/certificate-templates.routes';
@@ -72,6 +74,10 @@ import departmentAdaptiveSettingsRoutes from './routes/department-adaptive-setti
 import knowledgeNodesRoutes from './routes/knowledge-nodes.routes';
 import learnerKnowledgeProgressRoutes from './routes/learner-knowledge-progress.routes';
 import adaptiveSelectionRoutes from './routes/adaptive-selection.routes';
+
+// Flashcard System routes
+import flashcardRoutes from './routes/flashcard.routes';
+import retentionCheckRoutes from './routes/retention-check.routes';
 
 const app: Application = express();
 
@@ -131,6 +137,8 @@ app.use('/api/v2/classes', classesRoutes);
 
 // API routes - Phase 3
 app.use('/api/v2/content', contentRoutes);
+app.use('/api/v2/media', mediaRoutes); // Media upload with presigned URLs (S3/local)
+app.use('/api/v2/content/exercises', matchingExerciseRoutes); // Matching exercise routes (before general exercises)
 app.use('/api/v2/content/exercises', exercisesRoutes);
 app.use('/api/v2/questions', questionsRoutes);
 app.use('/api/v2/templates', templatesRoutes);
@@ -170,6 +178,10 @@ app.use('/api/v2/departments/:departmentId/adaptive-settings', departmentAdaptiv
 app.use('/api/v2/departments/:departmentId/knowledge-nodes', knowledgeNodesRoutes); // Knowledge nodes nested under departments
 app.use('/api/v2', learnerKnowledgeProgressRoutes); // Learner knowledge progress (multiple base paths)
 app.use('/api/v2/adaptive', adaptiveSelectionRoutes); // Adaptive question selection
+
+// API routes - Flashcard System (Spaced Repetition)
+app.use('/api/v2/courses/:courseId', flashcardRoutes); // Flashcard endpoints nested under courses
+app.use('/api/v2/courses/:courseId', retentionCheckRoutes); // Retention check and remediation endpoints
 
 // 404 handler
 app.use(notFoundHandler);

@@ -1,7 +1,70 @@
 import mongoose from 'mongoose';
-import Question, { IQuestion, QuestionType, DifficultyLevel } from '@/models/assessment/Question.model';
+import Question, {
+  IQuestion,
+  QuestionType,
+  DifficultyLevel,
+  IMediaAttachmentRef
+} from '@/models/assessment/Question.model';
 import QuestionBank from '@/models/assessment/QuestionBank.model';
 import { ApiError } from '@/utils/ApiError';
+
+// ============================================
+// RENDERING RESPONSE INTERFACES
+// ============================================
+
+/**
+ * Rendered multiple choice question with shuffled options
+ */
+export interface RenderedMultipleChoice {
+  questionId: string;
+  questionText: string;
+  questionType: 'multiple_choice' | 'multiple_select';
+  options: Array<{
+    id: string;
+    text: string;
+    isCorrect?: boolean; // Only included when showAnswers is true
+  }>;
+  points: number;
+  explanation?: string;
+  hints?: string[];
+}
+
+/**
+ * Rendered flashcard with front and back
+ */
+export interface RenderedFlashcard {
+  questionId: string;
+  front: {
+    text: string;
+    media?: IMediaAttachmentRef;
+  };
+  back: {
+    text: string;
+    media?: IMediaAttachmentRef;
+  };
+  hint?: string;
+  promptIndex?: number; // Which prompt variation was used
+  totalPrompts?: number;
+}
+
+/**
+ * Rendered matching exercise combining multiple questions
+ */
+export interface RenderedMatching {
+  exerciseId: string;
+  columnA: Array<{
+    id: string;
+    text: string;
+    media?: IMediaAttachmentRef;
+  }>;
+  columnB: Array<{
+    id: string;
+    text: string;
+    media?: IMediaAttachmentRef;
+  }>;
+  correctPairs?: Array<{ columnAId: string; columnBId: string }>; // Only when showAnswers
+  totalPoints: number;
+}
 
 interface ListQuestionsFilters {
   questionType?: string;
@@ -1279,5 +1342,446 @@ export class QuestionsService {
     }
 
     return { updated, failed, results };
+  }
+
+  // ============================================
+  // RENDERING METHODS (Monolithic Design)
+  // ============================================
+
+  /**
+   * Helper function to shuffle array (Fisher-Yates algorithm)
+   */
+  private static shuffleArray<T>(array: T[]): T[] {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }
+
+  /**
+   * Generate a unique ID for an option
+   */
+  private static generateOptionId(): string {
+    return Math.random().toString(36).substring(2, 10);
+  }
+
+  /**
+   * Render a question as multiple choice
+   * Combines distractors (or options) with correct answers and shuffles them
+   *
+   * @param question - The question document
+   * @param options - Rendering options
+   * @returns Rendered multiple choice question with shuffled options
+   */
+  static renderAsMultipleChoice(
+    question: IQuestion,
+    options?: {
+      showAnswers?: boolean;  // Include isCorrect in response
+      seed?: number;          // For deterministic shuffling (testing)
+    }
+  ): RenderedMultipleChoice {
+    const questionType = question.questionTypes.includes('multiple_select')
+      ? 'multiple_select'
+      : 'multiple_choice';
+
+    // Build options array from either new design (distractors + correctAnswer) or legacy (options)
+    let allOptions: Array<{ id: string; text: string; isCorrect: boolean }> = [];
+
+    // Check if using new monolithic design (distractors field)
+    if (question.distractors && question.distractors.length > 0) {
+      // Get correct answers
+      const correctAnswers = question.correctAnswers?.length
+        ? question.correctAnswers
+        : question.correctAnswer
+          ? [question.correctAnswer]
+          : [];
+
+      // Add correct answers
+      for (const answer of correctAnswers) {
+        allOptions.push({
+          id: this.generateOptionId(),
+          text: answer,
+          isCorrect: true
+        });
+      }
+
+      // Add distractors
+      for (const distractor of question.distractors) {
+        allOptions.push({
+          id: this.generateOptionId(),
+          text: distractor,
+          isCorrect: false
+        });
+      }
+    } else if (question.options && question.options.length > 0) {
+      // Legacy design - options array with correctAnswer/correctAnswers marking which are correct
+      const correctAnswers = question.correctAnswers?.length
+        ? question.correctAnswers
+        : question.correctAnswer
+          ? [question.correctAnswer]
+          : [];
+
+      for (const optionText of question.options) {
+        allOptions.push({
+          id: this.generateOptionId(),
+          text: optionText,
+          isCorrect: correctAnswers.includes(optionText)
+        });
+      }
+    }
+
+    // Shuffle options
+    allOptions = this.shuffleArray(allOptions);
+
+    // Format response
+    const renderedOptions = allOptions.map(opt => {
+      const rendered: { id: string; text: string; isCorrect?: boolean } = {
+        id: opt.id,
+        text: opt.text
+      };
+      if (options?.showAnswers) {
+        rendered.isCorrect = opt.isCorrect;
+      }
+      return rendered;
+    });
+
+    return {
+      questionId: question._id.toString(),
+      questionText: question.questionText,
+      questionType,
+      options: renderedOptions,
+      points: question.points,
+      explanation: options?.showAnswers ? question.explanation : undefined,
+      hints: question.hints
+    };
+  }
+
+  /**
+   * Render a question as a flashcard
+   * Uses flashcardData (new design) or cards/questionText (legacy)
+   *
+   * @param question - The question document
+   * @param promptIndex - Which prompt variation to use (for flashcardData.prompts)
+   * @returns Rendered flashcard with front and back
+   */
+  static renderAsFlashcard(
+    question: IQuestion,
+    promptIndex?: number
+  ): RenderedFlashcard {
+    let front: { text: string; media?: IMediaAttachmentRef };
+    let back: { text: string; media?: IMediaAttachmentRef };
+    let hint: string | undefined;
+    let actualPromptIndex: number | undefined;
+    let totalPrompts: number | undefined;
+
+    // Check for new flashcardData design
+    if (question.flashcardData) {
+      const data = question.flashcardData;
+      totalPrompts = data.prompts?.length || 0;
+
+      // Select which prompt to use
+      if (data.prompts && data.prompts.length > 0) {
+        actualPromptIndex = typeof promptIndex === 'number'
+          ? Math.min(promptIndex, data.prompts.length - 1)
+          : Math.floor(Math.random() * data.prompts.length);
+
+        const selectedPrompt = data.prompts[actualPromptIndex];
+        front = {
+          text: selectedPrompt.text,
+          media: selectedPrompt.media || data.frontMedia
+        };
+      } else {
+        // No prompts, use questionText as front
+        front = {
+          text: question.questionText,
+          media: data.frontMedia
+        };
+      }
+
+      // Back is the answer (correctAnswer or questionText if prompts exist)
+      const backText = question.correctAnswer
+        || question.correctAnswers?.[0]
+        || question.questionText;
+
+      back = {
+        text: backText,
+        media: data.backMedia
+      };
+    } else if (question.cards && question.cards.length > 0) {
+      // Legacy cards design - use first card or specified index
+      const cardIndex = typeof promptIndex === 'number'
+        ? Math.min(promptIndex, question.cards.length - 1)
+        : 0;
+      const card = question.cards[cardIndex];
+
+      front = { text: card.front };
+      back = { text: card.back };
+      hint = card.hint;
+      actualPromptIndex = cardIndex;
+      totalPrompts = question.cards.length;
+    } else {
+      // Fallback: use questionText as front, correctAnswer as back
+      front = { text: question.questionText };
+      back = {
+        text: question.correctAnswer
+          || question.correctAnswers?.[0]
+          || question.modelAnswer
+          || ''
+      };
+    }
+
+    // Get hint from hints array if not set
+    if (!hint && question.hints && question.hints.length > 0) {
+      hint = question.hints[0];
+    }
+
+    return {
+      questionId: question._id.toString(),
+      front,
+      back,
+      hint,
+      promptIndex: actualPromptIndex,
+      totalPrompts
+    };
+  }
+
+  /**
+   * Render multiple questions as a matching exercise
+   * Combines questions into column A (prompts) and column B (answers)
+   *
+   * @param questions - Array of questions to combine into matching
+   * @param options - Rendering options
+   * @returns Rendered matching exercise with shuffled columns
+   */
+  static renderAsMatching(
+    questions: IQuestion[],
+    options?: {
+      showAnswers?: boolean;  // Include correct pairs in response
+      exerciseId?: string;    // Custom ID for the exercise
+    }
+  ): RenderedMatching {
+    const columnA: Array<{ id: string; text: string; media?: IMediaAttachmentRef; questionId: string }> = [];
+    const columnB: Array<{ id: string; text: string; media?: IMediaAttachmentRef; questionId: string }> = [];
+    const correctPairs: Array<{ columnAId: string; columnBId: string }> = [];
+    let totalPoints = 0;
+
+    for (const question of questions) {
+      const columnAId = this.generateOptionId();
+      const columnBId = this.generateOptionId();
+
+      // Get media from matchingData if available
+      const matchingData = question.matchingData;
+
+      // Column A: question text (prompt)
+      columnA.push({
+        id: columnAId,
+        text: question.questionText,
+        media: matchingData?.columnAMedia,
+        questionId: question._id.toString()
+      });
+
+      // Column B: correct answer
+      const answerText = question.correctAnswer
+        || question.correctAnswers?.[0]
+        || question.modelAnswer
+        || '';
+
+      columnB.push({
+        id: columnBId,
+        text: answerText,
+        media: matchingData?.columnBMedia,
+        questionId: question._id.toString()
+      });
+
+      // Track correct pairing
+      correctPairs.push({ columnAId, columnBId });
+
+      totalPoints += question.points;
+    }
+
+    // Handle legacy matchingPairs format
+    for (const question of questions) {
+      if (question.matchingPairs && Object.keys(question.matchingPairs).length > 0) {
+        // Add pairs from matchingPairs object
+        for (const [left, right] of Object.entries(question.matchingPairs)) {
+          const aId = this.generateOptionId();
+          const bId = this.generateOptionId();
+
+          // Only add if not already added via questionText
+          const existingA = columnA.find(a => a.text === left);
+          const existingB = columnB.find(b => b.text === right);
+
+          if (!existingA && !existingB) {
+            columnA.push({
+              id: aId,
+              text: left,
+              questionId: question._id.toString()
+            });
+            columnB.push({
+              id: bId,
+              text: right,
+              questionId: question._id.toString()
+            });
+            correctPairs.push({ columnAId: aId, columnBId: bId });
+          }
+        }
+      }
+    }
+
+    // Shuffle both columns independently
+    const shuffledColumnA = this.shuffleArray(columnA).map(({ questionId, ...rest }) => rest);
+    const shuffledColumnB = this.shuffleArray(columnB).map(({ questionId, ...rest }) => rest);
+
+    const result: RenderedMatching = {
+      exerciseId: options?.exerciseId || this.generateOptionId(),
+      columnA: shuffledColumnA,
+      columnB: shuffledColumnB,
+      totalPoints
+    };
+
+    if (options?.showAnswers) {
+      result.correctPairs = correctPairs;
+    }
+
+    return result;
+  }
+
+  /**
+   * Render a question in true/false format
+   * Uses trueFalseData (new design) or legacy options
+   */
+  static renderAsTrueFalse(
+    question: IQuestion,
+    options?: { showAnswers?: boolean }
+  ): {
+    questionId: string;
+    questionText: string;
+    options: Array<{ id: string; text: string; isCorrect?: boolean }>;
+    points: number;
+    trueExplanation?: string;
+    falseExplanation?: string;
+  } {
+    const trueId = this.generateOptionId();
+    const falseId = this.generateOptionId();
+
+    let correctValue: boolean;
+    let trueExplanation: string | undefined;
+    let falseExplanation: string | undefined;
+
+    // Check for new trueFalseData design
+    if (question.trueFalseData && typeof question.trueFalseData.correctValue === 'boolean') {
+      correctValue = question.trueFalseData.correctValue;
+      trueExplanation = question.trueFalseData.trueExplanation;
+      falseExplanation = question.trueFalseData.falseExplanation;
+    } else if (question.options && question.options.length === 2) {
+      // Legacy design - check correctAnswer
+      const correctAnswer = question.correctAnswer?.toLowerCase();
+      correctValue = correctAnswer === 'true' || correctAnswer === question.options[0]?.toLowerCase();
+    } else {
+      // Default to true if no data
+      correctValue = true;
+    }
+
+    const renderedOptions = [
+      {
+        id: trueId,
+        text: 'True',
+        ...(options?.showAnswers && { isCorrect: correctValue === true })
+      },
+      {
+        id: falseId,
+        text: 'False',
+        ...(options?.showAnswers && { isCorrect: correctValue === false })
+      }
+    ];
+
+    return {
+      questionId: question._id.toString(),
+      questionText: question.questionText,
+      options: renderedOptions,
+      points: question.points,
+      ...(options?.showAnswers && trueExplanation && { trueExplanation }),
+      ...(options?.showAnswers && falseExplanation && { falseExplanation })
+    };
+  }
+
+  /**
+   * Render a question in fill-in-the-blank format
+   * Uses fillBlankData (new design) or legacy blanks
+   */
+  static renderAsFillBlank(
+    question: IQuestion,
+    options?: { showAnswers?: boolean }
+  ): {
+    questionId: string;
+    textWithBlanks: string;
+    blanks: Array<{
+      id: string;
+      acceptedAnswers?: string[];
+      matchThreshold?: number;
+    }>;
+    points: number;
+  } {
+    let textWithBlanks: string;
+    let blanks: Array<{
+      id: string;
+      acceptedAnswers: string[];
+      matchThreshold: number;
+    }>;
+
+    // Check for new fillBlankData design
+    if (question.fillBlankData) {
+      textWithBlanks = question.fillBlankData.textWithBlanks;
+      blanks = question.fillBlankData.blanks.map(b => ({
+        id: b.id,
+        acceptedAnswers: b.acceptedAnswers,
+        matchThreshold: b.matchThreshold
+      }));
+    } else if (question.blanks && question.blanks.length > 0) {
+      // Legacy design - convert position-based blanks to id-based
+      textWithBlanks = question.questionText;
+      blanks = question.blanks.map((b, index) => ({
+        id: `blank_${index}`,
+        acceptedAnswers: b.acceptedAnswers,
+        matchThreshold: b.matchThreshold
+      }));
+
+      // Replace positions with placeholders in text
+      // This is a best-effort conversion - legacy data might not have proper placeholders
+      let offset = 0;
+      for (const blank of question.blanks) {
+        const placeholder = `{{blank_${blanks.findIndex(b => b.acceptedAnswers === blank.acceptedAnswers)}}}`;
+        // Simple replacement assuming positions are character indices
+        if (typeof blank.position === 'number') {
+          const adjustedPos = blank.position + offset;
+          textWithBlanks = textWithBlanks.slice(0, adjustedPos) + placeholder + textWithBlanks.slice(adjustedPos);
+          offset += placeholder.length;
+        }
+      }
+    } else {
+      // Fallback - no blank data
+      textWithBlanks = question.questionText;
+      blanks = [];
+    }
+
+    const renderedBlanks = blanks.map(b => {
+      const rendered: { id: string; acceptedAnswers?: string[]; matchThreshold?: number } = {
+        id: b.id
+      };
+      if (options?.showAnswers) {
+        rendered.acceptedAnswers = b.acceptedAnswers;
+        rendered.matchThreshold = b.matchThreshold;
+      }
+      return rendered;
+    });
+
+    return {
+      questionId: question._id.toString(),
+      textWithBlanks,
+      blanks: renderedBlanks,
+      points: question.points
+    };
   }
 }
