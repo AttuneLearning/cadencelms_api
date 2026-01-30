@@ -499,7 +499,9 @@ export class AssessmentAttemptsService {
       case 'multiple-choice':  // Legacy support
       case 'true_false':
       case 'true-false': {     // Legacy support
-        const correctAnswer = question.questionSnapshot?.correctAnswer;
+        // Support both old format (correctAnswer) and new format (correctAnswers[])
+        const correctAnswer = question.questionSnapshot?.correctAnswer
+          || question.questionSnapshot?.correctAnswers?.[0];
         const isCorrect = String(response).toLowerCase() === String(correctAnswer).toLowerCase();
         return {
           graded: true,
@@ -536,7 +538,9 @@ export class AssessmentAttemptsService {
 
       case 'fill_in_blank':
       case 'fill-blank': {   // Legacy support
-        const correctAnswer = question.questionSnapshot?.correctAnswer;
+        // Support both old format (correctAnswer) and new format (correctAnswers[])
+        const correctAnswer = question.questionSnapshot?.correctAnswer
+          || question.questionSnapshot?.correctAnswers?.[0];
         const isCorrect = String(response).toLowerCase().trim() === String(correctAnswer).toLowerCase().trim();
         return {
           graded: true,

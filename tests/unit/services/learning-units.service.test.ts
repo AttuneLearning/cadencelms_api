@@ -24,7 +24,10 @@ describeIfMongo('LearningUnitsService - Unit Tests', () => {
   afterEach(async () => {
     const collections = mongoose.connection.collections;
     for (const key in collections) {
-      await collections[key].deleteMany({});
+      // Don't delete LookupValues - they're seeded in beforeAll
+      if (key !== 'lookupvalues') {
+        await collections[key].deleteMany({});
+      }
     }
   });
 

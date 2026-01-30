@@ -36,7 +36,9 @@ describeIfMongo('Question Model', () => {
         questionText: 'What is 2 + 2?',
         questionTypes: ['multiple_choice'],
         departmentId: testDept._id,
-        points: 5
+        points: 5,
+        correctAnswers: ['4'],
+        distractors: ['3', '5', '6']
       });
 
       expect(question.questionText).toBe('What is 2 + 2?');
@@ -96,14 +98,22 @@ describeIfMongo('Question Model', () => {
     });
 
     it('should accept valid question types', async () => {
-      const types = ['multiple_choice', 'true_false', 'short_answer', 'long_answer', 'fill_in_blank', 'matching'];
+      const typeConfigs: Record<string, any> = {
+        'multiple_choice': { correctAnswers: ['A'], distractors: ['B', 'C'] },
+        'true_false': { correctAnswers: ['true'], trueFalseData: { correctValue: true } },
+        'short_answer': { correctAnswers: ['answer'] },
+        'long_answer': {},
+        'fill_in_blank': { correctAnswers: ['blank'], blanks: [{ placeholder: '____', acceptedAnswers: ['blank'], position: 0, matchThreshold: 100 }] },
+        'matching': { matchingPairs: { 'A': '1', 'B': '2' } }
+      };
 
-      for (const type of types) {
+      for (const [type, config] of Object.entries(typeConfigs)) {
         const question = await Question.create({
           questionText: `Question of type ${type}`,
           questionTypes: [type],
           departmentId: testDept._id,
-          points: 5
+          points: 5,
+          ...config
         });
 
         expect(question.questionTypes).toEqual([type]);
@@ -123,29 +133,31 @@ describeIfMongo('Question Model', () => {
   });
 
   describe('Multiple Choice Questions', () => {
-    it('should store multiple choice options', async () => {
+    it('should store multiple choice with correct answer and distractors', async () => {
       const question = await Question.create({
         questionText: 'What is the capital of France?',
         questionTypes: ['multiple_choice'],
         departmentId: testDept._id,
         points: 5,
-        options: ['Paris', 'London', 'Berlin', 'Madrid']
+        correctAnswers: ['Paris'],
+        distractors: ['London', 'Berlin', 'Madrid']
       });
 
-      expect(question.options).toEqual(['Paris', 'London', 'Berlin', 'Madrid']);
+      expect(question.correctAnswers).toEqual(['Paris']);
+      expect(question.distractors).toEqual(['London', 'Berlin', 'Madrid']);
     });
 
-    it('should store correct answer', async () => {
+    it('should store correct answer in array format', async () => {
       const question = await Question.create({
         questionText: 'What is 2 + 2?',
         questionTypes: ['multiple_choice'],
         departmentId: testDept._id,
         points: 5,
-        options: ['3', '4', '5', '6'],
-        correctAnswer: '4'
+        correctAnswers: ['4'],
+        distractors: ['3', '5', '6']
       });
 
-      expect(question.correctAnswer).toBe('4');
+      expect(question.correctAnswers).toEqual(['4']);
     });
 
     it('should store multiple correct answers', async () => {
@@ -154,8 +166,8 @@ describeIfMongo('Question Model', () => {
         questionTypes: ['multiple_choice'],
         departmentId: testDept._id,
         points: 10,
-        options: ['2', '3', '4', '5', '6'],
-        correctAnswers: ['2', '3', '5']
+        correctAnswers: ['2', '3', '5'],
+        distractors: ['4', '6']
       });
 
       expect(question.correctAnswers).toEqual(['2', '3', '5']);
@@ -169,10 +181,12 @@ describeIfMongo('Question Model', () => {
         questionTypes: ['true_false'],
         departmentId: testDept._id,
         points: 2,
-        correctAnswer: 'true'
+        correctAnswers: ['true'],
+        trueFalseData: { correctValue: true }
       });
 
-      expect(question.correctAnswer).toBe('true');
+      expect(question.correctAnswers).toEqual(['true']);
+      expect(question.trueFalseData?.correctValue).toBe(true);
     });
   });
 
@@ -220,10 +234,11 @@ describeIfMongo('Question Model', () => {
         questionTypes: ['fill_in_blank'],
         departmentId: testDept._id,
         points: 5,
-        correctAnswer: 'O(log n)'
+        correctAnswers: ['O(log n)'],
+        blanks: [{ placeholder: '____', acceptedAnswers: ['O(log n)'], position: 0, matchThreshold: 100 }]
       });
 
-      expect(question.correctAnswer).toBe('O(log n)');
+      expect(question.correctAnswers).toEqual(['O(log n)']);
     });
 
     it('should allow multiple acceptable answers', async () => {
@@ -232,7 +247,8 @@ describeIfMongo('Question Model', () => {
         questionTypes: ['fill_in_blank'],
         departmentId: testDept._id,
         points: 5,
-        correctAnswers: ['Brendan Eich', 'Eich']
+        correctAnswers: ['Brendan Eich', 'Eich'],
+        blanks: [{ placeholder: '____', acceptedAnswers: ['Brendan Eich', 'Eich'], position: 0, matchThreshold: 100 }]
       });
 
       expect(question.correctAnswers).toEqual(['Brendan Eich', 'Eich']);
@@ -292,6 +308,8 @@ describeIfMongo('Question Model', () => {
         questionTypes: ['multiple_choice'],
         departmentId: testDept._id,
         points: 5,
+        correctAnswers: ['A'],
+        distractors: ['B', 'C'],
         tags: ['algorithms', 'sorting', 'complexity']
       });
 
@@ -329,7 +347,9 @@ describeIfMongo('Question Model', () => {
         questionText: 'Test question',
         questionTypes: ['multiple_choice'],
         departmentId: testDept._id,
-        points: 5
+        points: 5,
+        correctAnswers: ['A'],
+        distractors: ['B', 'C']
       });
 
       expect(question.isActive).toBe(true);
@@ -341,6 +361,8 @@ describeIfMongo('Question Model', () => {
         questionTypes: ['multiple_choice'],
         departmentId: testDept._id,
         points: 5,
+        correctAnswers: ['A'],
+        distractors: ['B', 'C'],
         isActive: false
       });
 
@@ -355,6 +377,8 @@ describeIfMongo('Question Model', () => {
         questionTypes: ['multiple_choice'],
         departmentId: testDept._id,
         points: 5,
+        correctAnswers: ['A'],
+        distractors: ['B', 'C'],
         metadata: {
           source: 'Textbook Chapter 5',
           lastUsed: '2024-09-15',
@@ -374,7 +398,9 @@ describeIfMongo('Question Model', () => {
         questionText: 'Test question',
         questionTypes: ['multiple_choice'],
         departmentId: testDept._id,
-        points: 5
+        points: 5,
+        correctAnswers: ['A'],
+        distractors: ['B', 'C']
       });
 
       expect(question.createdAt).toBeDefined();
@@ -388,7 +414,9 @@ describeIfMongo('Question Model', () => {
         questionText: 'Question 1',
         questionTypes: ['multiple_choice'],
         departmentId: testDept._id,
-        points: 5
+        points: 5,
+        correctAnswers: ['A'],
+        distractors: ['B', 'C']
       });
 
       const questions = await Question.find({ departmentId: testDept._id });
@@ -400,7 +428,9 @@ describeIfMongo('Question Model', () => {
         questionText: 'MC Question',
         questionTypes: ['multiple_choice'],
         departmentId: testDept._id,
-        points: 5
+        points: 5,
+        correctAnswers: ['A'],
+        distractors: ['B', 'C']
       });
 
       await Question.create({
@@ -420,6 +450,8 @@ describeIfMongo('Question Model', () => {
         questionTypes: ['multiple_choice'],
         departmentId: testDept._id,
         points: 5,
+        correctAnswers: ['A'],
+        distractors: ['B', 'C'],
         difficulty: 'easy'
       });
 
@@ -441,6 +473,8 @@ describeIfMongo('Question Model', () => {
         questionTypes: ['multiple_choice'],
         departmentId: testDept._id,
         points: 5,
+        correctAnswers: ['A'],
+        distractors: ['B', 'C'],
         isActive: true
       });
 
@@ -449,6 +483,8 @@ describeIfMongo('Question Model', () => {
         questionTypes: ['multiple_choice'],
         departmentId: testDept._id,
         points: 5,
+        correctAnswers: ['A'],
+        distractors: ['B', 'C'],
         isActive: false
       });
 
