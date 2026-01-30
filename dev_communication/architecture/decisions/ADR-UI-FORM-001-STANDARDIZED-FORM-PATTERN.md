@@ -23,5 +23,8 @@ Standardize all forms on the shadcn + React Hook Form pattern via `src/shared/ui
 ## Links
 
 - Decision log: [[../decision-log]]
-- Source: ../../../dev_guidance/FEATURE_DEVELOPMENT_CHECKLIST.md
-- Reference: ../../../dev_guidance/architecture/ui/UI_COMPONENT_LIBRARY.md
+- Related ADRs:
+  - [[ADR-UI-001-FSD-ARCHITECTURE]] (form components within FSD structure)
+- Reference:
+  - [[../UI_COMPONENT_LIBRARY]] (UI component patterns)
+  - `../../guidance/FEATURE_DEVELOPMENT_CHECKLIST.md` (development checklist)

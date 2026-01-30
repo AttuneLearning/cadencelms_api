@@ -34,5 +34,11 @@ Replace the dual authorization system with a unified scoped permissions model:
 ## Links
 
 - Decision log: [[../decision-log]]
-- Source: ../../../dev_guidance/FEATURE_DEVELOPMENT_CHECKLIST.md
-- Spec: ../../../api/specs/UNIFIED_AUTHORIZATION_MODEL.md
+- Related ADRs:
+  - [[ADR-SEC-001-SECURITY-ARCHITECTURE]] (authorization layer details)
+  - [[ADR-API-002-API-CACHING-STRATEGY]] (permission caching)
+- Implementation:
+  - `src/services/auth/authorize.service.ts` - Core authorization service
+  - `src/services/auth/permissions.service.ts` - Permission resolution
+  - `src/services/auth/role-cache.service.ts` - Role caching
+  - `src/utils/permission-cache.ts` - Permission cache utilities

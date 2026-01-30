@@ -27,4 +27,4 @@ Reliable deliverability and reasonable pricing.
 ## Links
 
 - Decision log: [[../decision-log]]
-- Source: ../../../specs/BILLING_REGISTRATION_SYSTEM_SPEC.md
+- Source: [[../../specs/commerce/BILLING_REGISTRATION_SYSTEM_SPEC]]

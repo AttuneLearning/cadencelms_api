@@ -434,5 +434,13 @@ POST /api/v2/courses/bulk-delete
 ## Links
 
 - Decision log: [[../decision-log]]
-- Related ADRs: [[ADR-AUTH-001-UNIFIED-AUTHORIZATION-MODEL]] (authorization headers)
-- Implementation: `src/shared/middleware/apiStandards.ts`
+- Related ADRs:
+  - [[ADR-AUTH-001-UNIFIED-AUTHORIZATION-MODEL]] (authorization headers)
+  - [[ADR-API-002-API-CACHING-STRATEGY]] (cache headers)
+  - [[ADR-API-003-REST-CONVENTIONS]] (resource patterns)
+- Implementation:
+  - `src/middlewares/validateRequest.ts` - Request validation
+  - `src/middlewares/errorHandler.ts` - Error response formatting
+  - `src/utils/ApiError.ts` - Standardized error codes
+  - `src/utils/ApiResponse.ts` - Response envelope utilities
+  - `src/utils/pagination.ts` - Pagination utilities

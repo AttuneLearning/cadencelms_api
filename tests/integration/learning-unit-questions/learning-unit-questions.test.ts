@@ -273,8 +273,8 @@ describeIfMongo('Learning Unit Questions API', () => {
       departmentId: options.departmentId || testDepartment._id,
       points: options.points || 10,
       difficulty: options.difficulty || 'medium',
-      options: ['Option A', 'Option B', 'Option C', 'Option D'],
-      correctAnswer: 'Option A',
+      correctAnswers: ['Option A'],
+      distractors: ['Option B', 'Option C', 'Option D'],
       isActive: true,
       questionBankIds: []
     });
@@ -1161,8 +1161,8 @@ describeIfMongo('Learning Unit Questions API', () => {
         questionTypes: ['multiple_choice'],
         departmentId: testDepartment._id,
         points: 1, // Minimum allowed is 1 in the model
-        options: ['A', 'B'],
-        correctAnswer: 'A',
+        correctAnswers: ['A'],
+        distractors: ['B'],
         isActive: true,
         questionBankIds: []
       });

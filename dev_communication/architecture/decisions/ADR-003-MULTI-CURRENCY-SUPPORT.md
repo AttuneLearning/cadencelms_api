@@ -27,4 +27,4 @@ Allows international payments while keeping reporting consistent in a single set
 ## Links
 
 - Decision log: [[../decision-log]]
-- Source: ../../../specs/BILLING_REGISTRATION_SYSTEM_SPEC.md
+- Source: [[../../specs/commerce/BILLING_REGISTRATION_SYSTEM_SPEC]]

@@ -47,8 +47,8 @@ describeIfMongo('AssessmentsService - Unit Tests', () => {
         questionTypes: ['multiple_choice'],
         departmentId: testDepartment._id,
         points: 10,
-        options: ['3', '4', '5', '6'],
-        correctAnswer: '4',
+        correctAnswers: ['4'],
+        distractors: ['3', '5', '6'],
         difficulty: 'easy',
         tags: ['math', 'basic'],
         isActive: true
@@ -58,7 +58,7 @@ describeIfMongo('AssessmentsService - Unit Tests', () => {
         questionTypes: ['short_answer'],
         departmentId: testDepartment._id,
         points: 10,
-        correctAnswer: 'Paris',
+        correctAnswers: ['Paris'],
         difficulty: 'easy',
         tags: ['geography'],
         isActive: true
@@ -68,8 +68,8 @@ describeIfMongo('AssessmentsService - Unit Tests', () => {
         questionTypes: ['true_false'],
         departmentId: testDepartment._id,
         points: 5,
-        options: ['True', 'False'],
-        correctAnswer: 'True',
+        correctAnswers: ['True'],
+        trueFalseData: { correctValue: true },
         difficulty: 'easy',
         tags: ['programming'],
         isActive: true
@@ -79,6 +79,8 @@ describeIfMongo('AssessmentsService - Unit Tests', () => {
         questionTypes: ['long_answer'],
         departmentId: testDepartment._id,
         points: 20,
+        correctAnswers: [],
+        modelAnswer: 'This is a model answer explaining recursion.',
         difficulty: 'hard',
         tags: ['programming', 'advanced'],
         isActive: true
@@ -88,8 +90,8 @@ describeIfMongo('AssessmentsService - Unit Tests', () => {
         questionTypes: ['multiple_choice'],
         departmentId: testDepartment._id,
         points: 10,
-        options: ['3', '4', '5', '6'],
-        correctAnswer: '5',
+        correctAnswers: ['5'],
+        distractors: ['3', '4', '6'],
         difficulty: 'medium',
         tags: ['math'],
         isActive: true

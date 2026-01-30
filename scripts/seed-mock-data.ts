@@ -1187,21 +1187,46 @@ async function main() {
       const createdQuestions = [] as mongoose.Types.ObjectId[];
       for (let index = 0; index < 12; index += 1) {
         const moduleNumber = (index % moduleTemplates.length) + 1;
-        const questionType = index % 3 === 0 ? 'multiple-choice' : index % 3 === 1 ? 'true-false' : 'short-answer';
-        const options =
-          questionType === 'multiple-choice'
-            ? ['Option A', 'Option B', 'Option C', 'Option D']
-            : questionType === 'true-false'
-              ? ['True', 'False']
-              : undefined;
+
+        // Use new monolithic question design with questionTypes[], correctAnswers[], distractors[]
+        const questionTypeIndex = index % 4;
+        let questionTypes: string[];
+        let correctAnswers: string[];
+        let distractors: string[] | undefined;
+        let trueFalseData: { correctValue: boolean } | undefined;
+        let shortAnswerData: { alternateAccepted?: string[] } | undefined;
+
+        if (questionTypeIndex === 0) {
+          // Multiple choice - can also be used as flashcard
+          questionTypes = ['multiple_choice', 'flashcard'];
+          correctAnswers = ['Option A'];
+          distractors = ['Option B', 'Option C', 'Option D'];
+        } else if (questionTypeIndex === 1) {
+          // True/false
+          questionTypes = ['true_false'];
+          correctAnswers = ['True'];
+          trueFalseData = { correctValue: true };
+        } else if (questionTypeIndex === 2) {
+          // Short answer
+          questionTypes = ['short_answer'];
+          correctAnswers = ['Sample answer'];
+          shortAnswerData = { alternateAccepted: ['sample', 'Sample Answer'] };
+        } else {
+          // Matching-capable question
+          questionTypes = ['multiple_choice', 'matching'];
+          correctAnswers = ['Correct Match'];
+          distractors = ['Wrong A', 'Wrong B', 'Wrong C'];
+        }
 
         const question = await Question.create({
           questionText: `Module ${moduleNumber} question ${index + 1} for ${course.code}`,
-          questionType,
+          questionTypes,
           departmentId: course.departmentId,
           points: 10,
-          options,
-          correctAnswer: questionType === 'multiple-choice' ? 'Option A' : questionType === 'true-false' ? 'True' : 'Sample answer',
+          correctAnswers,
+          distractors,
+          trueFalseData,
+          shortAnswerData,
           difficulty: 'medium',
           tags: [course.code.toLowerCase(), `module-${moduleNumber}`, 'seeded'],
           questionBankIds: [bank._id.toString()],

@@ -137,8 +137,8 @@ describeIfMongo('Bulk Question Updates Integration Tests', () => {
         questionText: 'Test Question 1',
         points: 10,
         difficulty: 'medium',
-        options: ['Option A', 'Option B', 'Option C'],
-        correctAnswer: 'Option A',
+        correctAnswers: ['Option A'],
+        distractors: ['Option B', 'Option C'],
         isActive: true
       },
       {
@@ -147,8 +147,8 @@ describeIfMongo('Bulk Question Updates Integration Tests', () => {
         questionText: 'Test Question 2',
         points: 10,
         difficulty: 'medium',
-        options: ['Option A', 'Option B', 'Option C'],
-        correctAnswer: 'Option A',
+        correctAnswers: ['Option A'],
+        distractors: ['Option B', 'Option C'],
         isActive: true
       },
       {
@@ -157,8 +157,8 @@ describeIfMongo('Bulk Question Updates Integration Tests', () => {
         questionText: 'Test Question 3',
         points: 5,
         difficulty: 'easy',
-        options: ['True', 'False'],
-        correctAnswer: 'True',
+        correctAnswers: ['True'],
+        trueFalseData: { correctValue: true },
         isActive: true
       }
     ]);
@@ -270,8 +270,8 @@ describeIfMongo('Bulk Question Updates Integration Tests', () => {
         questionText: 'Other Department Question',
         points: 10,
         difficulty: 'medium',
-        options: ['Option A', 'Option B', 'Option C'],
-        correctAnswer: 'Option A',
+        correctAnswers: ['Option A'],
+        distractors: ['Option B', 'Option C'],
         isActive: true
       });
 

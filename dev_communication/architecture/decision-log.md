@@ -13,6 +13,8 @@
 | ADR-AUTH-001 | Unified Authorization Model | Accepted | 2026-01-22 | Platform/Auth | [[decisions/ADR-AUTH-001-UNIFIED-AUTHORIZATION-MODEL]] |
 | ADR-UI-001 | Feature-Sliced Design Architecture | Accepted | 2026-01-07 | UI | [[decisions/ADR-UI-001-FSD-ARCHITECTURE]] |
 | ADR-UI-FORM-001 | Standardized Form Pattern | Accepted | 2026-01-22 | UI | [[decisions/ADR-UI-FORM-001-STANDARDIZED-FORM-PATTERN]] |
+| ADR-UI-002 | Error Handling Strategy | Accepted | 2026-01-27 | UI | [[decisions/ADR-UI-002-ERROR-HANDLING]] |
+| ADR-DEV-001 | Testing Strategy | Accepted | 2026-01-27 | Development | [[decisions/ADR-DEV-001-TESTING-STRATEGY]] |
 | ADR-001 | Refund Policy | Approved | 2026-01-14 | Billing | [[decisions/ADR-001-REFUND-POLICY]] |
 | ADR-002 | Tax Calculation | Approved | 2026-01-14 | Billing | [[decisions/ADR-002-TAX-CALCULATION]] |
 | ADR-003 | Multi-Currency Support | Approved | 2026-01-14 | Billing | [[decisions/ADR-003-MULTI-CURRENCY-SUPPORT]] |

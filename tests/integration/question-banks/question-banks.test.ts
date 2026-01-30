@@ -522,8 +522,8 @@ describeIfMongo('Question Banks API', () => {
           questionTypes: ['multiple_choice'],
           departmentId: testDepartment._id,
           points: 10,
-          options: ['A', 'B', 'C', 'D'],
-          correctAnswer: 'A',
+          correctAnswers: ['A'],
+          distractors: ['B', 'C', 'D'],
           questionBankIds: [detailsTestBank._id.toString()],
           isActive: true
         },
@@ -532,7 +532,8 @@ describeIfMongo('Question Banks API', () => {
           questionTypes: ['true_false'],
           departmentId: testDepartment._id,
           points: 5,
-          correctAnswer: 'true',
+          correctAnswers: ['true'],
+          trueFalseData: { correctValue: true },
           questionBankIds: [detailsTestBank._id.toString()],
           isActive: true
         }
@@ -774,8 +775,8 @@ describeIfMongo('Question Banks API', () => {
         questionTypes: ['multiple_choice'],
         departmentId: testDepartment._id,
         points: 10,
-        options: ['A', 'B', 'C'],
-        correctAnswer: 'A',
+        correctAnswers: ['A'],
+        distractors: ['B', 'C'],
         questionBankIds: [usedTestBank._id.toString()],
         isActive: true
       });
@@ -858,7 +859,8 @@ describeIfMongo('Question Banks API', () => {
         questionTypes: ['true_false'],
         departmentId: testDepartment._id,
         points: 5,
-        correctAnswer: 'true',
+        correctAnswers: ['true'],
+        trueFalseData: { correctValue: true },
         questionBankIds: [deleteTestBank._id.toString()],
         isActive: true
       });

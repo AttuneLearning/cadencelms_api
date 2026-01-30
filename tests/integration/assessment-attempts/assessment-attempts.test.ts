@@ -219,18 +219,22 @@ async function createTestQuestion(options: TestQuestionOptions): Promise<any> {
   const primaryType = options.questionTypes[0];
 
   if (primaryType === 'multiple_choice') {
-    questionData.options = options.options || ['Option A', 'Option B', 'Option C', 'Option D'];
-    questionData.correctAnswer = options.correctAnswer || 'Option A';
+    const allOptions = options.options || ['Option A', 'Option B', 'Option C', 'Option D'];
+    const correct = options.correctAnswer || 'Option A';
+    questionData.correctAnswers = [correct];
+    questionData.distractors = allOptions.filter(o => o !== correct);
   } else if (primaryType === 'true_false') {
-    questionData.options = ['true', 'false'];
-    questionData.correctAnswer = options.correctAnswer || 'true';
+    const correct = options.correctAnswer || 'true';
+    questionData.correctAnswers = [correct];
+    questionData.trueFalseData = { correctValue: correct === 'true' };
   } else if (primaryType === 'short_answer') {
     questionData.correctAnswers = options.correctAnswers || ['correct answer'];
   } else if (primaryType === 'long_answer') {
+    questionData.correctAnswers = [];
     questionData.modelAnswer = 'This is a model answer for the essay question.';
     questionData.maxWordCount = 500;
   } else if (primaryType === 'fill_in_blank') {
-    questionData.correctAnswer = options.correctAnswer || 'blank';
+    questionData.correctAnswers = [options.correctAnswer || 'blank'];
   } else if (primaryType === 'matching') {
     questionData.matchingPairs = options.matchingPairs || {
       'Term A': 'Definition A',

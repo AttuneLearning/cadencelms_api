@@ -25,4 +25,4 @@ Ensures users have accounts to access purchased content and supports enrollment 
 ## Links
 
 - Decision log: [[../decision-log]]
-- Source: ../../../specs/BILLING_REGISTRATION_SYSTEM_SPEC.md
+- Source: [[../../specs/commerce/BILLING_REGISTRATION_SYSTEM_SPEC]]

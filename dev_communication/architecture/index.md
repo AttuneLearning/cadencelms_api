@@ -8,6 +8,7 @@ Central hub for architecture decisions, gaps, and suggestions across API and UI 
 - [[decisions/index|All Decisions]]
 - [[suggestions/index|Pending Suggestions]]
 - [[gaps/index|Known Gaps]]
+- [[../specs/index|Specifications]]
 - [[templates/adr-template|ADR Template]]
 
 ## Skill
@@ -52,6 +53,11 @@ Use `/adr` skill for architecture management:
 ### UI / Frontend
 - [[decisions/ADR-UI-001-FSD-ARCHITECTURE]]
 - [[decisions/ADR-UI-FORM-001-STANDARDIZED-FORM-PATTERN]]
+- [[decisions/ADR-UI-002-ERROR-HANDLING]]
+
+### Development Process
+- [[decisions/ADR-DEV-001-TESTING-STRATEGY]]
+- [[decisions/ADR-DEV-002-IDEAL-API-DESIGN]]
 
 ### Billing / Registration System
 - [[decisions/ADR-001-REFUND-POLICY]]
@@ -71,13 +77,14 @@ Use `/adr` skill for architecture management:
 | Billing | 7 | Approved |
 | API | 3 | Accepted |
 | Auth | 1 | Accepted |
-| UI | 2 | Accepted |
+| UI | 3 | Accepted |
 | Data | 1 | Accepted |
 | Security | 1 | Accepted |
 | Content | 1 | Accepted |
 | SCORM | 1 | Accepted |
 | Infrastructure | 1 | Accepted |
-| **Total** | **18** | |
+| Development | 2 | Accepted |
+| **Total** | **21** | |
 
 ---
 

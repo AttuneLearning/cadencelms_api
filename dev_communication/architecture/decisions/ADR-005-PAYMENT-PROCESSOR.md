@@ -27,4 +27,4 @@ Best developer experience and widest payment method support.
 ## Links
 
 - Decision log: [[../decision-log]]
-- Source: ../../../specs/BILLING_REGISTRATION_SYSTEM_SPEC.md
+- Source: [[../../specs/commerce/BILLING_REGISTRATION_SYSTEM_SPEC]]

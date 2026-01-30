@@ -26,8 +26,8 @@ describe('Question Model', () => {
       questionTypes: ['multiple_choice'],
       departmentId: new mongoose.Types.ObjectId(),
       points: 5,
-      options: ['3', '4', '5', '6'],
-      correctAnswer: '4'
+      correctAnswers: ['4'],
+      distractors: ['3', '5', '6']
     };
 
     it('should default to empty array when not provided', async () => {
@@ -222,8 +222,8 @@ describe('Question Model', () => {
         questionTypes: ['multiple_choice'],
         departmentId,
         points: 10,
-        options: ['Option A', 'Option B', 'Option C'],
-        correctAnswer: 'Option A',
+        correctAnswers: ['Option A'],
+        distractors: ['Option B', 'Option C'],
         difficulty: 'medium',
         tags: ['test', 'sample'],
         questionBankIds: ['bank-comprehensive']

@@ -19,16 +19,35 @@ Development issue tracking for API and UI teams.
 ### API Team (`issues/api/`)
 | Folder | Count | Description |
 |--------|-------|-------------|
-| `queue/` | 0 | Ready to work |
+| `queue/` | 5 | Ready to work |
 | `active/` | 0 | In progress |
 | `completed/` | 0 | Done |
+
+**Queue:**
+- API-ISS-009: Question Model - Monolithic Design Update (High)
+- API-ISS-010: Flashcard System Implementation (High)
+- API-ISS-011: Matching Exercise Implementation (High)
+- API-ISS-012: Media Upload System - S3 + Local (High)
+- API-ISS-013: Retention Check & Remediation System (Medium)
 
 ### UI Team (`issues/ui/`)
 | Folder | Count | Description |
 |--------|-------|-------------|
-| `queue/` | 0 | Ready to work |
-| `active/` | 0 | In progress |
-| `completed/` | 0 | Done |
+| `queue/` | 20 | Ready to work |
+| `active/` | 2 | In progress |
+| `completed/` | 3 | Done |
+
+**Active Issues:**
+- UI-ISS-071: Missing Create Flashcard Deck Page (High)
+- UI-ISS-072: Missing Create Matching Game Page (High)
+
+**Question System Migration (UI-ISS-075 to UI-ISS-080):**
+- UI-ISS-075: Question System Type Alignment (High) - Foundation
+- UI-ISS-076: QuestionForm Enhancement (High) - Depends on 075
+- UI-ISS-077: QuestionRenderer Enhancement (High) - Depends on 075
+- UI-ISS-078: Page Integration (Medium) - Depends on 075-077
+- UI-ISS-079: API Integration (Medium) - Depends on 075
+- UI-ISS-080: Testing & Polish (Medium) - Depends on 075-079
 
 ## Naming Convention
 
@@ -44,8 +63,8 @@ Examples:
 
 | Team | Prefix | Next Number |
 |------|--------|-------------|
-| API | API-ISS- | 009 |
-| UI | UI-ISS- | 063 |
+| API | API-ISS- | 014 |
+| UI | UI-ISS- | 081 |
 
 *Update "Next Number" when creating issues*
 

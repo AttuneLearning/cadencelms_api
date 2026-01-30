@@ -359,6 +359,628 @@ SKILL_EOF
 file_created ".claude/commands/adr.md"
 fi
 
+# Create memory.md skill
+if should_create_file ".claude/commands/memory.md"; then
+cat > .claude/commands/memory.md << 'SKILL_EOF'
+---
+name: memory
+description: Memory Vault Management
+argument-hint: "[search|add|status]"
+---
+
+# Memory Vault Management
+
+You are managing the extended memory vault at `./memory/`.
+
+## Available Actions
+
+Based on the user's request, perform one of these actions:
+
+### 1. Search Memory
+If the user wants to find something:
+- Search across `memory/` using Grep for keywords
+- Check relevant index files (`memory/entities/index.md`, etc.)
+- Return relevant memory files with summaries
+
+### 2. Add Entity
+If the user wants to remember a concept/component:
+- Use template: `memory/templates/entity-template.md`
+- Create file: `memory/entities/[slug].md`
+- Update: `memory/entities/index.md`
+- Update: `memory/memory-log.md`
+
+### 3. Add Pattern
+If the user wants to document a pattern:
+- Use template: `memory/templates/pattern-template.md`
+- Create file: `memory/patterns/[slug].md`
+- Update: `memory/patterns/index.md`
+- Update: `memory/memory-log.md`
+
+### 4. Add Session Summary
+If the user wants to record a session:
+- Use template: `memory/templates/session-template.md`
+- Create file: `memory/sessions/YYYY-MM-DD-[slug].md`
+- Update: `memory/sessions/index.md`
+- Update: `memory/memory-log.md`
+
+### 5. Add Context
+If the user wants to add background knowledge:
+- Use template: `memory/templates/context-template.md`
+- Create file: `memory/context/[slug].md`
+- Update: `memory/context/index.md`
+- Update: `memory/memory-log.md`
+
+### 6. Show Status
+If the user wants to see memory status:
+- Read `memory/memory-log.md`
+- Count files in each category
+- Show recent additions
+
+## Wikilink Format
+
+Always use Obsidian wikilink syntax for cross-references:
+```markdown
+[[../memory-log]]
+[[entities/entity-name]]
+[[patterns/pattern-name]]
+```
+
+## Memory Log Entry Format
+
+When adding to `memory/memory-log.md`:
+```markdown
+| YYYY-MM-DD | type | Title | #tags | [[folder/filename]] |
+```
+
+## Guidelines
+
+- Keep entries concise but complete
+- Use consistent naming (lowercase, hyphens)
+- Always update index files and memory-log
+- Add relevant tags for discoverability
+- Link related memories with wikilinks
+SKILL_EOF
+file_created ".claude/commands/memory.md"
+fi
+
+# Create recall.md skill
+if should_create_file ".claude/commands/recall.md"; then
+cat > .claude/commands/recall.md << 'SKILL_EOF'
+---
+name: recall
+description: Memory Recall
+argument-hint: "[topic]"
+---
+
+# Memory Recall
+
+Quickly load relevant context from the memory vault.
+
+## Instructions
+
+1. Read the main memory index:
+   - `memory/index.md`
+
+2. Read the memory log for recent activity:
+   - `memory/memory-log.md`
+
+3. Read core context files:
+   - `memory/context/project-overview.md`
+   - `memory/context/tech-stack.md`
+
+4. If the user mentioned a specific topic, search for relevant memories:
+   - Use Grep to search `memory/` for keywords
+   - Read matching entity, pattern, or context files
+
+5. Summarize what you found:
+   - Key context loaded
+   - Recent session activity
+   - Relevant patterns or entities for current work
+
+## Output Format
+
+Provide a brief summary:
+
+```
+## Memory Loaded
+
+**Context:** [key points from context files]
+
+**Recent Activity:** [from memory-log]
+
+**Relevant Memories:**
+- [entity/pattern names with brief descriptions]
+```
+
+Keep the summary concise - the goal is quick orientation, not exhaustive detail.
+SKILL_EOF
+file_created ".claude/commands/recall.md"
+fi
+
+echo -e "${BLUE}Setting up Memory Vault...${NC}"
+
+# Create memory vault directories
+mkdir -p memory/{entities,sessions,patterns,context,templates,prompts/{agents,tasks,workflows,team-configs}}
+echo -e "  ${GREEN}✓${NC} Memory directories created"
+
+# Create memory index
+if should_create_file "memory/index.md"; then
+cat > memory/index.md << 'EOF'
+# Memory Vault
+
+Extended memory repository for development. This vault stores persistent knowledge that AI agents can reference across sessions.
+
+## Quick Navigation
+
+- Memory log: [[memory-log]]
+- Recent sessions: [[sessions/index]]
+
+## Memory Types
+
+### Prompts
+Tracked prompts, agent configurations, and team workflows.
+- [[prompts/index|Browse prompts]]
+- [[prompts/prompt-registry|Prompt registry]]
+
+### Entities
+Key concepts, systems, people, and components. These are the "nouns" of the project.
+- [[entities/index|Browse entities]]
+
+### Sessions
+Session summaries capturing decisions, discoveries, and work completed.
+- [[sessions/index|Browse sessions]]
+
+### Patterns
+Recurring solutions, conventions, and best practices discovered through development.
+- [[patterns/index|Browse patterns]]
+
+### Context
+Background information, project overview, and foundational knowledge.
+- [[context/index|Browse context]]
+
+## Templates
+
+- [[templates/entity-template|Entity template]]
+- [[templates/session-template|Session template]]
+- [[templates/pattern-template|Pattern template]]
+- [[templates/context-template|Context template]]
+
+## How to Use This Vault
+
+1. **Start with [[memory-log]]** to see recent additions and changes
+2. **Search entities** when you need to understand a concept or component
+3. **Reference patterns** for established solutions to common problems
+4. **Check sessions** for historical context on past decisions
+5. **Use backlinks** to discover connections between memories
+
+## Tags
+
+Common tags used in this vault:
+- `#entity` - Core concepts and components
+- `#session` - Session summaries
+- `#pattern` - Reusable patterns
+- `#context` - Background information
+- `#prompt` - Prompts and configurations
+- `#team-config` - Multi-agent team configs
+- `#decision` - Key decisions made
+EOF
+file_created "memory/index.md"
+fi
+
+# Create memory log
+if should_create_file "memory/memory-log.md"; then
+cat > memory/memory-log.md << EOF
+# Memory Log
+
+Chronological log of all memory additions and updates.
+
+| Date | Type | Title | Tags | Link |
+|------|------|-------|------|------|
+| $(date +%Y-%m-%d) | context | Project Overview | #context | [[context/project-overview]] |
+
+---
+
+[[index|← Back to Memory Index]]
+EOF
+file_created "memory/memory-log.md"
+fi
+
+# Create entity template
+if should_create_file "memory/templates/entity-template.md"; then
+cat > memory/templates/entity-template.md << 'EOF'
+# Entity: [Name]
+
+**Type:** Model | Service | Controller | System | Concept
+**Created:** YYYY-MM-DD
+**Tags:** #entity
+
+## Summary
+
+Brief description of what this entity is and its purpose.
+
+## Key Characteristics
+
+- Characteristic 1
+- Characteristic 2
+
+## Relationships
+
+- Depends on: [[entities/related-entity]]
+- Used by: [[entities/dependent-entity]]
+
+## Location
+
+**Files:**
+- `src/path/to/file.ts`
+
+## Notes
+
+Additional context, gotchas, or important details.
+
+## Links
+
+- Memory log: [[../memory-log]]
+- Related patterns: [[../patterns/related-pattern]]
+EOF
+file_created "memory/templates/entity-template.md"
+fi
+
+# Create session template
+if should_create_file "memory/templates/session-template.md"; then
+cat > memory/templates/session-template.md << 'EOF'
+# Session: [Date] - [Brief Title]
+
+**Date:** YYYY-MM-DD
+**Duration:** Approximate time
+**Tags:** #session
+
+## Objective
+
+What was the goal of this session?
+
+## Work Completed
+
+- Task 1
+- Task 2
+
+## Key Decisions
+
+| Decision | Rationale |
+| --- | --- |
+| Decision 1 | Why we chose this |
+
+## Discoveries
+
+What new information was learned?
+
+## Files Modified
+
+- `path/to/file1.ts` - Description of change
+- `path/to/file2.ts` - Description of change
+
+## Open Items
+
+- [ ] Item to follow up on
+- [ ] Another open item
+
+## Related Entities
+
+- [[../entities/entity-name]]
+
+## Links
+
+- Memory log: [[../memory-log]]
+EOF
+file_created "memory/templates/session-template.md"
+fi
+
+# Create pattern template
+if should_create_file "memory/templates/pattern-template.md"; then
+cat > memory/templates/pattern-template.md << 'EOF'
+# Pattern: [Name]
+
+**Category:** API | Data | Testing | Architecture
+**Created:** YYYY-MM-DD
+**Tags:** #pattern
+
+## Problem
+
+What problem does this pattern solve?
+
+## Solution
+
+Description of the pattern and how it works.
+
+## Example
+
+```typescript
+// Code example showing the pattern in use
+```
+
+## When to Use
+
+- Situation 1
+- Situation 2
+
+## When NOT to Use
+
+- Anti-pattern situation
+
+## Related Patterns
+
+- [[patterns/related-pattern]]
+
+## Examples in Codebase
+
+- `src/path/to/example.ts:123`
+
+## Links
+
+- Memory log: [[../memory-log]]
+- Related entities: [[../entities/entity-name]]
+EOF
+file_created "memory/templates/pattern-template.md"
+fi
+
+# Create context template
+if should_create_file "memory/templates/context-template.md"; then
+cat > memory/templates/context-template.md << 'EOF'
+# Context: [Topic]
+
+**Category:** Project | Domain | Technical | Business
+**Created:** YYYY-MM-DD
+**Last Updated:** YYYY-MM-DD
+**Tags:** #context
+
+## Overview
+
+High-level description of this context area.
+
+## Key Points
+
+- Point 1
+- Point 2
+- Point 3
+
+## Details
+
+Expanded information about this context.
+
+## Implications
+
+How does this context affect development decisions?
+
+## Related Context
+
+- [[context/related-topic]]
+
+## Links
+
+- Memory log: [[../memory-log]]
+- Related entities: [[../entities/entity-name]]
+EOF
+file_created "memory/templates/context-template.md"
+fi
+
+# Create prompt template
+if should_create_file "memory/templates/prompt-template.md"; then
+cat > memory/templates/prompt-template.md << 'EOF'
+# Prompt: [Name]
+
+**Type:** Agent | Task | Workflow | Team-Config
+**Created:** YYYY-MM-DD
+**Tags:** #prompt
+
+## Purpose
+
+What is this prompt for?
+
+## Usage
+
+How to use this prompt.
+
+## Content
+
+```
+[Prompt content here]
+```
+
+## Variables
+
+| Variable | Description |
+|----------|-------------|
+| `{var}` | Description |
+
+## Links
+
+- Memory log: [[../memory-log]]
+- Registry: [[../prompt-registry]]
+EOF
+file_created "memory/templates/prompt-template.md"
+fi
+
+# Create category index files
+if should_create_file "memory/entities/index.md"; then
+cat > memory/entities/index.md << 'EOF'
+# Entities
+
+Key concepts, systems, and components.
+
+## Index
+
+*No entities documented yet*
+
+---
+
+[[../index|← Back to Memory Index]]
+EOF
+file_created "memory/entities/index.md"
+fi
+
+if should_create_file "memory/sessions/index.md"; then
+cat > memory/sessions/index.md << 'EOF'
+# Sessions
+
+Session summaries capturing decisions and work completed.
+
+## Recent Sessions
+
+*No sessions documented yet*
+
+---
+
+[[../index|← Back to Memory Index]]
+EOF
+file_created "memory/sessions/index.md"
+fi
+
+if should_create_file "memory/patterns/index.md"; then
+cat > memory/patterns/index.md << 'EOF'
+# Patterns
+
+Recurring solutions, conventions, and best practices.
+
+## Index
+
+*No patterns documented yet*
+
+---
+
+[[../index|← Back to Memory Index]]
+EOF
+file_created "memory/patterns/index.md"
+fi
+
+if should_create_file "memory/context/index.md"; then
+cat > memory/context/index.md << 'EOF'
+# Context
+
+Background information and foundational knowledge.
+
+## Index
+
+- [[project-overview]] - Project fundamentals
+
+---
+
+[[../index|← Back to Memory Index]]
+EOF
+file_created "memory/context/index.md"
+fi
+
+# Create initial project overview context
+if should_create_file "memory/context/project-overview.md"; then
+cat > memory/context/project-overview.md << EOF
+# Context: Project Overview
+
+**Category:** Project
+**Created:** $(date +%Y-%m-%d)
+**Last Updated:** $(date +%Y-%m-%d)
+**Tags:** #context
+
+## Overview
+
+This is the ${TEAM^^} project for CadenceLMS.
+
+## Key Points
+
+- Team: ${TEAM^^}
+- Communication hub: \`dev_communication/\`
+- Architecture decisions: \`dev_communication/architecture/\`
+
+## Details
+
+*Add project-specific details here*
+
+## Links
+
+- Memory log: [[../memory-log]]
+- Dev communication: \`../dev_communication/index.md\`
+EOF
+file_created "memory/context/project-overview.md"
+fi
+
+# Create prompts index files
+if should_create_file "memory/prompts/index.md"; then
+cat > memory/prompts/index.md << 'EOF'
+# Prompts
+
+Tracked prompts, agent configurations, and team workflows.
+
+## Categories
+
+- [[agents/index|Agents]] - Standalone agent prompts
+- [[tasks/index|Tasks]] - Task-specific prompts
+- [[workflows/index|Workflows]] - Multi-step workflow prompts
+- [[team-configs/index|Team Configs]] - Multi-agent team configurations
+
+## Registry
+
+See [[prompt-registry]] for the full prompt inventory.
+
+---
+
+[[../index|← Back to Memory Index]]
+EOF
+file_created "memory/prompts/index.md"
+fi
+
+if should_create_file "memory/prompts/prompt-registry.md"; then
+cat > memory/prompts/prompt-registry.md << 'EOF'
+# Prompt Registry
+
+Central registry of all tracked prompts.
+
+## Agents
+
+| Name | Purpose | Link |
+|------|---------|------|
+| | | |
+
+## Tasks
+
+| Name | Purpose | Link |
+|------|---------|------|
+| | | |
+
+## Workflows
+
+| Name | Purpose | Link |
+|------|---------|------|
+| | | |
+
+## Team Configs
+
+| Name | Purpose | Link |
+|------|---------|------|
+| | | |
+
+---
+
+[[index|← Back to Prompts Index]]
+EOF
+file_created "memory/prompts/prompt-registry.md"
+fi
+
+for subdir in agents tasks workflows team-configs; do
+if should_create_file "memory/prompts/${subdir}/index.md"; then
+cat > "memory/prompts/${subdir}/index.md" << EOF
+# ${subdir^}
+
+## Index
+
+*No ${subdir} documented yet*
+
+---
+
+[[../index|← Back to Prompts Index]]
+EOF
+file_created "memory/prompts/${subdir}/index.md"
+fi
+done
+
+echo -e "${GREEN}✓${NC} Memory vault ready"
+
 echo -e "${BLUE}Creating index files...${NC}"
 
 # Skip shared files if dev_communication is a symlink
@@ -833,5 +1455,9 @@ echo "  /comms        - Check inbox and issues"
 echo "  /comms send   - Send message to ${OTHER_TEAM^^} team"
 echo "  /comms issue  - Create new issue"
 echo "  /adr          - Check architecture status"
+echo "  /memory       - Manage memory vault"
+echo "  /recall       - Load context from memory"
+echo ""
+echo "Memory vault: memory/"
 echo ""
 echo "See dev_communication/PROCESS_GUIDE.md for full documentation."

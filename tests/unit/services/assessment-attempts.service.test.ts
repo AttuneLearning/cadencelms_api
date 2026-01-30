@@ -54,8 +54,8 @@ describeIfMongo('AssessmentAttemptsService - Unit Tests', () => {
         questionTypes: ['multiple_choice'],
         departmentId,
         points: 10,
-        options: ['3', '4', '5', '6'],
-        correctAnswer: '4',
+        correctAnswers: ['4'],
+        distractors: ['3', '5', '6'],
         isActive: true,
         questionBankIds: ['bank1']
       });
@@ -65,7 +65,8 @@ describeIfMongo('AssessmentAttemptsService - Unit Tests', () => {
         questionTypes: ['true_false'],
         departmentId,
         points: 5,
-        correctAnswer: 'true',
+        correctAnswers: ['true'],
+        trueFalseData: { correctValue: true },
         isActive: true,
         questionBankIds: ['bank1']
       });
@@ -1454,6 +1455,7 @@ describeIfMongo('AssessmentAttemptsService - Unit Tests', () => {
         questionTypes: ['long_answer'],
         departmentId,
         points: 20,
+        correctAnswers: [],
         maxWordCount: 500,
         isActive: true,
         questionBankIds: ['bank1']

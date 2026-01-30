@@ -1,5 +1,13 @@
 # CadenceLMS API - Claude Code Instructions
 
+## Development Principles
+
+**Read:** `dev_communication/guidance/DEVELOPMENT_PRINCIPLES.md`
+
+**Key Rule:** Unless otherwise specified, always design for the ideal API/route structure. No backward compatibility layers, deprecated fields, or legacy fallbacks unless explicitly requested.
+
+---
+
 ## Project Overview
 
 CadenceLMS is a Learning Management System API built with Node.js, Express, TypeScript, and MongoDB.
@@ -85,6 +93,37 @@ For significant sessions, create a session summary:
 - Use template: `memory/templates/session-template.md`
 - Save to: `memory/sessions/YYYY-MM-DD-brief-title.md`
 - Update: `memory/memory-log.md`
+
+## Development Standards
+
+### Contract First (CF1)
+**All development is contract-first.** Unless explicitly specified otherwise:
+- Define the API contract/interface before implementation
+- Both UI and API teams develop against agreed contracts
+- No implementation begins without a documented contract
+- Post contracts to `dev_communication/messaging/` for cross-team agreement
+
+### Ideal Design First (I1)
+**Always design for ideal structure.** See Development Principles section above.
+- No backward compatibility unless explicitly requested
+- No technical debt shortcuts or deprecated field shims
+- Update callers rather than adding compatibility layers
+- Key ADRs: DEV-002 (ideal design), API-001 (endpoints), DATA-001 (models), AUTH-001 (permissions)
+
+### Naming Conventions (N1)
+**Use specific, non-colliding names:**
+- Check for existing names before creating new components/files
+- Staff vs Admin pages may share concepts - use specific prefixes
+- Examples:
+  - `DepartmentProgramsPage` not `DepartmentManagementPage`
+  - `LearnerCoursesWidget` not `CoursesWidget`
+  - `AdminUserService` not `UserService` (if both exist)
+- Search codebase before naming: `grep -r "ComponentName" src/`
+
+### Golden Rule
+**Never invent API values.** Always verify endpoint paths, field names, and permission strings exist before using them. When uncertain, ask or check contracts.
+
+---
 
 ## Code Conventions
 
