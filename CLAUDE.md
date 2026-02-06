@@ -1,5 +1,33 @@
 # CadenceLMS API - Claude Code Instructions
 
+## MANDATORY: Before Any Implementation
+
+**STOP.** Before implementing any feature, endpoint, or issue:
+
+1. **Read the checklist:** `dev_communication/guidance/FEATURE_DEVELOPMENT_CHECKLIST.md`
+2. **Check relevant ADRs:** Run `/adr` or read `dev_communication/architecture/decisions/`
+   - DEV-001: Testing Strategy (Lazy TDD - tests AFTER each phase)
+   - DEV-002: Ideal API Design (no backward compatibility)
+   - API-001: API Design Standards
+   - AUTH-001: Authorization Model
+
+3. **Implementation workflow (per ADR-DEV-001):**
+   ```
+   1. Implement Feature/Fix
+   2. Write Tests for Implementation  ← DO NOT SKIP
+   3. Run Related Tests: npm test [path]
+   4. Verify: npx tsc --noEmit
+   ```
+
+4. **When spawning agents for implementation:**
+   - Include testing requirements in the prompt
+   - Agent must create tests after implementation
+   - Agent must verify tests pass before reporting complete
+
+**Failure to follow this workflow caused API-ISS-014 through API-ISS-020 to ship without tests.**
+
+---
+
 ## Development Principles
 
 **Read:** `dev_communication/guidance/DEVELOPMENT_PRINCIPLES.md`
@@ -57,6 +85,52 @@ After completing significant work, consider:
 3. Does this affect the other team? → `/comms send` + `/adr suggest`
 
 See `dev_communication/coordination/supervisor-protocol.md` for full protocol.
+
+---
+
+## Development Workflow (MANDATORY)
+
+**ADR:** `dev_communication/architecture/decisions/ADR-DEV-002-DEVELOPMENT-LIFECYCLE.md`
+**Config:** `memory/prompts/team-configs/development-lifecycle.md`
+**Skill:** `/develop`
+
+| Action | Command |
+|--------|---------|
+| Process next issue | `/develop` |
+| Process specific issue | `/develop API-ISS-022` |
+| Process all issues | `/develop all` |
+| Quick mode (trivial) | `/develop quick <file>` |
+
+### Lifecycle Phases (ALL MANDATORY)
+
+0. **Poll & Unblock** - Check `ui-to-api/` inbox, unblock issues with responses
+1. **Context** - Check /comms, load /memory patterns, identify ADRs
+2. **Implementation** - Follow patterns, follow ADRs, update types
+3. **Verification** - `tsc --noEmit` (0 errors), unit tests, integration tests
+4. **Documentation** - Update /memory, /adr suggest if needed, /comms if cross-team
+5. **Completion** - Verify acceptance criteria, move issue, store session
+
+### Message Polling (Automatic)
+
+- **API team** polls: `dev_communication/messaging/ui-to-api/`
+- **UI team** polls: `dev_communication/messaging/api-to-ui/`
+- Responses automatically unblock matching BLOCKED issues
+- **Stops after:** 20 min inactivity OR issue completion
+
+### Verification Commands
+
+```bash
+# Type check (MUST pass before completing)
+npx tsc --noEmit
+
+# Unit tests
+npm run test:unit
+
+# Integration tests
+npm run test:integration
+```
+
+**CRITICAL:** No issue can be marked complete until ALL verification steps pass.
 
 ---
 
@@ -139,10 +213,28 @@ import { ApiError } from '@/utils/ApiError';
 - Department-scoped: `/api/v2/departments/:departmentId/[resource]`
 - See `memory/patterns/department-scoping.md`
 
-### Testing
+### Testing (ADR-DEV-001 - MANDATORY)
+
+**Per ADR-DEV-001, tests are REQUIRED after implementation:**
+
+| Rule | Requirement |
+|------|-------------|
+| T1 | Write tests at end of each dev phase/issue |
+| T2 | Run full test suite at milestone completion |
+| T3 | Run `npx tsc --noEmit` before marking complete |
+
+**Test locations:**
 - Integration tests: `tests/integration/`
-- Use `describeIfMongo` helper for MongoDB-dependent tests
-- Run: `npx jest tests/integration/[path]`
+- Unit tests: `tests/unit/`
+
+**Commands:**
+```bash
+npx jest tests/integration/[feature]/    # Run feature tests
+npm test                                  # Run all tests
+npx tsc --noEmit                         # Type check
+```
+
+**Helper:** Use `describeIfMongo` for MongoDB-dependent tests
 
 ### Models
 - Location: `src/models/`

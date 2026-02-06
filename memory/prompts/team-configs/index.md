@@ -6,6 +6,7 @@ Multi-agent team configurations for complex implementations.
 
 | Config | Description | Status |
 |--------|-------------|--------|
+| [[development-lifecycle]] | Mandatory development workflow enforcement | Active |
 | [[iss-011-encryption]] | PII encryption implementation | Active |
 | [[lookup-values-migration]] | LookupValues collection migration | Complete |
 | [[role-system-phases-3-5]] | Role System V2 phases 3-5 | Complete |

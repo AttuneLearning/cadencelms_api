@@ -15,6 +15,7 @@
 | ADR-UI-FORM-001 | Standardized Form Pattern | Accepted | 2026-01-22 | UI | [[decisions/ADR-UI-FORM-001-STANDARDIZED-FORM-PATTERN]] |
 | ADR-UI-002 | Error Handling Strategy | Accepted | 2026-01-27 | UI | [[decisions/ADR-UI-002-ERROR-HANDLING]] |
 | ADR-DEV-001 | Testing Strategy | Accepted | 2026-01-27 | Development | [[decisions/ADR-DEV-001-TESTING-STRATEGY]] |
+| ADR-DEV-002 | Development Lifecycle Enforcement | Accepted | 2026-02-05 | Development | [[decisions/ADR-DEV-002-DEVELOPMENT-LIFECYCLE]] |
 | ADR-001 | Refund Policy | Approved | 2026-01-14 | Billing | [[decisions/ADR-001-REFUND-POLICY]] |
 | ADR-002 | Tax Calculation | Approved | 2026-01-14 | Billing | [[decisions/ADR-002-TAX-CALCULATION]] |
 | ADR-003 | Multi-Currency Support | Approved | 2026-01-14 | Billing | [[decisions/ADR-003-MULTI-CURRENCY-SUPPORT]] |
