@@ -309,7 +309,7 @@ export class StaffService {
     const user = new User({
       email: staffData.email.toLowerCase(),
       password: hashedPassword,
-      roles: ['staff'],
+      userTypes: ['staff'],
       isActive: staffData.isActive !== undefined ? staffData.isActive : true
     });
 

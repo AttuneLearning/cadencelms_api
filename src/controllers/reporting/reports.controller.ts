@@ -268,7 +268,7 @@ export const generatePDFTranscript = asyncHandler(async (req: Request, res: Resp
   const isOwnTranscript = learnerId === user.userId;
   const hasAccess = isOwnTranscript ||
                     user.allAccessRights?.includes('learner:transcripts:read') ||
-                    user.roles?.includes('system-admin');
+                    user.allAccessRights?.includes('system:*');
 
   if (!hasAccess) {
     throw ApiError.forbidden('You do not have permission to generate this transcript');

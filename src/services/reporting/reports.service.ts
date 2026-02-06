@@ -1924,13 +1924,14 @@ export class ReportsService {
    * Business Rule: Department-admin can only see transcripts for courses in their department
    */
   static async filterTranscriptByDepartment(transcript: any, user: any): Promise<any> {
-    // System admin and enrollment-admin see everything
-    if (user.roles?.includes('system-admin') || user.roles?.includes('enrollment-admin')) {
+    // Global admins see everything
+    if (user.userTypes?.includes('global-admin') || user.allAccessRights?.includes('system:*')) {
       return transcript;
     }
 
     // For department-admin, filter programs and courses to their department
-    if (user.roles?.includes('department-admin')) {
+    const isDepartmentAdmin = user.departmentMemberships?.some((m: any) => m.roles?.includes('department-admin'));
+    if (isDepartmentAdmin) {
       const userDepartmentIds = user.departmentMemberships?.map((m: any) => m.departmentId.toString()) || [];
 
       if (userDepartmentIds.length === 0) {
@@ -1982,7 +1983,9 @@ export class ReportsService {
    * Business Rule: Instructors can only see reports for their assigned classes
    */
   static async applyInstructorClassScoping(filters: any, user: any): Promise<any> {
-    if (!user.roles?.includes('instructor')) {
+    // Check if user has instructor role in any department membership
+    const isInstructor = user.departmentMemberships?.some((m: any) => m.roles?.includes('instructor'));
+    if (!isInstructor) {
       return filters;
     }
 
@@ -2018,13 +2021,14 @@ export class ReportsService {
    * Business Rule: Department-admin can only see reports for their department
    */
   static async applyDepartmentScoping(filters: any, user: any): Promise<any> {
-    // System admin and enrollment-admin see all
-    if (user.roles?.includes('system-admin') || user.roles?.includes('enrollment-admin')) {
+    // Global admins see all (system-admin, enrollment-admin)
+    if (user.userTypes?.includes('global-admin') || user.allAccessRights?.includes('system:*')) {
       return filters;
     }
 
     // For department-admin, apply department filtering
-    if (user.roles?.includes('department-admin')) {
+    const isDepartmentAdmin = user.departmentMemberships?.some((m: any) => m.roles?.includes('department-admin'));
+    if (isDepartmentAdmin) {
       const userDepartmentIds = user.departmentMemberships?.map((m: any) => m.departmentId.toString()) || [];
 
       if (userDepartmentIds.length === 0) {

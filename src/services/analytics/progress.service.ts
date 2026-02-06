@@ -1313,7 +1313,9 @@ export class ProgressService {
    * Business Rule: Instructors can only see progress for their assigned classes
    */
   static async applyInstructorClassScoping(query: any, user: any): Promise<any> {
-    if (!user.roles?.includes('instructor')) {
+    // Check if user has instructor role in any department membership
+    const isInstructor = user.departmentMemberships?.some((m: any) => m.roles?.includes('instructor'));
+    if (!isInstructor) {
       return query;
     }
 
@@ -1345,13 +1347,14 @@ export class ProgressService {
    * Business Rule: Department-admin can see only their department's progress
    */
   static async applyDepartmentScoping(query: any, user: any): Promise<any> {
-    // System admin and enrollment-admin see all
-    if (user.roles?.includes('system-admin') || user.roles?.includes('enrollment-admin')) {
+    // Global admins see all (system-admin, enrollment-admin)
+    if (user.userTypes?.includes('global-admin') || user.allAccessRights?.includes('system:*')) {
       return query;
     }
 
     // For department-admin, apply department filtering
-    if (user.roles?.includes('department-admin')) {
+    const isDepartmentAdmin = user.departmentMemberships?.some((m: any) => m.roles?.includes('department-admin'));
+    if (isDepartmentAdmin) {
       const userDepartmentIds = user.departmentMemberships?.map((m: any) => m.departmentId.toString()) || [];
 
       if (userDepartmentIds.length === 0) {

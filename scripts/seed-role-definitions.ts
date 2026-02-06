@@ -52,7 +52,7 @@ const ROLE_DEFINITIONS = [
       'content:lessons:read',
       'content:exams:attempt',
       'enrollment:own:read',
-      'enrollment:own:update',
+      'enrollment:own:manage',  // Self-enrollment when department allows
       'learner:profile:read',
       'learner:profile:update',
       'learner:progress:read',
@@ -109,6 +109,7 @@ const ROLE_DEFINITIONS = [
       'content:classes:manage-own',
       'enrollment:department:read',
       'learner:department:read',
+      'learner:directory:read',  // View learner directory (masked names, no PII)
       'reports:class:read',
       'reports:class:export',
       'grades:department:read',
@@ -127,8 +128,10 @@ const ROLE_DEFINITIONS = [
       'content:programs:manage',
       'content:lessons:manage',
       'content:exams:manage',
+      'content:assessments:manage',  // Question banks and assessment content
       'content:scorm:manage',
       'reports:content:read',
+      'learner:directory:read',  // View learner directory (masked names, no PII)
       'analytics:courses:read',
       'analytics:courses:export'
     ],
@@ -145,7 +148,10 @@ const ROLE_DEFINITIONS = [
       'content:classes:manage',
       'staff:department:manage',
       'learner:department:manage',
+      'learner:directory:read',  // View learner directory (masked names, no PII)
       'enrollment:department:manage',
+      'grades:department:read',
+      'grades:department:manage',  // Grade override capability
       'reports:department:read',
       'reports:department:export',
       'settings:department:manage',
@@ -201,6 +207,7 @@ const ROLE_DEFINITIONS = [
       'enrollment:system:manage',
       'enrollment:bulk:manage',
       'enrollment:policies:manage',
+      'learner:pii:read',  // Full PII access for enrollment management
       'reports:enrollment:read'
     ],
     isDefault: false,

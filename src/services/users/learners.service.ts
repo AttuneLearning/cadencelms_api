@@ -9,7 +9,7 @@ import Program from '@/models/academic/Program.model';
 import Course from '@/models/academic/Course.model';
 import { hashPassword } from '@/utils/password';
 import { ApiError } from '@/utils/ApiError';
-import { maskLastName, maskUserList } from '@/utils/dataMasking';
+import { maskLastName, maskLearnersForViewer } from '@/utils/dataMasking';
 import { getDepartmentAndSubdepartments } from '@/utils/departmentHierarchy';
 
 interface ListLearnersFilters {
@@ -79,7 +79,7 @@ export class LearnersService {
     const skip = (page - 1) * limit;
 
     // Build query for User collection
-    const userQuery: any = { roles: 'learner' };
+    const userQuery: any = { userTypes: 'learner' };
 
     // Map status filter to User.isActive
     if (filters.status) {
@@ -245,10 +245,10 @@ export class LearnersService {
 
     const totalPages = Math.ceil(total / limit);
 
-    // Apply FERPA-compliant data masking based on viewer's role
-    // Instructors and department-admin see "FirstName L." format
-    // Enrollment-admin and system-admin see full names
-    const maskedLearners = viewer ? maskUserList(learners, viewer) : learners;
+    // Apply permission-based data masking
+    // learner:pii:read → full data with displayName and idSuffix
+    // learner:directory:read only → "LastName, F." + idSuffix, no email/PII
+    const maskedLearners = viewer ? maskLearnersForViewer(learners, viewer) : learners;
 
     return {
       learners: maskedLearners,
@@ -264,8 +264,11 @@ export class LearnersService {
   }
 
   /**
-   * Optimized learner listing using aggregation pipeline when filtering by department
-   * Eliminates N+1 query pattern by using MongoDB aggregation
+   * Optimized learner listing with prioritization when department filter provided
+   *
+   * Returns ALL learners with program enrollees prioritized first:
+   * 1. Learners enrolled in department's programs (isProgramEnrollee: true)
+   * 2. All other learners (isProgramEnrollee: false)
    *
    * @param filters - Filtering and pagination options (must include department)
    * @param viewer - The user viewing the data (for data masking)
@@ -275,7 +278,7 @@ export class LearnersService {
     viewer: any
   ): Promise<any> {
     const page = filters.page || 1;
-    const limit = Math.min(filters.limit || 10, 100);
+    const limit = Math.min(filters.limit || 50, 100);
     const skip = (page - 1) * limit;
 
     // Get department IDs (including subdepartments if requested)
@@ -289,289 +292,122 @@ export class LearnersService {
     // Convert to ObjectIds
     const departmentObjectIds = departmentIds.map(id => new mongoose.Types.ObjectId(id));
 
-    // Build match stage for programs
-    const programMatch: any = {
+    // Step 1: Get program IDs for the department(s)
+    const programIds = await Program.find({
       departmentId: { $in: departmentObjectIds }
-    };
+    }).distinct('_id');
 
-    // Build match stage for enrollments
-    const enrollmentMatch: any = {};
-    if (filters.program) {
-      enrollmentMatch.programId = new mongoose.Types.ObjectId(filters.program);
-    }
-    if (filters.status === 'withdrawn' || filters.status === 'completed') {
-      enrollmentMatch.status = filters.status;
-    }
+    // Step 2: Get learner IDs enrolled in those programs
+    const programEnrolleeIds = await Enrollment.find({
+      programId: { $in: programIds }
+    }).distinct('learnerId');
 
-    // Build match stage for users
-    const userMatch: any = { roles: 'learner' };
+    const programEnrolleeIdStrings = new Set(programEnrolleeIds.map(id => id.toString()));
+
+    // Step 3: Build user query for ALL learners
+    const userQuery: any = { userTypes: 'learner' };
     if (filters.status === 'active') {
-      userMatch.isActive = true;
+      userQuery.isActive = true;
     } else if (filters.status === 'suspended') {
-      userMatch.isActive = false;
+      userQuery.isActive = false;
     }
 
-    // Build search filter for learners
-    const learnerMatch: any = {};
+    // Step 4: Build search filter
+    let searchLearnerIds: mongoose.Types.ObjectId[] | null = null;
     if (filters.search) {
       const searchRegex = new RegExp(filters.search, 'i');
-      learnerMatch.$or = [
-        { 'person.firstName': searchRegex },
-        { 'person.lastName': searchRegex },
+      const matchingLearners = await Learner.find({
+        $or: [
+          { 'person.firstName': searchRegex },
+          { 'person.lastName': searchRegex }
+        ]
+      }).select('_id');
+      searchLearnerIds = matchingLearners.map(l => l._id);
+
+      // Also search by email
+      userQuery.$or = [
+        { _id: { $in: searchLearnerIds } },
         { email: searchRegex }
       ];
     }
 
-    // Build sort stage
-    const sortField = filters.sort || '-createdAt';
-    const sortDirection = sortField.startsWith('-') ? -1 : 1;
-    const sortKey = sortField.replace(/^-/, '');
+    // Step 5: Get all matching users
+    const allUsers = await User.find(userQuery);
 
-    let sortStage: any;
-    if (sortKey === 'firstName') {
-      sortStage = { 'learnerProfile.person.firstName': sortDirection };
-    } else if (sortKey === 'lastName') {
-      sortStage = { 'learnerProfile.person.lastName': sortDirection };
-    } else {
-      sortStage = { 'user.createdAt': sortDirection };
-    }
+    // Step 6: Build learner data with prioritization
+    const learners = [];
+    for (const user of allUsers) {
+      const learner = await Learner.findById(user._id);
+      if (!learner) continue;
 
-    // Build aggregation pipeline
-    const pipeline: any[] = [
-      // Stage 1: Get programs in the department(s)
-      {
-        $match: programMatch
-      },
-      // Stage 2: Find enrollments in those programs
-      {
-        $lookup: {
-          from: 'enrollments',
-          let: { programId: '$_id' },
-          pipeline: [
-            {
-              $match: {
-                $expr: { $eq: ['$programId', '$$programId'] },
-                ...enrollmentMatch
-              }
-            }
-          ],
-          as: 'enrollments'
-        }
-      },
-      // Stage 3: Unwind enrollments
-      {
-        $unwind: '$enrollments'
-      },
-      // Stage 4: Group by learner to get unique learners
-      {
-        $group: {
-          _id: '$enrollments.learnerId',
-          programIds: { $addToSet: '$_id' },
-          firstDepartmentId: { $first: '$departmentId' },
-          enrollmentStatuses: { $push: '$enrollments.status' }
-        }
-      },
-      // Stage 5: Lookup user data
-      {
-        $lookup: {
-          from: 'users',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'user'
-        }
-      },
-      {
-        $unwind: '$user'
-      },
-      // Stage 6: Match user criteria
-      {
-        $match: userMatch
-      },
-      // Stage 7: Lookup learner profile
-      {
-        $lookup: {
-          from: 'learners',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'learnerProfile'
-        }
-      },
-      {
-        $unwind: '$learnerProfile'
-      },
-      // Stage 8: Apply search filter if provided
-      ...(Object.keys(learnerMatch).length > 0 ? [{
-        $addFields: {
-          email: '$user.email'
-        }
-      }, {
-        $match: learnerMatch
-      }] : []),
-      // Stage 9: Lookup department info
-      {
-        $lookup: {
-          from: 'departments',
-          localField: 'firstDepartmentId',
-          foreignField: '_id',
-          as: 'department'
-        }
-      },
-      // Stage 10: Lookup program enrollments count
-      {
-        $lookup: {
-          from: 'enrollments',
-          localField: '_id',
-          foreignField: 'learnerId',
-          as: 'allProgramEnrollments'
-        }
-      },
-      // Stage 11: Lookup course enrollments
-      {
-        $lookup: {
-          from: 'classenrollments',
-          localField: '_id',
-          foreignField: 'learnerId',
-          as: 'courseEnrollments'
-        }
-      },
-      // Stage 12: Calculate stats and build response
-      {
-        $addFields: {
-          programEnrollmentCount: { $size: '$allProgramEnrollments' },
-          courseEnrollmentCount: { $size: '$courseEnrollments' },
-          completedCoursesCount: {
-            $size: {
-              $filter: {
-                input: '$courseEnrollments',
-                as: 'ce',
-                cond: { $eq: ['$$ce.status', 'completed'] }
-              }
-            }
-          },
-          completionRate: {
-            $cond: [
-              { $gt: [{ $size: '$courseEnrollments' }, 0] },
-              {
-                $divide: [
-                  {
-                    $size: {
-                      $filter: {
-                        input: '$courseEnrollments',
-                        as: 'ce',
-                        cond: { $eq: ['$$ce.status', 'completed'] }
-                      }
-                    }
-                  },
-                  { $size: '$courseEnrollments' }
-                ]
-              },
-              0
-            ]
-          },
-          learnerStatus: {
-            $cond: [
-              { $eq: ['$user.isActive', false] },
-              'suspended',
-              {
-                $cond: [
-                  {
-                    $and: [
-                      { $gt: [{ $size: '$allProgramEnrollments' }, 0] },
-                      {
-                        $allElementsTrue: {
-                          $map: {
-                            input: '$enrollmentStatuses',
-                            as: 'status',
-                            in: { $eq: ['$$status', 'withdrawn'] }
-                          }
-                        }
-                      }
-                    ]
-                  },
-                  'withdrawn',
-                  {
-                    $cond: [
-                      {
-                        $and: [
-                          { $gt: [{ $size: '$allProgramEnrollments' }, 0] },
-                          {
-                            $allElementsTrue: {
-                              $map: {
-                                input: '$enrollmentStatuses',
-                                as: 'status',
-                                in: {
-                                  $or: [
-                                    { $eq: ['$$status', 'completed'] },
-                                    { $eq: ['$$status', 'graduated'] }
-                                  ]
-                                }
-                              }
-                            }
-                          }
-                        ]
-                      },
-                      'completed',
-                      'active'
-                    ]
-                  }
-                ]
-              }
-            ]
-          }
-        }
-      },
-      // Stage 13: Use $facet for pagination with count
-      {
-        $facet: {
-          metadata: [
-            { $count: 'total' }
-          ],
-          data: [
-            { $sort: sortStage },
-            { $skip: skip },
-            { $limit: limit },
-            {
-              $project: {
-                id: { $toString: '$_id' },
-                email: '$user.email',
-                firstName: '$learnerProfile.person.firstName',
-                lastName: '$learnerProfile.person.lastName',
-                studentId: null,
-                status: '$learnerStatus',
-                department: {
-                  $cond: [
-                    { $gt: [{ $size: '$department' }, 0] },
-                    {
-                      id: { $toString: { $arrayElemAt: ['$department._id', 0] } },
-                      name: { $arrayElemAt: ['$department.name', 0] }
-                    },
-                    null
-                  ]
-                },
-                programEnrollments: '$programEnrollmentCount',
-                courseEnrollments: '$courseEnrollmentCount',
-                completionRate: '$completionRate',
-                lastLogin: null,
-                createdAt: '$user.createdAt',
-                updatedAt: '$user.updatedAt'
-              }
-            }
-          ]
+      const isProgramEnrollee = programEnrolleeIdStrings.has(user._id.toString());
+
+      // Get enrollment counts
+      const programEnrollments = await Enrollment.countDocuments({ learnerId: user._id });
+      const courseEnrollments = await ClassEnrollment.countDocuments({ learnerId: user._id });
+
+      // Get department info from first enrollment if available
+      let departmentInfo = null;
+      const firstEnrollment = await Enrollment.findOne({ learnerId: user._id }).populate('programId');
+      if (firstEnrollment && firstEnrollment.programId) {
+        const program = firstEnrollment.programId as any;
+        const department = await Department.findById(program.departmentId);
+        if (department) {
+          departmentInfo = {
+            id: department._id.toString(),
+            name: department.name
+          };
         }
       }
-    ];
 
-    // Execute aggregation on Program collection
-    const results = await Program.aggregate(pipeline);
+      // Determine status
+      let learnerStatus: 'active' | 'withdrawn' | 'completed' | 'suspended' = 'active';
+      if (!user.isActive) {
+        learnerStatus = 'suspended';
+      }
 
-    // Extract results
-    const total = results[0]?.metadata[0]?.total || 0;
-    const learners = results[0]?.data || [];
+      learners.push({
+        id: user._id.toString(),
+        email: user.email,
+        firstName: learner.person.firstName,
+        lastName: learner.person.lastName,
+        studentId: null,
+        status: learnerStatus,
+        isProgramEnrollee,
+        department: departmentInfo,
+        programEnrollments,
+        courseEnrollments,
+        completionRate: 0,
+        lastLogin: null,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        // Priority for sorting (0 = program enrollee, 1 = other)
+        _priority: isProgramEnrollee ? 0 : 1
+      });
+    }
 
+    // Step 7: Sort by priority (program enrollees first), then by lastName, firstName
+    learners.sort((a, b) => {
+      if (a._priority !== b._priority) {
+        return a._priority - b._priority;
+      }
+      const lastNameCompare = (a.lastName || '').localeCompare(b.lastName || '');
+      if (lastNameCompare !== 0) return lastNameCompare;
+      return (a.firstName || '').localeCompare(b.firstName || '');
+    });
+
+    // Step 8: Remove internal _priority field
+    learners.forEach(l => delete (l as any)._priority);
+
+    // Step 9: Apply pagination
+    const total = learners.length;
+    const paginatedLearners = learners.slice(skip, skip + limit);
     const totalPages = Math.ceil(total / limit);
 
-    // Apply FERPA-compliant data masking based on viewer's role
-    const maskedLearners = viewer ? maskUserList(learners, viewer) : learners;
+    // Apply permission-based data masking
+    // learner:pii:read → full data with displayName and idSuffix
+    // learner:directory:read only → "LastName, F." + idSuffix, no email/PII
+    const maskedLearners = viewer ? maskLearnersForViewer(paginatedLearners, viewer) : paginatedLearners;
 
     return {
       learners: maskedLearners,
@@ -628,7 +464,7 @@ export class LearnersService {
         _id: userId,
         email: input.email.toLowerCase(),
         password: hashedPassword,
-        roles: ['learner'],
+        userTypes: ['learner'],
         isActive: true
       });
 

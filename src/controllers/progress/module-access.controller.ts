@@ -285,7 +285,7 @@ export const getDropOffAnalytics = asyncHandler(async (req: Request, res: Respon
   // Check permissions - only staff with analytics access should see this
   const hasAnalyticsAccess = user.allAccessRights?.includes('read:analytics') ||
                              user.allAccessRights?.includes('reports:department:read') ||
-                             user.roles?.includes('system-admin');
+                             user.allAccessRights?.includes('system:*');
 
   if (!hasAnalyticsAccess) {
     throw ApiError.forbidden('You do not have permission to view analytics');

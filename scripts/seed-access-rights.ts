@@ -497,6 +497,12 @@ const ACCESS_RIGHTS: AccessRightDefinition[] = [
   },
   {
     domain: 'learner',
+    resource: 'directory',
+    action: 'read',
+    description: 'View learner directory (masked names, no PII)'
+  },
+  {
+    domain: 'learner',
     resource: 'progress',
     action: 'read',
     description: 'View own learning progress'

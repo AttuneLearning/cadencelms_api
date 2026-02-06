@@ -37,7 +37,7 @@ export const getProgramProgress = asyncHandler(async (req: Request, res: Respons
   // Apply authorization checks
   const isOwnProgress = targetLearnerId === user.userId;
   const canViewOthers = user.allAccessRights?.includes('reports:department:read') ||
-                        user.roles?.includes('system-admin');
+                        user.allAccessRights?.includes('system:*');
 
   if (!isOwnProgress && !canViewOthers) {
     throw ApiError.forbidden('You do not have permission to view this progress');
@@ -79,7 +79,7 @@ export const getCourseProgress = asyncHandler(async (req: Request, res: Response
   // Apply authorization checks
   const isOwnProgress = targetLearnerId === user.userId;
   const canViewOthers = user.allAccessRights?.includes('reports:department:read') ||
-                        user.roles?.includes('system-admin');
+                        user.allAccessRights?.includes('system:*');
 
   if (!isOwnProgress && !canViewOthers) {
     throw ApiError.forbidden('You do not have permission to view this progress');
@@ -121,7 +121,7 @@ export const getClassProgress = asyncHandler(async (req: Request, res: Response)
   // Apply authorization checks
   const isOwnProgress = targetLearnerId === user.userId;
   const canViewOthers = user.allAccessRights?.includes('reports:department:read') ||
-                        user.roles?.includes('system-admin');
+                        user.allAccessRights?.includes('system:*');
 
   if (!isOwnProgress && !canViewOthers) {
     throw ApiError.forbidden('You do not have permission to view this progress');
@@ -156,7 +156,7 @@ export const getLearnerProgress = asyncHandler(async (req: Request, res: Respons
   // Apply authorization checks
   const isOwnProgress = learnerId === user.userId;
   const canViewOthers = user.allAccessRights?.includes('reports:department:read') ||
-                        user.roles?.includes('system-admin');
+                        user.allAccessRights?.includes('system:*');
 
   if (!isOwnProgress && !canViewOthers) {
     throw ApiError.forbidden('You do not have permission to view this progress');
@@ -191,7 +191,7 @@ export const getLearnerProgramProgress = asyncHandler(async (req: Request, res: 
   // Apply authorization checks
   const isOwnProgress = learnerId === user.userId;
   const canViewOthers = user.allAccessRights?.includes('reports:department:read') ||
-                        user.roles?.includes('system-admin');
+                        user.allAccessRights?.includes('system:*');
 
   if (!isOwnProgress && !canViewOthers) {
     throw ApiError.forbidden('You do not have permission to view this progress');

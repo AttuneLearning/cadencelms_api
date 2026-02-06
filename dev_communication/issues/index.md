@@ -19,9 +19,12 @@ Development issue tracking for API and UI teams.
 ### API Team (`issues/api/`)
 | Folder | Count | Description |
 |--------|-------|-------------|
-| `queue/` | 5 | Ready to work |
+| `queue/` | 14 | Ready to work |
 | `active/` | 0 | In progress |
-| `completed/` | 0 | Done |
+| `completed/` | 1 | Done |
+
+**Recently Completed (2026-02-05):**
+- API-ISS-024: Legacy Role Authorization Cleanup (High) - COMPLETE
 
 **Queue:**
 - API-ISS-009: Question Model - Monolithic Design Update (High)
@@ -30,16 +33,37 @@ Development issue tracking for API and UI teams.
 - API-ISS-012: Media Upload System - S3 + Local (High)
 - API-ISS-013: Retention Check & Remediation System (Medium)
 
+**Course Versioning System (API-ISS-014 to API-ISS-021):**
+- API-ISS-014: Course Versioning Core (High) - Phase 1 Foundation
+- API-ISS-015: Course Version Module Management (High) - Phase 1, depends on 014
+- API-ISS-016: Module Sharing & Global Completion (High) - Phase 2, depends on 014-015
+- API-ISS-017: Credential Groups & Certificate Definitions (High) - Phase 3, depends on 014
+- API-ISS-018: Certificate Issuance & Verification (High) - Phase 3, depends on 017
+- API-ISS-019: Access Policies & Duration Management (Medium) - Phase 4, depends on 014, 017
+- API-ISS-020: Notification System (Medium) - Phase 4, depends on 017-019
+- API-ISS-021: Module Edit Locking (Medium) - Phase 2, per UI request
+
+**Learner Directory Enhancement (API-ISS-022 to API-ISS-023):**
+- API-ISS-022: Learner Directory Permission (High) - New permission tier
+- API-ISS-023: Prioritized Learner List (High) - Enrollment workflow, depends on 022
+
+**Authorization Cleanup:**
+- ~~API-ISS-024: Legacy Role Authorization Cleanup (High) - COMPLETE~~
+
 ### UI Team (`issues/ui/`)
 | Folder | Count | Description |
 |--------|-------|-------------|
 | `queue/` | 20 | Ready to work |
-| `active/` | 2 | In progress |
-| `completed/` | 3 | Done |
+| `active/` | 3 | In progress |
+| `completed/` | 4 | Done |
 
 **Active Issues:**
 - UI-ISS-071: Missing Create Flashcard Deck Page (High)
 - UI-ISS-072: Missing Create Matching Game Page (High)
+- UI-ISS-082: Course Enrollment Pages (High) - IN REVIEW
+
+**Recently Completed (2026-02-05):**
+- UI-ISS-081: Fix Permission String Mismatches (High) - COMPLETE
 
 **Question System Migration (UI-ISS-075 to UI-ISS-080):**
 - UI-ISS-075: Question System Type Alignment (High) - Foundation
@@ -63,8 +87,8 @@ Examples:
 
 | Team | Prefix | Next Number |
 |------|--------|-------------|
-| API | API-ISS- | 014 |
-| UI | UI-ISS- | 081 |
+| API | API-ISS- | 025 |
+| UI | UI-ISS- | 084 |
 
 *Update "Next Number" when creating issues*
 
