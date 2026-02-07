@@ -1,0 +1,30 @@
+{
+  "$schema": "Learned team configuration from development session",
+  "sourceSession": "memory/sessions/{date}-{slug}.md",
+  "sourceIssue": "{TEAM}-ISS-{NNN}",
+  "created": "YYYY-MM-DD",
+
+  "issueProfile": {
+    "issueType": "new-feature | bug-fix | refactor | integration | documentation",
+    "complexity": "simple | moderate | complex",
+    "filesModified": 0,
+    "fsdLayers": [],
+    "crossTeam": false,
+    "tags": []
+  },
+
+  "teamConfig": {
+    "presetUsed": "solo | paired | standard | research | parallel-impl",
+    "presetIdeal": "solo | paired | standard | research | parallel-impl",
+    "teammates": [],
+    "taskPattern": "newFeature | bugFix | complexFeature",
+    "midDevAdjustments": "none"
+  },
+
+  "results": {
+    "effectiveness": "excellent | good | adequate | poor",
+    "bottlenecks": "none",
+    "recommendation": "",
+    "notes": ""
+  }
+}
