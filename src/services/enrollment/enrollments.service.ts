@@ -1227,6 +1227,117 @@ export class EnrollmentsService {
     return map[status] || 'active';
   }
 
+  /**
+   * Bulk enroll learners in a course
+   */
+  static async bulkEnrollCourse(
+    courseId: string,
+    learnerIds: string[],
+    options: {
+      startDate?: Date;
+      expiresAt?: Date;
+      sendNotification?: boolean;
+    },
+    _userId: string
+  ): Promise<{
+    enrolled: Array<{ learnerId: string; enrollmentId: string }>;
+    failed: Array<{ learnerId: string; reason: string }>;
+    summary: { total: number; successful: number; failed: number };
+  }> {
+    // Verify course exists and is published
+    const course = await Course.findById(courseId).populate('departmentId');
+    if (!course) {
+      throw ApiError.notFound('Course not found');
+    }
+
+    if (course.status !== 'published') {
+      throw ApiError.unprocessable('Course is not published');
+    }
+
+    // Validate all learnerIds exist upfront
+    const existingLearners = await User.find({
+      _id: { $in: learnerIds.map(id => new mongoose.Types.ObjectId(id)) },
+      userTypes: 'learner',
+      isActive: true
+    }).select('_id');
+
+    const existingLearnerIds = new Set(existingLearners.map(l => l._id.toString()));
+
+    // Check for existing enrollments
+    const existingEnrollments = await Enrollment.find({
+      learnerId: { $in: learnerIds.map(id => new mongoose.Types.ObjectId(id)) },
+      'metadata.courseId': courseId,
+      status: { $in: ['active', 'pending', 'suspended'] }
+    }).select('learnerId');
+
+    const alreadyEnrolledIds = new Set(existingEnrollments.map(e => e.learnerId.toString()));
+
+    // Process enrollments
+    const enrolled: Array<{ learnerId: string; enrollmentId: string }> = [];
+    const failed: Array<{ learnerId: string; reason: string }> = [];
+
+    // Get current academic year (simplified)
+    const academicYearId = new mongoose.Types.ObjectId();
+
+    for (const learnerId of learnerIds) {
+      // Check if learner exists
+      if (!existingLearnerIds.has(learnerId)) {
+        failed.push({ learnerId, reason: 'Learner not found' });
+        continue;
+      }
+
+      // Check if already enrolled
+      if (alreadyEnrolledIds.has(learnerId)) {
+        failed.push({ learnerId, reason: 'Already enrolled' });
+        continue;
+      }
+
+      try {
+        // Create enrollment
+        const enrollment = new Enrollment({
+          learnerId,
+          programId: new mongoose.Types.ObjectId(), // Placeholder for course enrollment
+          academicYearId,
+          status: 'active',
+          enrollmentDate: options.startDate || new Date(),
+          startDate: options.startDate || new Date(),
+          metadata: {
+            courseId,
+            enrollmentType: 'course',
+            expiresAt: options.expiresAt,
+            bulkEnrolled: true,
+            enrolledBy: _userId
+          }
+        });
+
+        await enrollment.save();
+
+        enrolled.push({
+          learnerId,
+          enrollmentId: enrollment._id.toString()
+        });
+
+        // TODO: Send notification if sendNotification is true (default)
+        // This would integrate with notification service when implemented
+      } catch (error) {
+        failed.push({
+          learnerId,
+          reason: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+
+    return {
+      enrolled,
+      failed,
+      summary: {
+        total: learnerIds.length,
+        successful: enrolled.length,
+        failed: failed.length
+      }
+    };
+  }
+
   private static mapStatusToClassStatus(status: string): string {
     const map: any = {
       'active': 'active',

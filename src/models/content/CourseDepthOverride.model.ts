@@ -32,8 +32,7 @@ const courseDepthOverrideSchema = new Schema<ICourseDepthOverride>(
     courseId: {
       type: Schema.Types.ObjectId,
       ref: 'Course',
-      required: [true, 'Course ID is required'],
-      index: true
+      required: [true, 'Course ID is required']
     },
     slug: {
       type: String,

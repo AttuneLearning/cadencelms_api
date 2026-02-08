@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { isAuthenticated } from '@/middlewares/isAuthenticated';
 import { authorize } from '@/middlewares/authorize';
 import * as enrollmentsController from '@/controllers/enrollment/enrollments.controller';
+import * as accessPolicyController from '@/controllers/policy/accessPolicy.controller';
+import * as accessPolicyValidator from '@/validators/accessPolicy.validator';
 
 const router = Router();
 
@@ -46,6 +48,16 @@ router.post('/program',
 router.post('/course',
   authorize.anyOf(['enrollment:own:manage', 'enrollment:department:manage']),
   enrollmentsController.enrollCourse
+);
+
+/**
+ * POST /api/v2/enrollments/course/bulk
+ * Bulk enroll learners in a course
+ * Access Right: enrollment:department:manage OR enrollment:system:manage
+ */
+router.post('/course/bulk',
+  authorize.anyOf(['enrollment:department:manage', 'enrollment:system:manage']),
+  enrollmentsController.bulkEnrollCourse
 );
 
 /**
@@ -117,6 +129,32 @@ router.patch('/:id/status',
 router.delete('/:id',
   authorize.anyOf(['enrollment:own:manage', 'enrollment:department:manage']),
   enrollmentsController.withdrawEnrollment
+);
+
+// ============================================================================
+// Enrollment Access Extension Routes
+// ============================================================================
+
+/**
+ * POST /api/v2/enrollments/:enrollmentId/extension-request
+ * Request access extension for an enrollment (learner action)
+ * Access Right: enrollment:own:manage
+ */
+router.post('/:enrollmentId/extension-request',
+  authorize('enrollment:own:manage'),
+  accessPolicyValidator.validateExtensionRequestCreate,
+  accessPolicyController.createExtensionRequest
+);
+
+/**
+ * POST /api/v2/enrollments/:enrollmentId/extend
+ * Directly extend enrollment access (admin action)
+ * Access Right: enrollment:department:manage
+ */
+router.post('/:enrollmentId/extend',
+  authorize('enrollment:department:manage'),
+  accessPolicyValidator.validateDirectExtend,
+  accessPolicyController.extendEnrollmentAccess
 );
 
 export default router;

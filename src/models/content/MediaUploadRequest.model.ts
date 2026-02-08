@@ -199,8 +199,7 @@ const mediaUploadRequestSchema = new Schema<IMediaUploadRequest>(
 
     expiresAt: {
       type: Date,
-      required: [true, 'Expiration time is required'],
-      index: true
+      required: [true, 'Expiration time is required']
     },
 
     status: {

@@ -28,6 +28,8 @@ import { Learner } from '@/models/auth/Learner.model';
 import GlobalAdmin from '@/models/GlobalAdmin.model';
 import Department from '@/models/organization/Department.model';
 import Course from '@/models/academic/Course.model';
+import CanonicalCourse from '@/models/academic/CanonicalCourse.model';
+import CourseVersion from '@/models/academic/CourseVersion.model';
 import Class from '@/models/academic/Class.model';
 import ClassEnrollment from '@/models/enrollment/ClassEnrollment.model';
 import { RoleDefinition } from '@/models/RoleDefinition.model';
@@ -179,8 +181,13 @@ describeIfMongo('E2E Authorization API Tests', () => {
     ]);
 
     // Create courses with different statuses
+    // Note: The API uses different models for different operations:
+    // - listCourses uses CanonicalCourse + CourseVersion (new versioning model)
+    // - getCourseById uses Course (old model)
+    // We create both for test compatibility
     const creatorId = new mongoose.Types.ObjectId();
 
+    // Draft course
     draftCourse = await Course.create({
       name: 'Draft Course',
       code: 'CS101',
@@ -193,7 +200,33 @@ describeIfMongo('E2E Authorization API Tests', () => {
         createdBy: creatorId
       }
     });
+    // Also create in new versioning model for listCourses
+    const draftCanonical = await CanonicalCourse.create({
+      _id: draftCourse._id, // Use same ID
+      code: 'CS101',
+      departmentId: topLevelDepartment._id,
+      programId: null,
+      totalVersions: 1,
+      createdBy: creatorId
+    });
+    const draftVersion = await CourseVersion.create({
+      canonicalCourseId: draftCanonical._id,
+      version: 1,
+      title: 'Draft Course',
+      description: 'A draft course for testing',
+      credits: 3,
+      duration: 15,
+      status: 'draft',
+      isLocked: false,
+      isLatest: true,
+      createdBy: creatorId
+    });
+    await CanonicalCourse.updateOne(
+      { _id: draftCanonical._id },
+      { latestDraftVersionId: draftVersion._id }
+    );
 
+    // Published course
     publishedCourse = await Course.create({
       name: 'Published Course',
       code: 'CS201',
@@ -206,7 +239,34 @@ describeIfMongo('E2E Authorization API Tests', () => {
         publishedAt: new Date()
       }
     });
+    const publishedCanonical = await CanonicalCourse.create({
+      _id: publishedCourse._id,
+      code: 'CS201',
+      departmentId: topLevelDepartment._id,
+      programId: null,
+      totalVersions: 1,
+      createdBy: creatorId
+    });
+    const publishedVersion = await CourseVersion.create({
+      canonicalCourseId: publishedCanonical._id,
+      version: 1,
+      title: 'Published Course',
+      description: 'A published course for testing',
+      credits: 3,
+      duration: 15,
+      status: 'published',
+      isLocked: false,
+      isLatest: true,
+      publishedAt: new Date(),
+      publishedBy: creatorId,
+      createdBy: creatorId
+    });
+    await CanonicalCourse.updateOne(
+      { _id: publishedCanonical._id },
+      { currentPublishedVersionId: publishedVersion._id }
+    );
 
+    // Archived course
     archivedCourse = await Course.create({
       name: 'Archived Course',
       code: 'CS301',
@@ -219,6 +279,32 @@ describeIfMongo('E2E Authorization API Tests', () => {
         archivedAt: new Date()
       }
     });
+    const archivedCanonical = await CanonicalCourse.create({
+      _id: archivedCourse._id,
+      code: 'CS301',
+      departmentId: topLevelDepartment._id,
+      programId: null,
+      totalVersions: 1,
+      createdBy: creatorId
+    });
+    const archivedVersion = await CourseVersion.create({
+      canonicalCourseId: archivedCanonical._id,
+      version: 1,
+      title: 'Archived Course',
+      description: 'An archived course for testing',
+      credits: 3,
+      duration: 15,
+      status: 'archived',
+      isLocked: true,
+      isLatest: true,
+      lockedAt: new Date(),
+      lockedReason: 'archived',
+      createdBy: creatorId
+    });
+    await CanonicalCourse.updateOne(
+      { _id: archivedCanonical._id },
+      { latestDraftVersionId: archivedVersion._id }
+    );
 
     // Create test class
     const academicYearId = new mongoose.Types.ObjectId();

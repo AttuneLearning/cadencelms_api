@@ -177,6 +177,8 @@ describeIfMongo('Learning Unit Questions API', () => {
     // Create test module
     testModule = await Module.create({
       courseId: testCourse._id,
+      ownerDepartmentId: testDepartment._id,
+      isShared: false,
       title: 'Test Module',
       description: 'Test module for learning unit questions',
       completionCriteria: {

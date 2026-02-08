@@ -1,5 +1,8 @@
 import mongoose from 'mongoose';
 import Course from '@/models/academic/Course.model';
+import CanonicalCourse from '@/models/academic/CanonicalCourse.model';
+import CourseVersion from '@/models/academic/CourseVersion.model';
+import CourseVersionModule from '@/models/academic/CourseVersionModule.model';
 import CourseContent from '@/models/content/CourseContent.model';
 import Department from '@/models/organization/Department.model';
 import Program from '@/models/academic/Program.model';
@@ -80,13 +83,14 @@ interface DuplicateCourseOptions {
 export class CoursesService {
   /**
    * List courses with filtering and pagination
+   * Updated to use CanonicalCourse + CourseVersion (versioning system)
    */
   static async listCourses(filters: ListCoursesFilters): Promise<any> {
     const page = filters.page || 1;
     const limit = Math.min(filters.limit || 10, 100);
     const skip = (page - 1) * limit;
 
-    // Build query
+    // Build query for CanonicalCourse
     const query: any = {};
 
     // Department filter
@@ -94,34 +98,14 @@ export class CoursesService {
       query.departmentId = filters.department;
     }
 
-    // Program filter (stored in metadata for now, as the Course model doesn't have programId)
-    // This would need to be adapted based on your actual schema
+    // Program filter
     if (filters.program) {
-      query['metadata.programId'] = filters.program;
+      query.programId = filters.program;
     }
 
-    // Status filter (using isActive as status for now)
-    if (filters.status === 'archived') {
-      query.isActive = false;
-    } else if (filters.status === 'published') {
-      query.isActive = true;
-      query['metadata.status'] = 'published';
-    } else if (filters.status === 'draft') {
-      query.isActive = true;
-      query['metadata.status'] = { $ne: 'published' };
-    }
-
-    // Search filter
+    // Search filter (search by code on CanonicalCourse)
     if (filters.search) {
-      query.$or = [
-        { name: { $regex: filters.search, $options: 'i' } },
-        { code: { $regex: filters.search, $options: 'i' } }
-      ];
-    }
-
-    // Instructor filter
-    if (filters.instructor) {
-      query['metadata.instructors'] = filters.instructor;
+      query.code = { $regex: filters.search, $options: 'i' };
     }
 
     // Sort
@@ -129,29 +113,41 @@ export class CoursesService {
     const sortOrder = sortField.startsWith('-') ? -1 : 1;
     const sortKey = sortField.replace(/^-/, '');
     const sortMap: any = {
-      title: 'name',
+      title: 'createdAt', // Will sort by version title later
       code: 'code',
       createdAt: 'createdAt',
       updatedAt: 'updatedAt'
     };
     const sort: any = { [sortMap[sortKey] || 'createdAt']: sortOrder };
 
-    // Execute query
-    const [courses, total] = await Promise.all([
-      Course.find(query).sort(sort).skip(skip).limit(limit),
-      Course.countDocuments(query)
+    // Execute query on CanonicalCourse
+    const [canonicalCourses, total] = await Promise.all([
+      CanonicalCourse.find(query).sort(sort).skip(skip).limit(limit),
+      CanonicalCourse.countDocuments(query)
     ]);
 
-    // Build response with populated data
+    // Build response with populated data from CourseVersion
     const coursesData = await Promise.all(
-      courses.map(async (course) => {
+      canonicalCourses.map(async (canonical) => {
+        // Get the latest draft or published version
+        const versionId = canonical.currentPublishedVersionId || canonical.latestDraftVersionId;
+        if (!versionId) {
+          // No version exists yet, skip this course
+          return null;
+        }
+
+        const version = await CourseVersion.findById(versionId);
+        if (!version) {
+          return null;
+        }
+
         // Get department info
-        const department = await Department.findById(course.departmentId);
+        const department = await Department.findById(canonical.departmentId);
 
         // Get program info if exists
         let program = null;
-        if (course.metadata?.programId) {
-          const programDoc = await Program.findById(course.metadata.programId);
+        if (canonical.programId) {
+          const programDoc = await Program.findById(canonical.programId);
           if (programDoc) {
             program = {
               id: programDoc._id.toString(),
@@ -160,10 +156,9 @@ export class CoursesService {
           }
         }
 
-        // Get instructors
-        const instructorIds = course.metadata?.instructors || [];
+        // Get instructors from CourseVersion
         const instructors = await Promise.all(
-          instructorIds.map(async (id: string) => {
+          version.instructorIds.map(async (id: mongoose.Types.ObjectId) => {
             const staff = await Staff.findById(id);
             const user = await User.findById(id);
             if (staff && user) {
@@ -178,47 +173,66 @@ export class CoursesService {
           })
         );
 
-        // Get module count
-        const moduleCount = await CourseContent.countDocuments({
-          courseId: course._id
+        // Get module count for this course version
+        const moduleCount = await CourseVersionModule.countDocuments({
+          courseVersionId: version._id
         });
 
-        // Get enrollment count (Note: This would need actual course enrollment model)
-        const enrollmentCount = 0; // Placeholder
+        // Get enrollment count (placeholder for now)
+        const enrollmentCount = 0;
+
+        // Apply status filter after fetching versions
+        if (filters.status) {
+          if (filters.status === 'archived' && version.status !== 'archived') return null;
+          if (filters.status === 'published' && version.status !== 'published') return null;
+          if (filters.status === 'draft' && version.status !== 'draft') return null;
+        }
+
+        // Apply instructor filter
+        if (filters.instructor) {
+          const hasInstructor = version.instructorIds.some(
+            id => id.toString() === filters.instructor
+          );
+          if (!hasInstructor) return null;
+        }
+
+        // Apply search filter on title (if not already filtered by code)
+        if (filters.search && !query.code) {
+          const searchRegex = new RegExp(filters.search, 'i');
+          if (!searchRegex.test(version.title)) return null;
+        }
 
         return {
-          id: course._id.toString(),
-          title: course.name,
-          code: course.code,
-          description: course.description || '',
+          id: canonical._id.toString(),
+          title: version.title,
+          code: canonical.code,
+          description: version.description || '',
           department: {
             id: department?._id.toString() || '',
             name: department?.name || ''
           },
           program,
-          credits: course.credits,
-          duration: course.metadata?.duration || 0,
-          status: !course.isActive ? 'archived' : (course.metadata?.status === 'published' ? 'published' : 'draft'),
+          credits: version.credits,
+          duration: version.duration,
+          status: version.status,
           instructors: instructors.filter(Boolean),
-          settings: {
-            allowSelfEnrollment: course.metadata?.settings?.allowSelfEnrollment || false,
-            passingScore: course.metadata?.settings?.passingScore || 70,
-            maxAttempts: course.metadata?.settings?.maxAttempts || 3,
-            certificateEnabled: course.metadata?.settings?.certificateEnabled || false
-          },
+          settings: version.settings,
           moduleCount,
           enrollmentCount,
-          publishedAt: course.metadata?.publishedAt || null,
-          archivedAt: course.metadata?.archivedAt || null,
-          createdBy: course.metadata?.createdBy || '',
-          createdAt: course.createdAt,
-          updatedAt: course.updatedAt
+          publishedAt: version.publishedAt || null,
+          archivedAt: version.status === 'archived' ? version.lockedAt : null,
+          createdBy: version.createdBy?.toString() || '',
+          createdAt: canonical.createdAt,
+          updatedAt: canonical.updatedAt
         };
       })
     );
 
+    // Filter out null entries (courses without versions or filtered out)
+    const filteredCourses = coursesData.filter(Boolean);
+
     return {
-      courses: coursesData,
+      courses: filteredCourses,
       pagination: {
         page,
         limit,
@@ -246,12 +260,12 @@ export class CoursesService {
       throw ApiError.notFound('Department does not exist');
     }
 
-    // Check if code already exists in department
-    const existingCourse = await Course.findOne({
+    // Check if code already exists in department (check CanonicalCourse, not old Course model)
+    const existingCanonical = await CanonicalCourse.findOne({
       departmentId: courseData.department,
-      code: courseData.code
+      code: courseData.code.toUpperCase()
     });
-    if (existingCourse) {
+    if (existingCanonical) {
       throw ApiError.conflict('Course code already exists in this department');
     }
 
@@ -280,47 +294,76 @@ export class CoursesService {
       }
     }
 
-    // Create course
-    const course = new Course({
-      name: courseData.title,
-      code: courseData.code,
-      description: courseData.description,
+    // Create CanonicalCourse (the stable course identity)
+    const canonicalCourse = new CanonicalCourse({
+      code: courseData.code.toUpperCase(),
       departmentId: courseData.department,
-      credits: courseData.credits || 0,
-      metadata: {
-        programId: courseData.program || null,
-        duration: courseData.duration || 0,
-        status: 'draft',
-        instructors: courseData.instructors || [],
-        settings: {
-          allowSelfEnrollment: courseData.settings?.allowSelfEnrollment || false,
-          passingScore: courseData.settings?.passingScore || 70,
-          maxAttempts: courseData.settings?.maxAttempts || 3,
-          certificateEnabled: courseData.settings?.certificateEnabled || false
-        },
-        createdBy: createdBy || null,
-        publishedAt: null,
-        archivedAt: null
-      }
+      programId: courseData.program || null,
+      currentPublishedVersionId: null,
+      latestDraftVersionId: null,
+      totalVersions: 1,
+      createdBy: createdBy ? new mongoose.Types.ObjectId(createdBy) : new mongoose.Types.ObjectId()
     });
 
-    await course.save();
+    await canonicalCourse.save();
 
+    // Create CourseVersion v1 (draft)
+    const instructorIds = (courseData.instructors || []).map(id => new mongoose.Types.ObjectId(id));
+    const creatorId = createdBy ? new mongoose.Types.ObjectId(createdBy) : new mongoose.Types.ObjectId();
+    
+    const courseVersion = new CourseVersion({
+      canonicalCourseId: canonicalCourse._id,
+      version: 1,
+      title: courseData.title,
+      description: courseData.description || null,
+      credits: courseData.credits || 0,
+      duration: courseData.duration || 0,
+      settings: {
+        allowSelfEnrollment: courseData.settings?.allowSelfEnrollment || false,
+        passingScore: courseData.settings?.passingScore || 70,
+        maxAttempts: courseData.settings?.maxAttempts || 3,
+        certificateEnabled: courseData.settings?.certificateEnabled || false,
+        enforcePrerequisites: true,
+        showProgressBar: true,
+        allowModuleSkipping: false
+      },
+      instructorIds: instructorIds,
+      status: 'draft',
+      isLocked: false,
+      isLatest: true,
+      parentVersionId: null,
+      createdBy: creatorId,
+      publishedAt: null,
+      publishedBy: null,
+      lockedAt: null,
+      lockedBy: null,
+      lockedReason: null,
+      changeNotes: 'Initial version',
+      statsAtLock: null
+    });
+
+    await courseVersion.save();
+
+    // Update CanonicalCourse to point to the draft version
+    canonicalCourse.latestDraftVersionId = courseVersion._id as mongoose.Types.ObjectId;
+    await canonicalCourse.save();
+
+    // Return response with CanonicalCourse ID (this is the courseId that modules endpoint expects)
     return {
-      id: course._id.toString(),
-      title: course.name,
-      code: course.code,
-      description: course.description || '',
+      id: canonicalCourse._id.toString(),
+      title: courseVersion.title,
+      code: canonicalCourse.code,
+      description: courseVersion.description || '',
       department: courseData.department,
       program: courseData.program || null,
-      credits: course.credits,
-      duration: course.metadata?.duration || 0,
+      credits: courseVersion.credits,
+      duration: courseVersion.duration,
       status: 'draft',
       instructors: courseData.instructors || [],
-      settings: course.metadata?.settings || {},
-      createdBy: course.metadata?.createdBy || '',
-      createdAt: course.createdAt,
-      updatedAt: course.updatedAt
+      settings: courseVersion.settings,
+      createdBy: createdBy || '',
+      createdAt: canonicalCourse.createdAt,
+      updatedAt: canonicalCourse.updatedAt
     };
   }
 
@@ -609,77 +652,108 @@ export class CoursesService {
 
   /**
    * Publish course
+   * Updated to use CanonicalCourse + CourseVersion (versioning system)
    */
   static async publishCourse(courseId: string, publishedAt?: Date): Promise<any> {
     if (!mongoose.Types.ObjectId.isValid(courseId)) {
       throw ApiError.badRequest('Invalid course ID');
     }
 
-    const course = await Course.findById(courseId);
-    if (!course) {
+    // Find CanonicalCourse
+    const canonical = await CanonicalCourse.findById(courseId);
+    if (!canonical) {
       throw ApiError.notFound('Course not found');
     }
 
-    // Cannot publish archived courses
-    if (!course.isActive) {
-      throw ApiError.badRequest('Cannot publish archived course');
+    // Get the latest version to publish
+    if (!canonical.latestDraftVersionId) {
+      throw ApiError.badRequest('No version available to publish');
+    }
+
+    const latestVersion = await CourseVersion.findById(canonical.latestDraftVersionId);
+    if (!latestVersion) {
+      throw ApiError.notFound('Version not found');
+    }
+
+    // Cannot publish archived courses - must unarchive first
+    if (latestVersion.status === 'archived') {
+      throw ApiError.badRequest(`Cannot publish archived course. Use /unarchive first. (version ${latestVersion.version} status: ${latestVersion.status})`);
     }
 
     // Check if already published
-    if (course.metadata?.status === 'published') {
-      throw ApiError.conflict('Course is already published');
+    if (latestVersion.status === 'published') {
+      throw ApiError.conflict(`Course is already published (version ${latestVersion.version} status: ${latestVersion.status})`);
     }
 
     // Validate course has at least one module
-    const moduleCount = await CourseContent.countDocuments({ courseId: course._id });
+    const moduleCount = await CourseVersionModule.countDocuments({
+      courseVersionId: latestVersion._id
+    });
     if (moduleCount === 0) {
       throw ApiError.badRequest('Course cannot be published: must have at least one module');
     }
 
-    // Publish course
-    course.metadata = {
-      ...course.metadata,
-      status: 'published',
-      publishedAt: publishedAt || new Date()
-    };
-    await course.save();
+    // Publish the version
+    const publishDate = publishedAt || new Date();
+    latestVersion.status = 'published';
+    latestVersion.publishedAt = publishDate;
+    await latestVersion.save();
+
+    // Update CanonicalCourse to point to published version
+    canonical.currentPublishedVersionId = latestVersion._id;
+    await canonical.save();
 
     return {
-      id: course._id.toString(),
+      id: canonical._id.toString(),
       status: 'published',
-      publishedAt: course.metadata.publishedAt
+      publishedAt: publishDate
     };
   }
 
   /**
    * Unpublish course
+   * Updated to use CanonicalCourse + CourseVersion (versioning system)
    */
   static async unpublishCourse(courseId: string, reason?: string): Promise<any> {
     if (!mongoose.Types.ObjectId.isValid(courseId)) {
       throw ApiError.badRequest('Invalid course ID');
     }
 
-    const course = await Course.findById(courseId);
-    if (!course) {
+    // Find CanonicalCourse
+    const canonical = await CanonicalCourse.findById(courseId);
+    if (!canonical) {
       throw ApiError.notFound('Course not found');
     }
 
-    // Check if course is published
-    if (course.metadata?.status !== 'published') {
+    // Get the published version
+    if (!canonical.currentPublishedVersionId) {
       throw ApiError.conflict('Course is not currently published');
     }
 
-    // Unpublish course
-    course.metadata = {
-      ...course.metadata,
-      status: 'draft',
-      publishedAt: null,
-      unpublishReason: reason
-    };
-    await course.save();
+    const publishedVersion = await CourseVersion.findById(canonical.currentPublishedVersionId);
+    if (!publishedVersion) {
+      throw ApiError.notFound('Published version not found');
+    }
+
+    // Check if course is published
+    if (publishedVersion.status !== 'published') {
+      throw ApiError.conflict('Course is not currently published');
+    }
+
+    // Unpublish the version
+    publishedVersion.status = 'draft';
+    publishedVersion.publishedAt = null;
+    if (reason) {
+      publishedVersion.changeNotes = reason;
+    }
+    await publishedVersion.save();
+
+    // Clear currentPublishedVersionId on CanonicalCourse
+    canonical.currentPublishedVersionId = null;
+    await canonical.save();
 
     return {
-      id: course._id.toString(),
+      id: canonical._id.toString(),
       status: 'draft',
       publishedAt: null
     };
@@ -687,69 +761,97 @@ export class CoursesService {
 
   /**
    * Archive course
+   * Updated to use CanonicalCourse + CourseVersion (versioning system)
    */
   static async archiveCourse(courseId: string, reason?: string, archivedAt?: Date): Promise<any> {
     if (!mongoose.Types.ObjectId.isValid(courseId)) {
       throw ApiError.badRequest('Invalid course ID');
     }
 
-    const course = await Course.findById(courseId);
-    if (!course) {
+    // Find CanonicalCourse
+    const canonical = await CanonicalCourse.findById(courseId);
+    if (!canonical) {
       throw ApiError.notFound('Course not found');
     }
 
+    // Get the current version (published or draft)
+    const versionId = canonical.currentPublishedVersionId || canonical.latestDraftVersionId;
+    if (!versionId) {
+      throw ApiError.badRequest('No version found for this course');
+    }
+
+    const version = await CourseVersion.findById(versionId);
+    if (!version) {
+      throw ApiError.notFound('Course version not found');
+    }
+
     // Check if already archived
-    if (!course.isActive) {
+    if (version.status === 'archived') {
       throw ApiError.conflict('Course is already archived');
     }
 
-    // Archive course
-    course.isActive = false;
-    course.metadata = {
-      ...course.metadata,
-      status: 'archived',
-      archivedAt: archivedAt || new Date(),
-      archiveReason: reason,
-      publishedAt: null
-    };
-    await course.save();
+    // Archive the version
+    const archiveDate = archivedAt || new Date();
+    version.status = 'archived';
+    version.isLocked = true;
+    version.lockedAt = archiveDate;
+    version.lockedReason = 'archived';
+    if (reason) {
+      version.changeNotes = reason;
+    }
+    await version.save();
+
+    // Clear currentPublishedVersionId on CanonicalCourse
+    canonical.currentPublishedVersionId = null;
+    await canonical.save();
 
     return {
-      id: course._id.toString(),
+      id: canonical._id.toString(),
       status: 'archived',
-      archivedAt: course.metadata.archivedAt
+      archivedAt: archiveDate
     };
   }
 
   /**
    * Unarchive course
+   * Updated to use CanonicalCourse + CourseVersion (versioning system)
    */
   static async unarchiveCourse(courseId: string): Promise<any> {
     if (!mongoose.Types.ObjectId.isValid(courseId)) {
       throw ApiError.badRequest('Invalid course ID');
     }
 
-    const course = await Course.findById(courseId);
-    if (!course) {
+    // Find CanonicalCourse
+    const canonical = await CanonicalCourse.findById(courseId);
+    if (!canonical) {
       throw ApiError.notFound('Course not found');
     }
 
+    // Get the version
+    const versionId = canonical.latestDraftVersionId;
+    if (!versionId) {
+      throw ApiError.badRequest('No version found for this course');
+    }
+
+    const version = await CourseVersion.findById(versionId);
+    if (!version) {
+      throw ApiError.notFound('Course version not found');
+    }
+
     // Check if course is archived
-    if (course.isActive) {
+    if (version.status !== 'archived') {
       throw ApiError.conflict('Course is not currently archived');
     }
 
-    // Unarchive course
-    course.isActive = true;
-    course.metadata = {
-      ...course.metadata,
-      status: 'draft',
-      archivedAt: null
-    };
-    await course.save();
+    // Unarchive the version
+    version.status = 'draft';
+    version.isLocked = false;
+    version.lockedAt = null;
+    version.lockedReason = null;
+    await version.save();
 
     return {
-      id: course._id.toString(),
+      id: canonical._id.toString(),
       status: 'draft',
       archivedAt: null
     };

@@ -3,7 +3,6 @@ import LearningUnitQuestion from '@/models/content/LearningUnitQuestion.model';
 import LearningUnit, { ILearningUnit } from '@/models/content/LearningUnit.model';
 import Question from '@/models/assessment/Question.model';
 import Module from '@/models/academic/Module.model';
-import Course from '@/models/academic/Course.model';
 import Setting from '@/models/system/Setting.model';
 import { ApiError } from '@/utils/ApiError';
 
@@ -458,25 +457,19 @@ export class LearningUnitQuestionsService {
   }
 
   /**
-   * Get the department ID for a learning unit by traversing module -> course
+   * Get the department ID for a learning unit by traversing module -> ownerDepartmentId
    */
   private static async getLearningUnitDepartment(learningUnit: ILearningUnit): Promise<mongoose.Types.ObjectId | null> {
     if (!learningUnit.moduleId) {
       return null;
     }
 
-    // Get the module
-    const module = await Module.findById(learningUnit.moduleId).select('courseId').lean();
-    if (!module || !module.courseId) {
+    // Get the module - modules now have ownerDepartmentId directly
+    const module = await Module.findById(learningUnit.moduleId).select('ownerDepartmentId').lean();
+    if (!module || !module.ownerDepartmentId) {
       return null;
     }
 
-    // Get the course
-    const course = await Course.findById(module.courseId).select('departmentId').lean();
-    if (!course || !course.departmentId) {
-      return null;
-    }
-
-    return course.departmentId as mongoose.Types.ObjectId;
+    return module.ownerDepartmentId as mongoose.Types.ObjectId;
   }
 }

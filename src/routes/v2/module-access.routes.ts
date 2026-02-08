@@ -63,7 +63,7 @@ router.get('/',
  * Access: read:courses (basic learner access)
  */
 router.post('/',
-  authorize('read:courses'),
+  authorize('content:courses:read'),
   moduleAccessController.recordAccess
 );
 
@@ -84,7 +84,7 @@ router.get('/:accessId',
  * Access: read:courses (learner updating own progress)
  */
 router.put('/:accessId',
-  authorize('read:courses'),
+  authorize('content:courses:read'),
   moduleAccessController.updateAccess
 );
 

@@ -1,6 +1,6 @@
 # UI-ISS-071: Missing Create Flashcard Deck Page
 
-## Status: IN PROGRESS
+## Status: COMPLETE
 ## Priority: High
 ## Created: 2026-01-22
 ## Updated: 2026-01-28
@@ -182,20 +182,41 @@ src/features/flashcard-player/
 - Question model types updated in UI (commit d4abfb0)
 - Ready for Phase 2: Build FlashcardEditor component
 
+### 2026-02-06: UI Implementation Complete
+
+**Implementation Summary:**
+
+Created `src/features/flashcard-builder/` with FSD structure:
+- `api/flashcardBuilderApi.ts` - API client for module-level CRUD
+- `model/useFlashcardBuilder.ts` - React Query hooks with optimistic updates
+- `ui/FlashcardEditor.tsx` - Modal editor for single cards with hints/tags
+- `ui/FlashcardList.tsx` - Sortable drag-drop list using @dnd-kit
+- `ui/FlashcardBulkImport.tsx` - CSV import with preview and validation
+- `ui/FlashcardPreview.tsx` - Interactive card flip preview
+- `index.ts` - Feature exports
+
+Created page and route:
+- `src/pages/staff/courses/FlashcardDeckPage.tsx` - Full page component
+- Route: `/staff/courses/:courseId/modules/:moduleId/flashcards`
+
+**Tests:** 7 passing (FlashcardList component)
+
+**Type Check:** No new errors introduced (pre-existing errors in codebase)
+
 ---
 
 ## Completion
 
-**Completed Date:**
+**Completed Date:** 2026-02-06
 **Commits:**
 | Hash | Description |
 |------|-------------|
-| | |
+| a36cf47 | feat(flashcard-builder): add flashcard deck page for module authoring |
 
 **Verification:**
-- [ ] All acceptance criteria met
-- [ ] Tests passing
-- [ ] Response message sent (if cross-team)
+- [x] All acceptance criteria met (UI components implemented)
+- [x] Tests passing (7 FlashcardList tests)
+- [ ] Response message sent (if cross-team) - N/A, no cross-team impact
 
 ---
 

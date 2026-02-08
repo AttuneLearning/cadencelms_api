@@ -145,6 +145,8 @@ describeIfMongo('Learning Units API', () => {
     // Create test module
     testModule = await Module.create({
       courseId: testCourse._id,
+      ownerDepartmentId: testDepartment._id,
+      isShared: false,
       title: 'Test Module 1',
       description: 'Test module for learning units',
       completionCriteria: {
@@ -171,6 +173,8 @@ describeIfMongo('Learning Units API', () => {
     // Create second test module for move tests
     testModule2 = await Module.create({
       courseId: testCourse._id,
+      ownerDepartmentId: testDepartment._id,
+      isShared: false,
       title: 'Test Module 2',
       description: 'Second test module for move tests',
       completionCriteria: {

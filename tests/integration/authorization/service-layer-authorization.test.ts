@@ -828,7 +828,10 @@ describeIfMongo('Service Layer Authorization Integration Tests', () => {
 
       const user = {
         _id: instructorUser._id,
-        roles: ['instructor']
+        departmentMemberships: [{
+          departmentId: topLevelDepartment._id,
+          roles: ['instructor']
+        }]
       };
 
       const query: any = {};
@@ -841,7 +844,10 @@ describeIfMongo('Service Layer Authorization Integration Tests', () => {
     it('should not filter for non-instructors', async () => {
       const user = {
         _id: deptAdminUser._id,
-        roles: ['department-admin']
+        departmentMemberships: [{
+          departmentId: topLevelDepartment._id,
+          roles: ['department-admin']
+        }]
       };
 
       const query: any = {};
@@ -864,8 +870,10 @@ describeIfMongo('Service Layer Authorization Integration Tests', () => {
       };
 
       const user = {
-        roles: ['department-admin'],
-        departmentMemberships: [{ departmentId: topLevelDepartment._id }]
+        departmentMemberships: [{
+          departmentId: topLevelDepartment._id,
+          roles: ['department-admin']
+        }]
       };
 
       const filtered = await ReportsService.filterTranscriptByDepartment(transcript, user);
@@ -884,7 +892,8 @@ describeIfMongo('Service Layer Authorization Integration Tests', () => {
       };
 
       const user = {
-        roles: ['system-admin'],
+        userTypes: ['global-admin'],
+        allAccessRights: ['system:*'],
         departmentMemberships: []
       };
 
@@ -903,7 +912,8 @@ describeIfMongo('Service Layer Authorization Integration Tests', () => {
       };
 
       const user = {
-        roles: ['enrollment-admin'],
+        userTypes: ['global-admin'],
+        allAccessRights: ['enrollment:*', 'learner:pii:read'],
         departmentMemberships: []
       };
 
@@ -969,8 +979,10 @@ describeIfMongo('Service Layer Authorization Integration Tests', () => {
 
       const user = {
         _id: instructorUser._id,
-        roles: ['instructor'],
-        departmentMemberships: [{ departmentId: topLevelDepartment._id }]
+        departmentMemberships: [{
+          departmentId: topLevelDepartment._id,
+          roles: ['instructor']
+        }]
       };
 
       const query: any = {};
@@ -984,14 +996,16 @@ describeIfMongo('Service Layer Authorization Integration Tests', () => {
     it('should skip instructor scoping for department-admin', async () => {
       const user = {
         _id: deptAdminUser._id,
-        roles: ['department-admin'],
-        departmentMemberships: [{ departmentId: topLevelDepartment._id }]
+        departmentMemberships: [{
+          departmentId: topLevelDepartment._id,
+          roles: ['department-admin']
+        }]
       };
 
       const query: any = {};
       const scopedQuery = await ProgressService.applyAuthorizationScoping(query, user);
 
-      // Should have department scoping but not instructor scoping
+      // Should have department scoping (sets classId based on department's courses/classes)
       expect(scopedQuery.classId).toBeDefined();
     });
   });

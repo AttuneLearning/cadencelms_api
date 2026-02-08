@@ -107,8 +107,7 @@ const RemediationSchema = new Schema<IRemediation>(
     triggeredByCheckId: {
       type: Schema.Types.ObjectId,
       required: [true, 'triggeredByCheckId is required'],
-      ref: 'RetentionCheck',
-      index: true
+      ref: 'RetentionCheck'
     },
     triggeredAt: {
       type: Date,

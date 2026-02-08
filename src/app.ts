@@ -24,11 +24,13 @@ import programsRoutes from './routes/programs.routes';
 import coursesRoutes from './routes/courses.routes';
 // courseSegmentsRoutes removed - replaced by modulesRoutes
 import modulesRoutes from './routes/v2/modules.routes';
+import { courseVersionsRouter, versionRouter } from './routes/v2/courseVersion.routes';
 import learningUnitsRoutes from './routes/v2/learning-units.routes';
 import learningUnitQuestionsRoutes from './routes/v2/learning-unit-questions.routes';
 import assessmentAttemptsRoutes from './routes/v2/assessment-attempts.routes';
 import aiQuizRoutes from './routes/v2/ai-quiz.routes';
 import learnerQuestionProgressRoutes from './routes/v2/learner-question-progress.routes';
+import moduleEditLockRoutes from './routes/v2/module-edit-lock.routes';
 import classesRoutes from './routes/classes.routes';
 
 // Phase 3 routes
@@ -79,6 +81,33 @@ import adaptiveSelectionRoutes from './routes/adaptive-selection.routes';
 import flashcardRoutes from './routes/flashcard.routes';
 import retentionCheckRoutes from './routes/retention-check.routes';
 
+// Credential & Certificate Definition routes
+import { credentialGroupRouter, certificateDefinitionRouter } from './routes/v2/credential.routes';
+
+// Access Policy routes
+import accessExtensionRequestsRoutes from './routes/access-policy.routes';
+
+// Certificate Issuance routes
+import {
+  certificateIssuanceRouter,
+  certificateVerificationRouter,
+  learnerCertificateRouter
+} from './routes/v2/certificateIssuance.routes';
+
+// Module Completion & Sharing routes
+import {
+  moduleCompletionsRouter,
+  learnerModuleCompletionsRouter,
+  moduleUsageRouter,
+  departmentModulesRouter
+} from './routes/v2/module-completion.routes';
+
+// Notification routes
+import notificationRouter from './routes/v2/notification.routes';
+
+// Event handlers
+import { registerNotificationHandlers } from './events/handlers/notification.handlers';
+
 const app: Application = express();
 
 // Security middleware
@@ -127,12 +156,15 @@ app.use('/api/v2/lists', listsRoutes);
 app.use('/api/v2/programs', programsRoutes);
 app.use('/api/v2/courses', coursesRoutes); // Main courses routes
 app.use('/api/v2/courses', modulesRoutes); // New modules routes with completionCriteria/presentationRules
+app.use('/api/v2/courses/:id/versions', courseVersionsRouter); // Course versioning - create/list versions
+app.use('/api/v2/course-versions', versionRouter); // Course versioning - get/update/publish/lock versions
 // Note: courseSegmentsRoutes replaced by modulesRoutes for /courses/:courseId/modules endpoints
 app.use('/api/v2/modules/:moduleId/learning-units', learningUnitsRoutes); // Learning units nested under modules
 app.use('/api/v2/learning-units/:learningUnitId/questions', learningUnitQuestionsRoutes); // Question linking for learning units
 app.use('/api/v2/assessments/:assessmentId/attempts', assessmentAttemptsRoutes); // Assessment attempts
 app.use('/api/v2/learning-units/:learningUnitId/ai-quiz', aiQuizRoutes); // AI Quiz shell endpoints (501)
 app.use('/api/v2/learning-units/:learningUnitId/progress/:learnerId/questions', learnerQuestionProgressRoutes); // Learner question progress tracking
+app.use('/api/v2/modules', moduleEditLockRoutes); // Module edit locking for concurrent edit prevention
 app.use('/api/v2/classes', classesRoutes);
 
 // API routes - Phase 3
@@ -182,6 +214,30 @@ app.use('/api/v2/adaptive', adaptiveSelectionRoutes); // Adaptive question selec
 // API routes - Flashcard System (Spaced Repetition)
 app.use('/api/v2/courses/:courseId', flashcardRoutes); // Flashcard endpoints nested under courses
 app.use('/api/v2/courses/:courseId', retentionCheckRoutes); // Retention check and remediation endpoints
+
+// API routes - Credential & Certificate Definitions
+app.use('/api/v2/credential-groups', credentialGroupRouter); // Credential groups (named credentials)
+app.use('/api/v2/certificate-definitions', certificateDefinitionRouter); // Versioned certificate definitions
+
+// API routes - Certificate Issuance & Verification
+app.use('/api/v2/certificate-issuances', certificateIssuanceRouter); // Certificate issuance management
+app.use('/api/v2/certificates', certificateVerificationRouter); // Public verification (no auth)
+app.use('/api/v2/learners/:id', learnerCertificateRouter); // Learner certificates and upgrade eligibility
+
+// API routes - Module Completion & Sharing
+app.use('/api/v2/module-completions', moduleCompletionsRouter); // Global module completion tracking
+app.use('/api/v2/learners/:id/module-completions', learnerModuleCompletionsRouter); // Learner module completions
+app.use('/api/v2/modules', moduleUsageRouter); // Module usage and completion stats
+app.use('/api/v2/departments/:id/modules', departmentModulesRouter); // Department-owned and available modules
+
+// API routes - Access Policy & Extension Requests
+app.use('/api/v2/access-extension-requests', accessExtensionRequestsRoutes); // Access extension request management
+
+// API routes - Notifications
+app.use('/api/v2/users/me', notificationRouter); // User notification management
+
+// Register event handlers
+registerNotificationHandlers();
 
 // 404 handler
 app.use(notFoundHandler);

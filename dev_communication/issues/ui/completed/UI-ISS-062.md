@@ -1,6 +1,6 @@
 # UI-ISS-062: Course Creators Cannot View Their Own Courses
 
-## Status: PENDING
+## Status: COMPLETE
 ## Priority: High
 ## Created: 2026-01-21
 ## Updated: 2026-01-28

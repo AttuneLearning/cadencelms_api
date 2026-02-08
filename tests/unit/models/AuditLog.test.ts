@@ -525,8 +525,10 @@ describeIfMongo('AuditLog Model', () => {
     });
 
     it('should efficiently query by date range', async () => {
-      const startDate = new Date('2026-01-01');
-      const endDate = new Date('2026-01-31');
+      // Use date range that includes today
+      const now = new Date();
+      const startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000); // yesterday
+      const endDate = new Date(now.getTime() + 24 * 60 * 60 * 1000); // tomorrow
 
       await createLog({
         action: 'login',

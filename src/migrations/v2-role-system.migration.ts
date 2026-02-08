@@ -294,7 +294,7 @@ async function seedRoleDefinitions(session: mongoose.ClientSession): Promise<num
       userType: 'staff',
       displayName: 'Instructor',
       description: 'Teaches classes, grades student work',
-      accessRights: ['content:courses:read', 'content:lessons:read', 'enrollment:department:read', 'grades:own-classes:read', 'grades:own-classes:manage', 'reports:own-classes:read'],
+      accessRights: ['content:courses:read', 'content:lessons:read', 'enrollment:department:read', 'grades:own-classes:read', 'grades:own-classes:manage', 'reports:own-classes:read', 'learner:directory:read'],
       isDefault: false,
       sortOrder: 1,
       isActive: true
@@ -304,7 +304,7 @@ async function seedRoleDefinitions(session: mongoose.ClientSession): Promise<num
       userType: 'staff',
       displayName: 'Content Administrator',
       description: 'Creates and manages courses, programs',
-      accessRights: ['content:courses:manage', 'content:lessons:manage', 'content:programs:manage', 'content:assessments:manage', 'enrollment:department:read', 'reports:content:read'],
+      accessRights: ['content:courses:manage', 'content:lessons:manage', 'content:programs:manage', 'content:assessments:manage', 'enrollment:department:read', 'reports:content:read', 'learner:directory:read'],
       isDefault: false,
       sortOrder: 2,
       isActive: true
@@ -314,7 +314,7 @@ async function seedRoleDefinitions(session: mongoose.ClientSession): Promise<num
       userType: 'staff',
       displayName: 'Department Administrator',
       description: 'Manages department operations, staff, settings',
-      accessRights: ['staff:department:read', 'staff:department:manage', 'enrollment:department:read', 'enrollment:department:manage', 'reports:department:read', 'system:department-settings:manage', 'content:*'],
+      accessRights: ['staff:department:read', 'staff:department:manage', 'enrollment:department:read', 'enrollment:department:manage', 'reports:department:read', 'system:department-settings:manage', 'content:*', 'learner:directory:read'],
       isDefault: false,
       sortOrder: 3,
       isActive: true
@@ -438,6 +438,7 @@ async function seedAccessRights(session: mongoose.ClientSession): Promise<number
 
     // Learner Domain
     { name: 'learner:peer-progress:read', domain: 'learner', resource: 'peer-progress', action: 'read', description: 'View peer learner progress', isSensitive: false },
+    { name: 'learner:directory:read', domain: 'learner', resource: 'directory', action: 'read', description: 'View learner directory (masked names, no PII)', isSensitive: false },
     { name: 'learner:pii:read', domain: 'learner', resource: 'pii', action: 'read', description: 'View student PII', isSensitive: true, sensitiveCategory: 'ferpa' },
     { name: 'learner:grades:read', domain: 'learner', resource: 'grades', action: 'read', description: 'View student grades', isSensitive: true, sensitiveCategory: 'ferpa' },
     { name: 'learner:contact:read', domain: 'learner', resource: 'contact', action: 'read', description: 'View contact information', isSensitive: true, sensitiveCategory: 'pii' },

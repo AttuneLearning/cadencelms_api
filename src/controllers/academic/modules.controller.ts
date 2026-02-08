@@ -71,10 +71,10 @@ export const getModule = asyncHandler(async (req: Request, res: Response) => {
 
   const result = await ModulesService.getModule(moduleId);
 
-  // Verify module belongs to the specified course
-  if (result.courseId !== courseId) {
-    throw ApiError.notFound('Module not found in this course');
-  }
+  // Module belongs to a department, not a course directly.
+  // The courseId param is the canonical course, but we don't validate
+  // module-to-course association here as modules are linked via CourseVersionModule.
+  // The listing endpoint already filters by course version modules.
 
   res.status(200).json(ApiResponse.success(result));
 });
@@ -167,11 +167,8 @@ export const updateModule = asyncHandler(async (req: Request, res: Response) => 
     throw ApiError.badRequest('Module ID is required');
   }
 
-  // First verify the module belongs to this course
-  const existingModule = await ModulesService.getModule(moduleId);
-  if (existingModule.courseId !== courseId) {
-    throw ApiError.notFound('Module not found in this course');
-  }
+  // Verify the module exists (no longer check courseId since modules are department-owned)
+  await ModulesService.getModule(moduleId);
 
   const updateData: any = {};
 
@@ -214,11 +211,8 @@ export const deleteModule = asyncHandler(async (req: Request, res: Response) => 
     throw ApiError.badRequest('Module ID is required');
   }
 
-  // First verify the module belongs to this course
-  const existingModule = await ModulesService.getModule(moduleId);
-  if (existingModule.courseId !== courseId) {
-    throw ApiError.notFound('Module not found in this course');
-  }
+  // Verify the module exists (no longer check courseId since modules are department-owned)
+  await ModulesService.getModule(moduleId);
 
   await ModulesService.deleteModule(moduleId);
   res.status(200).json(ApiResponse.success(null, 'Module deleted successfully'));

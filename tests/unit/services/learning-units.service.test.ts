@@ -36,7 +36,8 @@ describeIfMongo('LearningUnitsService - Unit Tests', () => {
    */
   const createTestModule = async (overrides: Partial<any> = {}) => {
     const defaultModule = {
-      courseId: new mongoose.Types.ObjectId(),
+      ownerDepartmentId: new mongoose.Types.ObjectId(),
+      isShared: false,
       title: 'Test Module',
       description: 'A test module',
       prerequisites: [],

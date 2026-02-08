@@ -39,6 +39,10 @@ import ContentAttempt from '../src/models/content/ContentAttempt.model';
 import LearningEvent from '../src/models/activity/LearningEvent.model';
 import ExamResult from '../src/models/activity/ExamResult.model';
 import ScormAttempt from '../src/models/activity/ScormAttempt.model';
+import CanonicalCourse from '../src/models/academic/CanonicalCourse.model';
+import CourseVersion from '../src/models/academic/CourseVersion.model';
+import CourseVersionModule from '../src/models/academic/CourseVersionModule.model';
+import Module from '../src/models/academic/Module.model';
 
 loadEnv();
 
@@ -568,6 +572,431 @@ async function ensureClassEnrollment(data: {
   });
 }
 
+/**
+ * CBT Question Data - 20 questions on Cognitive Behavioral Therapy
+ */
+const CBT_QUESTIONS = [
+  {
+    questionText: 'What is the core principle of Cognitive Behavioral Therapy (CBT)?',
+    correctAnswers: ['Thoughts, feelings, and behaviors are interconnected'],
+    distractors: ['Unconscious conflicts drive behavior', 'Only behavior change matters', 'Medication is the primary treatment'],
+    flashcardPrompt: 'What is the core principle of CBT?',
+    matchingPair: { term: 'CBT Core Principle', definition: 'Thoughts, feelings, and behaviors are interconnected' },
+    explanation: 'CBT is based on the cognitive model which proposes that the way we perceive situations influences how we feel and behave.',
+    difficulty: 'easy' as const
+  },
+  {
+    questionText: 'What is "cognitive restructuring" in CBT?',
+    correctAnswers: ['A technique to identify and challenge negative thought patterns'],
+    distractors: ['Rewiring brain neurons', 'Memory enhancement therapy', 'Restructuring the therapeutic relationship'],
+    flashcardPrompt: 'Define cognitive restructuring',
+    matchingPair: { term: 'Cognitive Restructuring', definition: 'Identifying and challenging negative thought patterns' },
+    explanation: 'Cognitive restructuring helps clients recognize distorted thinking and replace it with more balanced thoughts.',
+    difficulty: 'medium' as const
+  },
+  {
+    questionText: 'What is an "automatic thought" in CBT terminology?',
+    correctAnswers: ['A spontaneous thought that occurs in response to situations'],
+    distractors: ['A thought that happens during sleep', 'A consciously planned thought', 'A thought implanted by the therapist'],
+    flashcardPrompt: 'What are automatic thoughts?',
+    matchingPair: { term: 'Automatic Thought', definition: 'Spontaneous thoughts occurring in response to situations' },
+    explanation: 'Automatic thoughts are quick, evaluative thoughts that occur without deliberate effort.',
+    difficulty: 'easy' as const
+  },
+  {
+    questionText: 'Which cognitive distortion involves expecting the worst possible outcome?',
+    correctAnswers: ['Catastrophizing'],
+    distractors: ['Mind reading', 'Emotional reasoning', 'Personalization'],
+    flashcardPrompt: 'Name the distortion: expecting the worst outcome',
+    matchingPair: { term: 'Catastrophizing', definition: 'Expecting the worst possible outcome' },
+    explanation: 'Catastrophizing is when someone assumes the worst will happen and that they won\'t be able to cope.',
+    difficulty: 'medium' as const
+  },
+  {
+    questionText: 'What is "all-or-nothing thinking" (also called black-and-white thinking)?',
+    correctAnswers: ['Seeing things in extreme terms with no middle ground'],
+    distractors: ['Balanced perspective taking', 'Flexible thinking style', 'Systematic decision making'],
+    flashcardPrompt: 'Define all-or-nothing thinking',
+    matchingPair: { term: 'All-or-Nothing Thinking', definition: 'Seeing things in extreme terms with no middle ground' },
+    explanation: 'This cognitive distortion involves viewing situations in only two categories without recognizing gray areas.',
+    difficulty: 'easy' as const
+  },
+  {
+    questionText: 'What is the purpose of a "thought record" in CBT?',
+    correctAnswers: ['To track and analyze thoughts, emotions, and situations'],
+    distractors: ['To record therapy sessions', 'To document medication effects', 'To keep a journal of dreams'],
+    flashcardPrompt: 'Purpose of a thought record',
+    matchingPair: { term: 'Thought Record', definition: 'Tool for tracking and analyzing thoughts, emotions, and situations' },
+    explanation: 'Thought records help clients identify patterns between situations, thoughts, and emotional responses.',
+    difficulty: 'medium' as const
+  },
+  {
+    questionText: 'What cognitive distortion involves assuming you know what others are thinking?',
+    correctAnswers: ['Mind reading'],
+    distractors: ['Fortune telling', 'Labeling', 'Overgeneralization'],
+    flashcardPrompt: 'Distortion: assuming you know others\' thoughts',
+    matchingPair: { term: 'Mind Reading', definition: 'Assuming you know what others are thinking' },
+    explanation: 'Mind reading is concluding that someone is reacting negatively without any actual evidence.',
+    difficulty: 'medium' as const
+  },
+  {
+    questionText: 'What is "behavioral activation" used to treat?',
+    correctAnswers: ['Depression'],
+    distractors: ['Schizophrenia', 'Autism spectrum disorder', 'ADHD'],
+    flashcardPrompt: 'What does behavioral activation treat?',
+    matchingPair: { term: 'Behavioral Activation', definition: 'CBT technique primarily used to treat depression' },
+    explanation: 'Behavioral activation increases engagement in positively reinforcing activities to combat depression.',
+    difficulty: 'medium' as const
+  },
+  {
+    questionText: 'What does the "Socratic method" involve in CBT?',
+    correctAnswers: ['Guided questioning to help clients discover insights'],
+    distractors: ['Lecturing clients about their problems', 'Direct advice giving', 'Hypnotic suggestion'],
+    flashcardPrompt: 'Describe Socratic method in CBT',
+    matchingPair: { term: 'Socratic Method', definition: 'Guided questioning to help clients discover insights' },
+    explanation: 'The Socratic method uses questions to promote reflection and help clients examine their thoughts.',
+    difficulty: 'hard' as const
+  },
+  {
+    questionText: 'What is "exposure therapy" used for in CBT?',
+    correctAnswers: ['Anxiety disorders and phobias'],
+    distractors: ['Improving memory', 'Treating psychosis', 'Enhancing creativity'],
+    flashcardPrompt: 'What is exposure therapy used for?',
+    matchingPair: { term: 'Exposure Therapy', definition: 'Treatment for anxiety disorders and phobias' },
+    explanation: 'Exposure therapy gradually exposes clients to feared situations to reduce anxiety responses.',
+    difficulty: 'easy' as const
+  },
+  {
+    questionText: 'What is "emotional reasoning" as a cognitive distortion?',
+    correctAnswers: ['Believing something is true because it feels true'],
+    distractors: ['Using logic to understand emotions', 'Suppressing emotions', 'Expressing emotions freely'],
+    flashcardPrompt: 'Define emotional reasoning',
+    matchingPair: { term: 'Emotional Reasoning', definition: 'Believing something is true because it feels true' },
+    explanation: 'Emotional reasoning occurs when feelings are used as evidence for the truth of a thought.',
+    difficulty: 'medium' as const
+  },
+  {
+    questionText: 'What is a "core belief" in CBT?',
+    correctAnswers: ['A fundamental, deeply-held belief about self, others, or the world'],
+    distractors: ['A temporary belief', 'A religious conviction', 'A scientific theory'],
+    flashcardPrompt: 'What is a core belief?',
+    matchingPair: { term: 'Core Belief', definition: 'Fundamental, deeply-held belief about self, others, or the world' },
+    explanation: 'Core beliefs are underlying beliefs that influence how we interpret events and form automatic thoughts.',
+    difficulty: 'hard' as const
+  },
+  {
+    questionText: 'What is "homework" in the context of CBT?',
+    correctAnswers: ['Practice assignments between therapy sessions'],
+    distractors: ['Academic studying', 'Research on therapy techniques', 'Writing about childhood'],
+    flashcardPrompt: 'What is CBT homework?',
+    matchingPair: { term: 'CBT Homework', definition: 'Practice assignments between therapy sessions' },
+    explanation: 'Homework extends learning outside sessions and is crucial for therapeutic progress.',
+    difficulty: 'easy' as const
+  },
+  {
+    questionText: 'What cognitive distortion involves using feelings to determine facts?',
+    correctAnswers: ['Emotional reasoning'],
+    distractors: ['Magnification', 'Discounting the positive', 'Should statements'],
+    flashcardPrompt: 'Distortion: using feelings to determine facts',
+    matchingPair: { term: 'Emotional Reasoning', definition: 'Using emotional state to determine facts' },
+    explanation: 'This distortion assumes that negative emotions necessarily reflect reality.',
+    difficulty: 'medium' as const
+  },
+  {
+    questionText: 'What is the typical duration of short-term CBT treatment?',
+    correctAnswers: ['8-20 sessions'],
+    distractors: ['1-2 sessions', '50-100 sessions', 'Indefinite treatment'],
+    flashcardPrompt: 'Typical CBT treatment duration',
+    matchingPair: { term: 'CBT Duration', definition: 'Typically 8-20 sessions for short-term treatment' },
+    explanation: 'CBT is a time-limited, structured approach usually completed in 8-20 sessions.',
+    difficulty: 'easy' as const
+  },
+  {
+    questionText: 'What is "overgeneralization" in cognitive distortions?',
+    correctAnswers: ['Drawing broad conclusions from a single event'],
+    distractors: ['Being too specific', 'Ignoring details', 'Focusing on positives only'],
+    flashcardPrompt: 'Define overgeneralization',
+    matchingPair: { term: 'Overgeneralization', definition: 'Drawing broad conclusions from a single event' },
+    explanation: 'This involves viewing a single negative event as a never-ending pattern of defeat.',
+    difficulty: 'medium' as const
+  },
+  {
+    questionText: 'Who is considered the founder of Cognitive Therapy?',
+    correctAnswers: ['Aaron Beck'],
+    distractors: ['Sigmund Freud', 'Carl Rogers', 'B.F. Skinner'],
+    flashcardPrompt: 'Founder of Cognitive Therapy',
+    matchingPair: { term: 'Aaron Beck', definition: 'Founder of Cognitive Therapy' },
+    explanation: 'Aaron Beck developed cognitive therapy in the 1960s based on his work with depression.',
+    difficulty: 'easy' as const
+  },
+  {
+    questionText: 'What is a "behavioral experiment" in CBT?',
+    correctAnswers: ['Testing beliefs through planned activities to gather evidence'],
+    distractors: ['Lab research on behavior', 'Animal experiments', 'Drug trials'],
+    flashcardPrompt: 'Define behavioral experiment in CBT',
+    matchingPair: { term: 'Behavioral Experiment', definition: 'Testing beliefs through planned activities' },
+    explanation: 'Behavioral experiments test the validity of thoughts by collecting real-world evidence.',
+    difficulty: 'hard' as const
+  },
+  {
+    questionText: 'What does "ABC model" stand for in CBT?',
+    correctAnswers: ['Activating event, Beliefs, Consequences'],
+    distractors: ['Actions, Behaviors, Cognitions', 'Affect, Behavior, Change', 'Assessment, Blueprint, Conclusion'],
+    flashcardPrompt: 'What does ABC model stand for?',
+    matchingPair: { term: 'ABC Model', definition: 'Activating event, Beliefs, Consequences' },
+    explanation: 'The ABC model shows how beliefs about events determine emotional and behavioral consequences.',
+    difficulty: 'hard' as const
+  },
+  {
+    questionText: 'What is "personalization" as a cognitive distortion?',
+    correctAnswers: ['Taking excessive responsibility for external events'],
+    distractors: ['Customizing therapy', 'Being impersonal', 'Having a strong personality'],
+    flashcardPrompt: 'Define personalization distortion',
+    matchingPair: { term: 'Personalization', definition: 'Taking excessive responsibility for external events' },
+    explanation: 'Personalization involves blaming yourself for things that are not entirely your fault.',
+    difficulty: 'medium' as const
+  }
+];
+
+/**
+ * CBT Versioned Course Data - 5 courses with modules
+ */
+const CBT_COURSES = [
+  {
+    code: 'CBT-INTRO',
+    title: 'Introduction to CBT',
+    description: 'A comprehensive introduction to Cognitive Behavioral Therapy principles and techniques.',
+    credits: 3,
+    duration: 480,
+    modules: [
+      { title: 'Understanding the Cognitive Model', objectives: ['Explain the CBT cognitive model', 'Identify automatic thoughts'] },
+      { title: 'Cognitive Distortions', objectives: ['List common cognitive distortions', 'Recognize distortions in examples'] }
+    ]
+  },
+  {
+    code: 'CBT-TECH',
+    title: 'CBT Techniques and Interventions',
+    description: 'Hands-on training in core CBT intervention techniques.',
+    credits: 4,
+    duration: 600,
+    modules: [
+      { title: 'Cognitive Restructuring Techniques', objectives: ['Apply cognitive restructuring', 'Use thought records effectively'] },
+      { title: 'Behavioral Interventions', objectives: ['Implement behavioral experiments', 'Design exposure hierarchies'] }
+    ]
+  },
+  {
+    code: 'CBT-DEPR',
+    title: 'CBT for Depression',
+    description: 'Specialized training in applying CBT to treat depressive disorders.',
+    credits: 3,
+    duration: 540,
+    modules: [
+      { title: 'Understanding Depression in CBT', objectives: ['Identify depression symptoms', 'Understand the CBT model of depression'] },
+      { title: 'Behavioral Activation', objectives: ['Implement behavioral activation', 'Track mood and activity relationships'] }
+    ]
+  },
+  {
+    code: 'CBT-ANX',
+    title: 'CBT for Anxiety Disorders',
+    description: 'Training in CBT approaches to anxiety and related disorders.',
+    credits: 4,
+    duration: 600,
+    modules: [
+      { title: 'Anxiety and the Fight-or-Flight Response', objectives: ['Explain anxiety physiology', 'Identify anxiety maintenance cycles'] },
+      { title: 'Exposure Therapy Fundamentals', objectives: ['Design exposure hierarchies', 'Conduct exposure sessions safely'] }
+    ]
+  },
+  {
+    code: 'CBT-ADV',
+    title: 'Advanced CBT Practice',
+    description: 'Advanced topics in CBT including working with complex cases and treatment resistance.',
+    credits: 5,
+    duration: 720,
+    modules: [
+      { title: 'Core Beliefs and Schemas', objectives: ['Identify core beliefs', 'Work with schema-level cognitions'] },
+      { title: 'Complex Cases and Integration', objectives: ['Apply CBT to complex presentations', 'Integrate CBT with other approaches'] }
+    ]
+  }
+];
+
+/**
+ * Seeds CBT question bank and versioned courses
+ */
+async function seedCBTContent(departmentId: mongoose.Types.ObjectId, creatorId: mongoose.Types.ObjectId) {
+  console.log('Creating CBT question bank and questions...');
+
+  // Create or get CBT question bank
+  let cbtBank = await QuestionBank.findOne({ name: 'CBT Assessment Bank' });
+  if (!cbtBank) {
+    cbtBank = await QuestionBank.create({
+      name: 'CBT Assessment Bank',
+      description: 'Comprehensive question bank for Cognitive Behavioral Therapy assessments',
+      departmentId,
+      tags: ['cbt', 'cognitive-therapy', 'assessment', 'psychology'],
+      questionIds: [],
+      isActive: true
+    });
+  }
+
+  // Create 20 CBT questions if they don't exist
+  const existingQuestions = await Question.countDocuments({
+    questionBankIds: cbtBank._id.toString()
+  });
+
+  if (existingQuestions < 20) {
+    console.log('Creating 20 CBT questions with flashcard and matching data...');
+    const createdQuestionIds: mongoose.Types.ObjectId[] = [];
+
+    for (let i = 0; i < CBT_QUESTIONS.length; i++) {
+      const q = CBT_QUESTIONS[i];
+
+      const question = await Question.create({
+        questionText: q.questionText,
+        questionTypes: ['multiple_choice', 'flashcard', 'matching'],
+        departmentId,
+        points: 10,
+        correctAnswers: q.correctAnswers,
+        distractors: q.distractors,
+        difficulty: q.difficulty,
+        tags: ['cbt', 'cognitive-therapy', `difficulty-${q.difficulty}`],
+        questionBankIds: [cbtBank._id.toString()],
+        explanation: q.explanation,
+        // Flashcard data
+        flashcardData: {
+          prompts: [
+            { text: q.flashcardPrompt }
+          ]
+        },
+        // Matching data
+        matchingPairs: {
+          [q.matchingPair.term]: q.matchingPair.definition
+        },
+        matchingData: {
+          pairExplanation: q.explanation
+        },
+        isActive: true
+      });
+
+      createdQuestionIds.push(question._id);
+    }
+
+    // Update bank with question IDs
+    cbtBank.questionIds = createdQuestionIds;
+    await cbtBank.save();
+    console.log(`Created ${createdQuestionIds.length} CBT questions`);
+  } else {
+    console.log('CBT questions already exist, skipping...');
+  }
+
+  // Create 5 versioned courses
+  console.log('Creating 5 CBT versioned courses...');
+
+  for (const courseData of CBT_COURSES) {
+    // Check if canonical course exists
+    let canonical = await CanonicalCourse.findOne({
+      code: courseData.code,
+      departmentId
+    });
+
+    if (!canonical) {
+      // Create canonical course
+      canonical = await CanonicalCourse.create({
+        code: courseData.code,
+        departmentId,
+        programId: null,
+        currentPublishedVersionId: null,
+        latestDraftVersionId: null,
+        totalVersions: 0,
+        createdBy: creatorId
+      });
+
+      // Create version 1
+      const version = await CourseVersion.create({
+        canonicalCourseId: canonical._id,
+        version: 1,
+        title: courseData.title,
+        description: courseData.description,
+        credits: courseData.credits,
+        duration: courseData.duration,
+        settings: {
+          allowSelfEnrollment: true,
+          passingScore: 70,
+          maxAttempts: 3,
+          certificateEnabled: true,
+          enforcePrerequisites: true,
+          showProgressBar: true,
+          allowModuleSkipping: false
+        },
+        instructorIds: [creatorId],
+        status: 'published',
+        isLocked: false,
+        isLatest: true,
+        parentVersionId: null,
+        createdBy: creatorId,
+        publishedAt: new Date(),
+        publishedBy: creatorId,
+        changeNotes: 'Initial published version'
+      });
+
+      // Update canonical with version references
+      canonical.currentPublishedVersionId = version._id;
+      canonical.latestDraftVersionId = version._id;
+      canonical.totalVersions = 1;
+      await canonical.save();
+
+      // Create modules for this course
+      for (let i = 0; i < courseData.modules.length; i++) {
+        const moduleData = courseData.modules[i];
+
+        const module = await Module.create({
+          ownerDepartmentId: departmentId,
+          isShared: false,
+          title: moduleData.title,
+          description: `${moduleData.title} for ${courseData.title}`,
+          prerequisites: [],
+          completionCriteria: {
+            type: 'percentage',
+            percentageRequired: 80
+          },
+          presentationRules: {
+            presentationMode: 'random',
+            repetitionMode: 'until_passed',
+            masteryThreshold: 80,
+            maxRepetitions: 3,
+            repeatOn: {
+              failedAttempt: true,
+              belowMastery: true,
+              learnerRequest: true
+            },
+            repeatableCategories: [],
+            showAllAvailable: true,
+            allowSkip: false
+          },
+          isPublished: true,
+          estimatedDuration: 60,
+          objectives: moduleData.objectives,
+          order: i,
+          createdBy: creatorId
+        });
+
+        // Link module to course version
+        await CourseVersionModule.create({
+          courseVersionId: version._id,
+          moduleId: module._id,
+          order: i,
+          isRequired: true,
+          availableFrom: null,
+          availableUntil: null
+        });
+      }
+
+      console.log(`Created course: ${courseData.code} (${courseData.title}) with ${courseData.modules.length} modules - PUBLISHED`);
+    } else {
+      console.log(`Course ${courseData.code} already exists, skipping...`);
+    }
+  }
+}
+
 async function main() {
   console.log('Mock Data Seed Script (Current LMS V2 Schema)');
   console.log('');
@@ -729,7 +1158,7 @@ async function main() {
       ]
     });
 
-    const billingStaff = await ensureStaffRecord({
+    await ensureStaffRecord({
       userId: billingUser._id,
       person: buildPerson('Taylor', 'Billing', billingUser.email),
       title: 'Billing Specialist',
@@ -1237,6 +1666,12 @@ async function main() {
 
       bank.questionIds = createdQuestions;
       await bank.save();
+    }
+
+    // Seed CBT content in Cognitive Therapy department
+    const adminUser = await User.findOne({ email: ADMIN_EMAIL });
+    if (adminUser) {
+      await seedCBTContent(cognitive._id, adminUser._id);
     }
 
     console.log('Creating enrollments...');

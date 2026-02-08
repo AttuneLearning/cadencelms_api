@@ -4,6 +4,8 @@ import { authorize } from '@/middlewares/authorize';
 import { requireEscalation } from '@/middlewares/requireEscalation';
 import { requireAdminRole } from '@/middlewares/requireAdminRole';
 import * as departmentsController from '@/controllers/departments/departments.controller';
+import * as accessPolicyController from '@/controllers/policy/accessPolicy.controller';
+import * as accessPolicyValidator from '@/validators/accessPolicy.validator';
 
 const router = Router();
 
@@ -107,6 +109,31 @@ router.delete('/:id',
   requireAdminRole(['system-admin']),
   authorize('system:department-settings:manage'),
   departmentsController.deleteDepartment
+);
+
+// ============================================================================
+// Department Access Policy Routes
+// ============================================================================
+
+/**
+ * GET /api/v2/departments/:departmentId/access-policy
+ * Get department access policy
+ * Access Right: policy:department:read
+ */
+router.get('/:departmentId/access-policy',
+  authorize('settings:department:read'),
+  accessPolicyController.getDepartmentAccessPolicy
+);
+
+/**
+ * PUT /api/v2/departments/:departmentId/access-policy
+ * Create or update department access policy
+ * Access Right: policy:department:manage
+ */
+router.put('/:departmentId/access-policy',
+  authorize('settings:department:manage'),
+  accessPolicyValidator.validateDepartmentAccessPolicy,
+  accessPolicyController.updateDepartmentAccessPolicy
 );
 
 export default router;

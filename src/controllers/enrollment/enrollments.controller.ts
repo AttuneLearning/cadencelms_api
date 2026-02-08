@@ -436,3 +436,80 @@ export const listClassEnrollments = asyncHandler(async (req: Request, res: Respo
   const result = await EnrollmentsService.listClassEnrollments(classId, filters, userId);
   res.status(200).json(ApiResponse.success(result));
 });
+
+/**
+ * POST /api/v2/enrollments/course/bulk
+ * Bulk enroll learners in a course
+ */
+export const bulkEnrollCourse = asyncHandler(async (req: Request, res: Response) => {
+  const userId = (req as any).user.userId;
+
+  const { courseId, learnerIds, options } = req.body;
+
+  // Validate courseId
+  if (!courseId || typeof courseId !== 'string') {
+    throw ApiError.badRequest('courseId is required');
+  }
+  if (!mongoose.Types.ObjectId.isValid(courseId)) {
+    throw ApiError.badRequest('Invalid course ID');
+  }
+
+  // Validate learnerIds
+  if (!learnerIds || !Array.isArray(learnerIds)) {
+    throw ApiError.badRequest('learnerIds must be an array');
+  }
+  if (learnerIds.length === 0) {
+    throw ApiError.badRequest('learnerIds cannot be empty');
+  }
+  if (learnerIds.length > 500) {
+    throw ApiError.badRequest('Cannot enroll more than 500 learners at once');
+  }
+
+  // Validate each learnerId
+  for (const learnerId of learnerIds) {
+    if (typeof learnerId !== 'string' || !mongoose.Types.ObjectId.isValid(learnerId)) {
+      throw ApiError.badRequest(`Invalid learner ID: ${learnerId}`);
+    }
+  }
+
+  // Validate options if provided
+  const enrollmentOptions: {
+    startDate?: Date;
+    expiresAt?: Date;
+    sendNotification?: boolean;
+  } = {};
+
+  if (options) {
+    if (options.startDate) {
+      const date = new Date(options.startDate);
+      if (isNaN(date.getTime())) {
+        throw ApiError.badRequest('Invalid startDate');
+      }
+      enrollmentOptions.startDate = date;
+    }
+
+    if (options.expiresAt) {
+      const date = new Date(options.expiresAt);
+      if (isNaN(date.getTime())) {
+        throw ApiError.badRequest('Invalid expiresAt');
+      }
+      enrollmentOptions.expiresAt = date;
+    }
+
+    if (options.sendNotification !== undefined) {
+      if (typeof options.sendNotification !== 'boolean') {
+        throw ApiError.badRequest('sendNotification must be a boolean');
+      }
+      enrollmentOptions.sendNotification = options.sendNotification;
+    }
+  }
+
+  const result = await EnrollmentsService.bulkEnrollCourse(
+    courseId,
+    learnerIds,
+    enrollmentOptions,
+    userId
+  );
+
+  res.status(200).json(ApiResponse.success(result, 'Bulk enrollment completed'));
+});

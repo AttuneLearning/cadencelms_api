@@ -114,8 +114,7 @@ const MatchingSessionSchema = new Schema<IMatchingSession>(
     },
     expiresAt: {
       type: Date,
-      required: true,
-      index: true
+      required: true
     },
     completedAt: {
       type: Date

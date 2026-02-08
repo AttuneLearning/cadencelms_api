@@ -16,6 +16,10 @@ Recurring solutions, conventions, and best practices in the CadenceLMS API.
 - [[integration-test-setup]] - Standard integration test structure
 - [[describe-if-mongo]] - Conditional MongoDB test helper
 
+## Process Patterns
+
+- [[team-configuration]] - Inter-team workflow and skills
+
 ## Service Patterns
 
 (Add as discovered)

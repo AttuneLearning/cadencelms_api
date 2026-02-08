@@ -3,6 +3,8 @@ import { isAuthenticated } from '@/middlewares/isAuthenticated';
 import { authorize } from '@/middlewares/authorize';
 import { requireEscalation } from '@/middlewares/requireEscalation';
 import * as programsController from '@/controllers/academic/programs.controller';
+import * as accessPolicyController from '@/controllers/policy/accessPolicy.controller';
+import * as accessPolicyValidator from '@/validators/accessPolicy.validator';
 
 const router = Router();
 
@@ -129,6 +131,51 @@ router.patch('/:id/department',
 router.put('/:id/certificate',
   authorize('content:programs:manage'),
   programsController.updateCertificateConfig
+);
+
+// ============================================================================
+// Program Access Override Routes
+// ============================================================================
+
+/**
+ * GET /api/v2/programs/:programId/access-override
+ * Get program access override
+ * Access Right: policy:program:read
+ */
+router.get('/:programId/access-override',
+  authorize('settings:program:read'),
+  accessPolicyController.getProgramAccessOverride
+);
+
+/**
+ * PUT /api/v2/programs/:programId/access-override
+ * Create or update program access override
+ * Access Right: policy:program:manage
+ */
+router.put('/:programId/access-override',
+  authorize('settings:program:manage'),
+  accessPolicyValidator.validateProgramAccessOverride,
+  accessPolicyController.updateProgramAccessOverride
+);
+
+/**
+ * DELETE /api/v2/programs/:programId/access-override
+ * Delete program access override (revert to department defaults)
+ * Access Right: policy:program:manage
+ */
+router.delete('/:programId/access-override',
+  authorize('settings:program:manage'),
+  accessPolicyController.deleteProgramAccessOverride
+);
+
+/**
+ * GET /api/v2/programs/:programId/effective-policy
+ * Get effective policy for a program (merged department + program overrides)
+ * Access Right: policy:program:read
+ */
+router.get('/:programId/effective-policy',
+  authorize('settings:program:read'),
+  accessPolicyController.getEffectivePolicy
 );
 
 export default router;

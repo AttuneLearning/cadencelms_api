@@ -1,6 +1,6 @@
 # UI-ISS-072: Missing Create Matching Game Page
 
-## Status: IN PROGRESS
+## Status: REVIEW
 ## Priority: High
 ## Created: 2026-01-22
 ## Updated: 2026-01-28
@@ -156,20 +156,48 @@ src/features/matching-player/
 - Question model types updated in UI (commit d4abfb0)
 - Ready for Phase 2: Build MatchingExercise component
 
+### 2026-02-06: UI Implementation Complete
+
+**Implementation Summary:**
+
+Created `src/features/matching-builder/` with FSD structure:
+- `api/matchingBuilderApi.ts` - API client for module-level matching exercise CRUD
+- `model/useMatchingBuilder.ts` - React Query hooks with optimistic reorder updates
+- `ui/MatchingPairList.tsx` - Sortable drag-drop list using @dnd-kit
+- `ui/MatchingPairEditor.tsx` - Modal editor with hints support
+- `ui/MatchingBulkImport.tsx` - CSV import with preview and validation
+- `index.ts` - Feature exports
+
+Created page and route:
+- `src/pages/staff/courses/MatchingGamePage.tsx` - Full page component with create/edit modes
+- Route: `/staff/courses/:courseId/modules/:moduleId/matching`
+
+**Features:**
+- Drag-drop reordering with optimistic updates
+- Hints support for left-side items
+- Explanations for right-side items
+- CSV bulk import
+- Advanced settings (time limit, attempts, points, shuffle)
+- Create and edit modes
+
+**Tests:** 7 passing (MatchingPairList component)
+
+**Type Check:** No new errors introduced (pre-existing errors in codebase)
+
 ---
 
 ## Completion
 
-**Completed Date:**
+**Completed Date:** 2026-02-06
 **Commits:**
 | Hash | Description |
 |------|-------------|
-| | |
+| (pending) | feat(matching-builder): add matching game page and builder components |
 
 **Verification:**
-- [ ] All acceptance criteria met
-- [ ] Tests passing
-- [ ] Response message sent (if cross-team)
+- [x] All acceptance criteria met (UI components implemented)
+- [x] Tests passing (7 MatchingPairList tests)
+- [ ] Response message sent (if cross-team) - N/A, no cross-team impact
 
 ---
 

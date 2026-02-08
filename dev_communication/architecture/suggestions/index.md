@@ -15,7 +15,7 @@ This directory collects potential architecture decisions identified during devel
 
 | Date | Team | Topic | Suggested By | Status |
 |------|------|-------|--------------|--------|
-| | | | | |
+| 2026-02-05 | UI | [Navigation Architecture Redesign](2026-02-05_ui_navigation-architecture-redesign.md) | Claude | Pending |
 
 ---
 

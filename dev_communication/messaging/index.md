@@ -45,10 +45,14 @@ Examples:
 ## Pending Messages
 
 ### API → UI (Unread by UI)
-*List files in `api-to-ui/` here or check folder directly*
+
+- `2026-02-05_bulk-course-enrollment-response.md` - Endpoint ready for integration (High)
+- `2026-02-05_permission-string-alignment-response.md` - Permissions clarified and added (Medium)
+- `2026-02-05_department-scoped-question-banks-response.md` - All endpoints ready (High)
 
 ### UI → API (Unread by API)
-*List files in `ui-to-api/` here or check folder directly*
+
+*No pending messages*
 
 ## Processing Messages
 

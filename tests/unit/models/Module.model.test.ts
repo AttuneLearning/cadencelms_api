@@ -49,7 +49,8 @@ describeIfMongo('Module Model', () => {
   describe('Schema Validation - Required Fields', () => {
     it('should create a valid module with required fields', async () => {
       const module = await Module.create({
-        courseId: testCourse._id,
+        ownerDepartmentId: testDepartment._id,
+        isShared: false,
         title: 'Introduction Module',
         completionCriteria: {
           type: 'all_required'
@@ -72,13 +73,13 @@ describeIfMongo('Module Model', () => {
         createdBy: testUserId
       });
 
-      expect(module.courseId).toEqual(testCourse._id);
+      expect(module.ownerDepartmentId).toEqual(testDepartment._id);
       expect(module.title).toBe('Introduction Module');
       expect(module.isPublished).toBe(false);
       expect(module.order).toBe(1);
     });
 
-    it('should require courseId field', async () => {
+    it('should require ownerDepartmentId field', async () => {
       const module = new Module({
         title: 'Introduction Module',
         completionCriteria: { type: 'all_required' },
@@ -96,12 +97,12 @@ describeIfMongo('Module Model', () => {
         createdBy: testUserId
       });
 
-      await expect(module.save()).rejects.toThrow(/courseId/);
+      await expect(module.save()).rejects.toThrow(/ownerDepartmentId/);
     });
 
     it('should require title field', async () => {
       const module = new Module({
-        courseId: testCourse._id,
+        ownerDepartmentId: testDepartment._id,
         completionCriteria: { type: 'all_required' },
         presentationRules: {
           presentationMode: 'learner_choice',
@@ -143,7 +144,8 @@ describeIfMongo('Module Model', () => {
 
     it('should trim whitespace from title', async () => {
       const module = await Module.create({
-        courseId: testCourse._id,
+        ownerDepartmentId: testDepartment._id,
+        isShared: false,
         title: '  Introduction Module  ',
         completionCriteria: { type: 'all_required' },
         presentationRules: {
@@ -211,7 +213,8 @@ describeIfMongo('Module Model', () => {
 
     it('should accept all_required completion type', async () => {
       const module = await Module.create({
-        courseId: testCourse._id,
+        ownerDepartmentId: testDepartment._id,
+        isShared: false,
         title: 'Test Module',
         completionCriteria: { type: 'all_required' },
         presentationRules: {
@@ -233,7 +236,8 @@ describeIfMongo('Module Model', () => {
 
     it('should accept percentage completion type with percentageRequired', async () => {
       const module = await Module.create({
-        courseId: testCourse._id,
+        ownerDepartmentId: testDepartment._id,
+        isShared: false,
         title: 'Test Module',
         completionCriteria: {
           type: 'percentage',
@@ -285,7 +289,8 @@ describeIfMongo('Module Model', () => {
     it('should accept gate_learning_unit completion type with gateLearningUnitId', async () => {
       const gateLearningUnitId = new mongoose.Types.ObjectId();
       const module = await Module.create({
-        courseId: testCourse._id,
+        ownerDepartmentId: testDepartment._id,
+        isShared: false,
         title: 'Test Module',
         completionCriteria: {
           type: 'gate_learning_unit',
@@ -313,7 +318,8 @@ describeIfMongo('Module Model', () => {
 
     it('should accept points completion type with pointsRequired', async () => {
       const module = await Module.create({
-        courseId: testCourse._id,
+        ownerDepartmentId: testDepartment._id,
+        isShared: false,
         title: 'Test Module',
         completionCriteria: {
           type: 'points',
@@ -363,7 +369,8 @@ describeIfMongo('Module Model', () => {
 
     it('should accept requireAllExpositions flag', async () => {
       const module = await Module.create({
-        courseId: testCourse._id,
+        ownerDepartmentId: testDepartment._id,
+        isShared: false,
         title: 'Test Module',
         completionCriteria: {
           type: 'percentage',
@@ -417,7 +424,8 @@ describeIfMongo('Module Model', () => {
       ];
 
       const module = await Module.create({
-        courseId: testCourse._id,
+        ownerDepartmentId: testDepartment._id,
+        isShared: false,
         title: 'Test Module',
         completionCriteria: { type: 'all_required' },
         presentationRules: {
@@ -441,7 +449,8 @@ describeIfMongo('Module Model', () => {
 
     it('should accept learner_choice presentation mode', async () => {
       const module = await Module.create({
-        courseId: testCourse._id,
+        ownerDepartmentId: testDepartment._id,
+        isShared: false,
         title: 'Test Module',
         completionCriteria: { type: 'all_required' },
         presentationRules: {
@@ -463,7 +472,8 @@ describeIfMongo('Module Model', () => {
 
     it('should accept random presentation mode', async () => {
       const module = await Module.create({
-        courseId: testCourse._id,
+        ownerDepartmentId: testDepartment._id,
+        isShared: false,
         title: 'Test Module',
         completionCriteria: { type: 'all_required' },
         presentationRules: {
@@ -506,7 +516,8 @@ describeIfMongo('Module Model', () => {
 
     it('should accept until_mastery repetition mode with masteryThreshold', async () => {
       const module = await Module.create({
-        courseId: testCourse._id,
+        ownerDepartmentId: testDepartment._id,
+        isShared: false,
         title: 'Test Module',
         completionCriteria: { type: 'all_required' },
         presentationRules: {
@@ -553,7 +564,8 @@ describeIfMongo('Module Model', () => {
 
     it('should accept maxRepetitions as number', async () => {
       const module = await Module.create({
-        courseId: testCourse._id,
+        ownerDepartmentId: testDepartment._id,
+        isShared: false,
         title: 'Test Module',
         completionCriteria: { type: 'all_required' },
         presentationRules: {
@@ -576,7 +588,8 @@ describeIfMongo('Module Model', () => {
 
     it('should accept maxRepetitions as null for unlimited', async () => {
       const module = await Module.create({
-        courseId: testCourse._id,
+        ownerDepartmentId: testDepartment._id,
+        isShared: false,
         title: 'Test Module',
         completionCriteria: { type: 'all_required' },
         presentationRules: {
@@ -599,7 +612,8 @@ describeIfMongo('Module Model', () => {
 
     it('should accept cooldownBetweenRepetitions', async () => {
       const module = await Module.create({
-        courseId: testCourse._id,
+        ownerDepartmentId: testDepartment._id,
+        isShared: false,
         title: 'Test Module',
         completionCriteria: { type: 'all_required' },
         presentationRules: {
@@ -643,7 +657,8 @@ describeIfMongo('Module Model', () => {
 
     it('should accept valid repeatableCategories', async () => {
       const module = await Module.create({
-        courseId: testCourse._id,
+        ownerDepartmentId: testDepartment._id,
+        isShared: false,
         title: 'Test Module',
         completionCriteria: { type: 'all_required' },
         presentationRules: {
@@ -693,7 +708,8 @@ describeIfMongo('Module Model', () => {
   describe('Prerequisites Array', () => {
     it('should accept empty prerequisites array', async () => {
       const module = await Module.create({
-        courseId: testCourse._id,
+        ownerDepartmentId: testDepartment._id,
+        isShared: false,
         title: 'Test Module',
         prerequisites: [],
         completionCriteria: { type: 'all_required' },
@@ -716,7 +732,8 @@ describeIfMongo('Module Model', () => {
 
     it('should store module prerequisites', async () => {
       const prereqModule = await Module.create({
-        courseId: testCourse._id,
+        ownerDepartmentId: testDepartment._id,
+        isShared: false,
         title: 'Prerequisite Module',
         completionCriteria: { type: 'all_required' },
         presentationRules: {
@@ -734,7 +751,8 @@ describeIfMongo('Module Model', () => {
       });
 
       const module = await Module.create({
-        courseId: testCourse._id,
+        ownerDepartmentId: testDepartment._id,
+        isShared: false,
         title: 'Test Module',
         prerequisites: [prereqModule._id],
         completionCriteria: { type: 'all_required' },
@@ -758,7 +776,8 @@ describeIfMongo('Module Model', () => {
 
     it('should default prerequisites to empty array', async () => {
       const module = await Module.create({
-        courseId: testCourse._id,
+        ownerDepartmentId: testDepartment._id,
+        isShared: false,
         title: 'Test Module',
         completionCriteria: { type: 'all_required' },
         presentationRules: {
@@ -782,7 +801,8 @@ describeIfMongo('Module Model', () => {
   describe('Optional Fields', () => {
     it('should store description', async () => {
       const module = await Module.create({
-        courseId: testCourse._id,
+        ownerDepartmentId: testDepartment._id,
+        isShared: false,
         title: 'Test Module',
         description: 'This is a test module',
         completionCriteria: { type: 'all_required' },
@@ -806,7 +826,8 @@ describeIfMongo('Module Model', () => {
     it('should store availableFrom date', async () => {
       const now = new Date();
       const module = await Module.create({
-        courseId: testCourse._id,
+        ownerDepartmentId: testDepartment._id,
+        isShared: false,
         title: 'Test Module',
         availableFrom: now,
         completionCriteria: { type: 'all_required' },
@@ -830,7 +851,8 @@ describeIfMongo('Module Model', () => {
     it('should store availableUntil date', async () => {
       const future = new Date(Date.now() + 86400000);
       const module = await Module.create({
-        courseId: testCourse._id,
+        ownerDepartmentId: testDepartment._id,
+        isShared: false,
         title: 'Test Module',
         availableUntil: future,
         completionCriteria: { type: 'all_required' },
@@ -853,7 +875,8 @@ describeIfMongo('Module Model', () => {
 
     it('should store objectives array', async () => {
       const module = await Module.create({
-        courseId: testCourse._id,
+        ownerDepartmentId: testDepartment._id,
+        isShared: false,
         title: 'Test Module',
         objectives: ['Learn basics', 'Practice concepts', 'Master skills'],
         completionCriteria: { type: 'all_required' },
@@ -879,7 +902,8 @@ describeIfMongo('Module Model', () => {
   describe('Default Values', () => {
     it('should default isPublished to false', async () => {
       const module = await Module.create({
-        courseId: testCourse._id,
+        ownerDepartmentId: testDepartment._id,
+        isShared: false,
         title: 'Test Module',
         completionCriteria: { type: 'all_required' },
         presentationRules: {
@@ -900,7 +924,8 @@ describeIfMongo('Module Model', () => {
 
     it('should default estimatedDuration to 0', async () => {
       const module = await Module.create({
-        courseId: testCourse._id,
+        ownerDepartmentId: testDepartment._id,
+        isShared: false,
         title: 'Test Module',
         completionCriteria: { type: 'all_required' },
         presentationRules: {
@@ -921,7 +946,8 @@ describeIfMongo('Module Model', () => {
 
     it('should default order to 0', async () => {
       const module = await Module.create({
-        courseId: testCourse._id,
+        ownerDepartmentId: testDepartment._id,
+        isShared: false,
         title: 'Test Module',
         completionCriteria: { type: 'all_required' },
         presentationRules: {
@@ -942,7 +968,8 @@ describeIfMongo('Module Model', () => {
 
     it('should auto-generate timestamps', async () => {
       const module = await Module.create({
-        courseId: testCourse._id,
+        ownerDepartmentId: testDepartment._id,
+        isShared: false,
         title: 'Test Module',
         completionCriteria: { type: 'all_required' },
         presentationRules: {
@@ -965,9 +992,10 @@ describeIfMongo('Module Model', () => {
   });
 
   describe('Indexes', () => {
-    it('should find modules by courseId', async () => {
+    it('should find modules by ownerDepartmentId', async () => {
       await Module.create({
-        courseId: testCourse._id,
+        ownerDepartmentId: testDepartment._id,
+        isShared: false,
         title: 'Module 1',
         completionCriteria: { type: 'all_required' },
         presentationRules: {
@@ -984,14 +1012,15 @@ describeIfMongo('Module Model', () => {
         createdBy: testUserId
       });
 
-      const modules = await Module.find({ courseId: testCourse._id });
+      const modules = await Module.find({ ownerDepartmentId: testDepartment._id });
       expect(modules).toHaveLength(1);
       expect(modules[0].title).toBe('Module 1');
     });
 
     it('should find published modules', async () => {
       await Module.create({
-        courseId: testCourse._id,
+        ownerDepartmentId: testDepartment._id,
+        isShared: false,
         title: 'Published Module',
         completionCriteria: { type: 'all_required' },
         presentationRules: {
@@ -1009,7 +1038,8 @@ describeIfMongo('Module Model', () => {
       });
 
       await Module.create({
-        courseId: testCourse._id,
+        ownerDepartmentId: testDepartment._id,
+        isShared: false,
         title: 'Draft Module',
         completionCriteria: { type: 'all_required' },
         presentationRules: {
@@ -1031,9 +1061,10 @@ describeIfMongo('Module Model', () => {
       expect(published[0].title).toBe('Published Module');
     });
 
-    it('should sort modules by order within course', async () => {
+    it('should sort modules by order within department', async () => {
       await Module.create({
-        courseId: testCourse._id,
+        ownerDepartmentId: testDepartment._id,
+        isShared: false,
         title: 'Module 2',
         completionCriteria: { type: 'all_required' },
         presentationRules: {
@@ -1051,7 +1082,8 @@ describeIfMongo('Module Model', () => {
       });
 
       await Module.create({
-        courseId: testCourse._id,
+        ownerDepartmentId: testDepartment._id,
+        isShared: false,
         title: 'Module 1',
         completionCriteria: { type: 'all_required' },
         presentationRules: {
@@ -1068,7 +1100,7 @@ describeIfMongo('Module Model', () => {
         createdBy: testUserId
       });
 
-      const modules = await Module.find({ courseId: testCourse._id }).sort({ order: 1 });
+      const modules = await Module.find({ ownerDepartmentId: testDepartment._id }).sort({ order: 1 });
       expect(modules).toHaveLength(2);
       expect(modules[0].title).toBe('Module 1');
       expect(modules[1].title).toBe('Module 2');

@@ -106,8 +106,7 @@ const knowledgeNodeSchema = new Schema<IKnowledgeNode>(
     prerequisiteNodeIds: {
       type: [Schema.Types.ObjectId],
       ref: 'KnowledgeNode',
-      default: [],
-      index: true
+      default: []
     },
     relatedNodeIds: {
       type: [Schema.Types.ObjectId],

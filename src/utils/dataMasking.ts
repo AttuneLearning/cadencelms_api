@@ -238,6 +238,114 @@ export function maskUserPII(
 }
 
 /**
+ * Check if viewer has full PII access based on permissions
+ *
+ * @param viewer - The user viewing the data (should have permissions array)
+ * @returns True if viewer has learner:pii:read permission
+ */
+export function hasFullPiiAccess(viewer: any): boolean {
+  if (!viewer) return false;
+
+  // Check permissions array
+  const permissions: string[] = viewer.permissions || [];
+  return permissions.includes('learner:pii:read');
+}
+
+/**
+ * Check if viewer has at least directory access based on permissions
+ *
+ * @param viewer - The user viewing the data
+ * @returns True if viewer has learner:directory:read or learner:pii:read
+ */
+export function hasDirectoryAccess(viewer: any): boolean {
+  if (!viewer) return false;
+
+  const permissions: string[] = viewer.permissions || [];
+  return permissions.includes('learner:pii:read') || permissions.includes('learner:directory:read');
+}
+
+/**
+ * Build display name in "LastName, F." format
+ *
+ * @param firstName - First name
+ * @param lastName - Last name
+ * @returns Formatted display name
+ */
+export function buildDisplayName(firstName: string, lastName: string): string {
+  const firstInitial = firstName ? firstName.charAt(0).toUpperCase() : '?';
+  return `${lastName || 'Unknown'}, ${firstInitial}.`;
+}
+
+/**
+ * Get last 4 characters of an ObjectId for disambiguation
+ *
+ * @param id - MongoDB ObjectId string
+ * @returns Last 4 characters
+ */
+export function getIdSuffix(id: string): string {
+  if (!id || id.length < 4) return '????';
+  return id.slice(-4);
+}
+
+/**
+ * Convert learner to directory-level format (no PII)
+ *
+ * Returns only: displayName, idSuffix, status, counts
+ * No email, DOB, address, or full names
+ *
+ * @param learner - Full learner object
+ * @returns Directory-level learner object
+ */
+export function toDirectoryFormat(learner: any): any {
+  return {
+    id: learner.id,
+    displayName: buildDisplayName(learner.firstName, learner.lastName),
+    idSuffix: getIdSuffix(learner.id),
+    status: learner.status,
+    isProgramEnrollee: learner.isProgramEnrollee || false,
+    programCount: learner.programEnrollments || learner.programCount || 0,
+    courseCount: learner.courseEnrollments || learner.courseCount || 0
+  };
+}
+
+/**
+ * Convert learner list to directory-level format
+ *
+ * @param learners - Array of full learner objects
+ * @returns Array of directory-level learner objects
+ */
+export function toDirectoryFormatList(learners: any[]): any[] {
+  if (!Array.isArray(learners)) return learners;
+  return learners.map(toDirectoryFormat);
+}
+
+/**
+ * Apply permission-based masking to learner list
+ *
+ * - learner:pii:read → full data with displayName and idSuffix added
+ * - learner:directory:read only → directory format only
+ *
+ * @param learners - Array of learner objects
+ * @param viewer - The user viewing the data
+ * @returns Appropriately masked learner array
+ */
+export function maskLearnersForViewer(learners: any[], viewer: any): any[] {
+  if (!Array.isArray(learners)) return learners;
+
+  if (hasFullPiiAccess(viewer)) {
+    // Full access - add displayName and idSuffix but keep all data
+    return learners.map(learner => ({
+      ...learner,
+      displayName: buildDisplayName(learner.firstName, learner.lastName),
+      idSuffix: getIdSuffix(learner.id)
+    }));
+  }
+
+  // Directory access only - strip PII
+  return toDirectoryFormatList(learners);
+}
+
+/**
  * Export default object with all masking functions
  */
 export default {
@@ -246,5 +354,12 @@ export default {
   shouldMaskData,
   maskEmail,
   maskPhone,
-  maskUserPII
+  maskUserPII,
+  hasFullPiiAccess,
+  hasDirectoryAccess,
+  buildDisplayName,
+  getIdSuffix,
+  toDirectoryFormat,
+  toDirectoryFormatList,
+  maskLearnersForViewer
 };

@@ -15,6 +15,9 @@ Chronological record of memories added to the vault.
 | 2026-01-27 | context | Tech Stack | #context #api | [[context/tech-stack]] |
 | 2026-01-27 | entity | Adaptive Learning System | #entity #api | [[entities/adaptive-learning-system]] |
 | 2026-01-27 | pattern | Department Scoping | #pattern #api | [[patterns/department-scoping]] |
+| 2026-02-04 | pattern | Integration Test Setup | #pattern #testing | [[patterns/integration-test-setup]] |
+| 2026-02-04 | pattern | Team Configuration | #pattern #workflow | [[patterns/team-configuration]] |
+| 2026-02-05 | session | Test Suite Completion | #testing #api #issues | [[sessions/2026-02-05-test-suite-completion]] |
 
 ## Notes
 

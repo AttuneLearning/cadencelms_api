@@ -11,3 +11,4 @@ All Architecture Decision Records (ADRs) live in this folder.
 - [[ADR-005-PAYMENT-PROCESSOR]]
 - [[ADR-006-PDF-GENERATION]]
 - [[ADR-007-EMAIL-PROVIDER]]
+- [[ADR-UI-003-TASK-BASED-NAVIGATION-ARCHITECTURE]]

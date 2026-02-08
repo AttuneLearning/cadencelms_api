@@ -4,6 +4,7 @@ import { authorize } from '@/middlewares/authorize';
 import { requireEscalation } from '@/middlewares/requireEscalation';
 import { requireAdminRole } from '@/middlewares/requireAdminRole';
 import * as learnersController from '@/controllers/users/learners.controller';
+import * as accessPolicyController from '@/controllers/policy/accessPolicy.controller';
 
 const router = Router();
 
@@ -21,15 +22,15 @@ router.use(isAuthenticated);
 /**
  * GET /api/v2/users/learners
  * List all learners with filtering and pagination
- * Access Right: learner:pii:read
- * Roles: instructor (enrolled only), department-admin, enrollment-admin
+ * Access Right: learner:directory:read (masked) OR learner:pii:read (full)
+ * Roles: instructor, content-admin, department-admin (directory)
+ *        enrollment-admin, system-admin (full PII)
  * Service Layer:
- * - Data masking: "FirstName L." for instructors & dept-admin
- * - Instructor scoping: Enrolled learners only
- * - Enrollment-admin: Full names visible
+ * - learner:directory:read: Returns "LastName, F." + last 4 of ID, no email
+ * - learner:pii:read: Returns full name, email, DOB, address
  */
 router.get('/',
-  authorize('learner:pii:read'),
+  authorize.anyOf(['learner:pii:read', 'learner:directory:read']),
   learnersController.listLearners
 );
 
@@ -83,6 +84,21 @@ router.delete('/:id',
   requireAdminRole(['system-admin', 'enrollment-admin']),
   authorize('learner:pii:read'),
   learnersController.deleteLearner
+);
+
+// ============================================================================
+// Learner Version Access Routes
+// ============================================================================
+
+/**
+ * GET /api/v2/users/learners/:learnerId/version-access
+ * Get learner's version access information
+ * Access Right: enrollment:own:read OR enrollment:department:read
+ * Service Layer: Learners can view own access, staff can view department learners
+ */
+router.get('/:learnerId/version-access',
+  authorize.anyOf(['enrollment:own:read', 'enrollment:department:read']),
+  accessPolicyController.getLearnerVersionAccess
 );
 
 export default router;

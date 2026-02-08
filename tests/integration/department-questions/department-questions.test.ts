@@ -1425,6 +1425,8 @@ describeIfMongo('Department Questions API', () => {
 
         const testModule = await Module.create({
           courseId: testCourse._id,
+          ownerDepartmentId: testDepartment._id,
+          isShared: false,
           title: 'Test Module',
           order: 1,
           completionCriteria: { type: 'all_required' },
@@ -1488,6 +1490,8 @@ describeIfMongo('Department Questions API', () => {
 
         const testModule = await Module.create({
           courseId: testCourse._id,
+          ownerDepartmentId: testDepartment._id,
+          isShared: false,
           title: 'Test Module',
           order: 1,
           completionCriteria: { type: 'all_required' },

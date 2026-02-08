@@ -4,6 +4,8 @@ import Module, {
   ICompletionCriteria,
   IPresentationRules
 } from '@/models/academic/Module.model';
+import CourseVersionModule from '@/models/academic/CourseVersionModule.model';
+import CanonicalCourse from '@/models/academic/CanonicalCourse.model';
 import LearningUnit from '@/models/content/LearningUnit.model';
 import { ApiError } from '@/utils/ApiError';
 
@@ -29,7 +31,8 @@ interface CreateModuleData {
 
 interface ModuleResponse {
   id: string;
-  courseId: string;
+  ownerDepartmentId: string;
+  isShared: boolean;
   title: string;
   description?: string;
   prerequisites: string[];
@@ -63,7 +66,11 @@ interface ListModulesResponse {
 
 export class ModulesService {
   /**
-   * List modules for a course with filters and pagination
+   * List modules for a course (via CourseVersionModule join table)
+   *
+   * Modules are now department-owned and linked to courses via CourseVersionModule.
+   * This method finds the current published version of the course and returns
+   * its associated modules.
    */
   static async listModules(
     courseId: string,
@@ -73,33 +80,85 @@ export class ModulesService {
     const limit = Math.min(filters.limit || 10, 100);
     const skip = (page - 1) * limit;
 
-    // Build query
-    const query: any = { courseId };
+    // Find the canonical course to get the current published version
+    const canonicalCourse = await CanonicalCourse.findById(courseId);
+    if (!canonicalCourse) {
+      throw ApiError.notFound('Course not found');
+    }
+
+    // Get the current published version or latest draft
+    const versionId = canonicalCourse.currentPublishedVersionId || canonicalCourse.latestDraftVersionId;
+    if (!versionId) {
+      // No versions yet, return empty list
+      return {
+        modules: [],
+        pagination: {
+          page,
+          limit,
+          total: 0,
+          totalPages: 0,
+          hasNext: false,
+          hasPrev: false
+        }
+      };
+    }
+
+    // Get module IDs from CourseVersionModule
+    const courseVersionModules = await CourseVersionModule.find({
+      courseVersionId: versionId
+    }).sort({ order: 1 });
+
+    const moduleIds = courseVersionModules.map(cvm => cvm.moduleId);
+
+    // Build query for modules
+    const query: any = { _id: { $in: moduleIds } };
 
     if (filters.isPublished !== undefined) {
       query.isPublished = filters.isPublished;
     }
 
-    // Parse sort
-    const sortField = filters.sort || 'order';
-    const sortDirection = sortField.startsWith('-') ? -1 : 1;
-    const sortKey = sortField.replace(/^-/, '');
-    const sort: any = { [sortKey]: sortDirection };
+    // Get total count
+    const total = await Module.countDocuments(query);
 
-    // Execute query
-    const [modules, total] = await Promise.all([
-      Module.find(query)
-        .sort(sort)
-        .skip(skip)
-        .limit(limit)
-        .populate('prerequisites', 'title'),
-      Module.countDocuments(query)
-    ]);
+    // Get ALL modules (no pagination here - we'll paginate after ordering)
+    const modules = await Module.find(query).populate('prerequisites', 'title');
+
+    // Order modules according to CourseVersionModule order
+    const moduleMap = new Map(modules.map(m => [m._id.toString(), m]));
+    const orderedModules: IModule[] = [];
+    const cvmOrderMap = new Map(courseVersionModules.map(cvm => [cvm.moduleId.toString(), cvm.order]));
+
+    for (const cvm of courseVersionModules) {
+      const module = moduleMap.get(cvm.moduleId.toString());
+      if (module) {
+        orderedModules.push(module);
+      }
+    }
+
+    // Apply sort if requested (sort by title, etc.)
+    if (filters.sort) {
+      const sortField = filters.sort.startsWith('-') ? filters.sort.slice(1) : filters.sort;
+      const sortOrder = filters.sort.startsWith('-') ? -1 : 1;
+
+      if (sortField === 'title') {
+        orderedModules.sort((a, b) => {
+          const comparison = a.title.localeCompare(b.title);
+          return sortOrder * comparison;
+        });
+      }
+      // Default is order (already sorted by CVM order above)
+    }
+
+    // Apply pagination AFTER ordering
+    const paginatedModules = orderedModules.slice(skip, skip + limit);
 
     // Format response
-    const modulesData: ModuleResponse[] = modules.map((module) =>
-      this.formatModuleResponse(module)
-    );
+    const modulesData: ModuleResponse[] = paginatedModules.map((module) => {
+      const response = this.formatModuleResponse(module);
+      // Use the CourseVersionModule order
+      response.order = cvmOrderMap.get(module._id.toString()) || module.order;
+      return response;
+    });
 
     return {
       modules: modulesData,
@@ -156,6 +215,9 @@ export class ModulesService {
 
   /**
    * Create a new module for a course
+   *
+   * Creates a department-owned module and links it to the course's
+   * current draft version via CourseVersionModule.
    */
   static async createModule(
     courseId: string,
@@ -167,33 +229,29 @@ export class ModulesService {
       throw ApiError.badRequest('Module title is required');
     }
 
-    // Validate prerequisites if provided
+    // Find the canonical course to get the department
+    const canonicalCourse = await CanonicalCourse.findById(courseId);
+    if (!canonicalCourse) {
+      throw ApiError.notFound('Course not found');
+    }
+
+    const departmentId = canonicalCourse.departmentId;
+
+    // Validate prerequisites if provided (they should exist in the same department)
     if (data.prerequisites && data.prerequisites.length > 0) {
       const prereqsValid = await this.validatePrerequisitesExist(
         data.prerequisites,
-        courseId
+        departmentId.toString()
       );
       if (!prereqsValid) {
         throw ApiError.badRequest(
-          'One or more prerequisites do not exist in this course'
-        );
-      }
-
-      // Check for cycles
-      const noCycles = await this.validatePrerequisites(
-        null,
-        data.prerequisites,
-        courseId
-      );
-      if (!noCycles) {
-        throw ApiError.badRequest(
-          'Prerequisites would create a circular dependency'
+          'One or more prerequisites do not exist in this department'
         );
       }
     }
 
-    // Get next order number
-    const moduleCount = await Module.countDocuments({ courseId });
+    // Get next order number for modules in this department
+    const moduleCount = await Module.countDocuments({ ownerDepartmentId: departmentId });
     const order = moduleCount + 1;
 
     // Set defaults for completionCriteria
@@ -216,9 +274,10 @@ export class ModulesService {
       allowSkip: false
     };
 
-    // Create module
+    // Create module (now department-owned)
     const module = new Module({
-      courseId,
+      ownerDepartmentId: departmentId,
+      isShared: false,
       title: data.title.trim(),
       description: data.description?.trim(),
       prerequisites: data.prerequisites || [],
@@ -234,6 +293,22 @@ export class ModulesService {
     });
 
     await module.save();
+
+    // Link to course's draft version (if one exists)
+    if (canonicalCourse.latestDraftVersionId) {
+      const cvmCount = await CourseVersionModule.countDocuments({
+        courseVersionId: canonicalCourse.latestDraftVersionId
+      });
+
+      await CourseVersionModule.create({
+        courseVersionId: canonicalCourse.latestDraftVersionId,
+        moduleId: module._id,
+        order: cvmCount + 1,
+        isRequired: true,
+        availableFrom: data.availableFrom || null,
+        availableUntil: data.availableUntil || null
+      });
+    }
 
     return this.formatModuleResponse(module);
   }
@@ -259,11 +334,11 @@ export class ModulesService {
       if (data.prerequisites.length > 0) {
         const prereqsValid = await this.validatePrerequisitesExist(
           data.prerequisites,
-          module.courseId.toString()
+          module.ownerDepartmentId.toString()
         );
         if (!prereqsValid) {
           throw ApiError.badRequest(
-            'One or more prerequisites do not exist in this course'
+            'One or more prerequisites do not exist in this department'
           );
         }
 
@@ -271,7 +346,7 @@ export class ModulesService {
         const noCycles = await this.validatePrerequisites(
           moduleId,
           data.prerequisites,
-          module.courseId.toString()
+          module.ownerDepartmentId.toString()
         );
         if (!noCycles) {
           throw ApiError.badRequest(
@@ -322,12 +397,15 @@ export class ModulesService {
     // Soft delete learning units associated with this module
     await LearningUnit.updateMany({ moduleId }, { isActive: false });
 
+    // Remove from any CourseVersionModules
+    await CourseVersionModule.deleteMany({ moduleId });
+
     // Soft delete the module
     await Module.findByIdAndDelete(moduleId);
   }
 
   /**
-   * Reorder modules within a course
+   * Reorder modules within a course version
    */
   static async reorderModules(
     courseId: string,
@@ -337,14 +415,25 @@ export class ModulesService {
       throw ApiError.badRequest('Module IDs array cannot be empty');
     }
 
-    // Get existing modules for the course
-    const existingModules = await Module.find({ courseId });
-    const existingIds = existingModules.map((m) => m._id.toString());
+    // Find the canonical course to get the current version
+    const canonicalCourse = await CanonicalCourse.findById(courseId);
+    if (!canonicalCourse) {
+      throw ApiError.notFound('Course not found');
+    }
+
+    const versionId = canonicalCourse.latestDraftVersionId || canonicalCourse.currentPublishedVersionId;
+    if (!versionId) {
+      throw ApiError.badRequest('Course has no versions');
+    }
+
+    // Get existing CourseVersionModules
+    const existingCVMs = await CourseVersionModule.find({ courseVersionId: versionId });
+    const existingIds = existingCVMs.map((m) => m.moduleId.toString());
 
     // Verify all module IDs match
     if (moduleIds.length !== existingIds.length) {
       throw ApiError.badRequest(
-        'Module IDs must match all modules in the course'
+        'Module IDs must match all modules in the course version'
       );
     }
 
@@ -354,20 +443,23 @@ export class ModulesService {
     for (const id of providedSet) {
       if (!existingSet.has(id)) {
         throw ApiError.badRequest(
-          'Module IDs must match all modules in the course'
+          'Module IDs must match all modules in the course version'
         );
       }
     }
 
-    // Bulk update orders
+    // Bulk update orders in CourseVersionModule
     const bulkOps = moduleIds.map((id, index) => ({
       updateOne: {
-        filter: { _id: new mongoose.Types.ObjectId(id) },
+        filter: {
+          courseVersionId: versionId,
+          moduleId: new mongoose.Types.ObjectId(id)
+        },
         update: { $set: { order: index + 1 } }
       }
     }));
 
-    await Module.bulkWrite(bulkOps);
+    await CourseVersionModule.bulkWrite(bulkOps);
   }
 
   /**
@@ -377,7 +469,7 @@ export class ModulesService {
   static async validatePrerequisites(
     moduleId: string | null,
     prerequisiteIds: string[],
-    courseId: string
+    departmentId: string
   ): Promise<boolean> {
     // Empty prerequisites are always valid
     if (!prerequisiteIds || prerequisiteIds.length === 0) {
@@ -389,14 +481,14 @@ export class ModulesService {
       return false;
     }
 
-    // Get all modules in the course
-    const allModules = await Module.find({ courseId });
+    // Get all modules in the department
+    const allModules = await Module.find({ ownerDepartmentId: departmentId });
 
     if (allModules.length === 0) {
       return false;
     }
 
-    // Check if all prerequisites exist in the course
+    // Check if all prerequisites exist in the department
     const moduleMap = new Map<string, any>();
     for (const m of allModules) {
       moduleMap.set(m._id.toString(), m);
@@ -409,11 +501,6 @@ export class ModulesService {
     }
 
     // Build adjacency list for cycle detection
-    // If moduleId is null, we're checking for a new module
-    // We need to check if adding the prerequisites would create a cycle
-
-    // Create a graph where edges go FROM module TO its prerequisites
-    // (i.e., an edge from A to B means B must be completed before A)
     const graph = new Map<string, string[]>();
 
     for (const m of allModules) {
@@ -428,22 +515,13 @@ export class ModulesService {
     }
 
     // Use DFS to detect cycles
-    // We need to check if any prerequisite can eventually reach back to moduleId
-    // (or any of the new prerequisites can reach each other in a cycle)
-
     if (moduleId) {
-      // Check if any prerequisite leads back to moduleId
       for (const prereqId of prerequisiteIds) {
         if (this.canReach(prereqId, moduleId, graph, new Set())) {
           return false;
         }
       }
     } else {
-      // For new module, just verify no cycles exist among prerequisites
-      // Actually for a new module, since it has no dependents yet,
-      // it can have any existing modules as prerequisites without creating cycles
-      // The only issue would be if the prerequisites themselves have cycles,
-      // but those would have been prevented during their creation
       return true;
     }
 
@@ -480,15 +558,15 @@ export class ModulesService {
   }
 
   /**
-   * Helper: Validate prerequisites exist in the course
+   * Helper: Validate prerequisites exist in the department
    */
   private static async validatePrerequisitesExist(
     prerequisiteIds: string[],
-    courseId: string
+    departmentId: string
   ): Promise<boolean> {
     const existingModules = await Module.find({
       _id: { $in: prerequisiteIds },
-      courseId
+      ownerDepartmentId: departmentId
     });
 
     return existingModules.length === prerequisiteIds.length;
@@ -502,7 +580,8 @@ export class ModulesService {
 
     return {
       id: moduleObj._id.toString(),
-      courseId: moduleObj.courseId.toString(),
+      ownerDepartmentId: moduleObj.ownerDepartmentId.toString(),
+      isShared: moduleObj.isShared,
       title: moduleObj.title,
       description: moduleObj.description,
       prerequisites: moduleObj.prerequisites.map((p: any) =>

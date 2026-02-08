@@ -127,8 +127,7 @@ const MatchingAttemptSchema = new Schema<IMatchingAttempt>(
     sessionId: {
       type: Schema.Types.ObjectId,
       required: [true, 'sessionId is required'],
-      ref: 'MatchingSession',
-      index: true
+      ref: 'MatchingSession'
     },
     attemptNumber: {
       type: Number,

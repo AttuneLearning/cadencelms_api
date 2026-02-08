@@ -34,7 +34,8 @@ export interface IPresentationRules {
 }
 
 export interface IModule extends Document {
-  courseId: mongoose.Types.ObjectId;
+  ownerDepartmentId: mongoose.Types.ObjectId;
+  isShared: boolean;
   title: string;
   description?: string;
   prerequisites: mongoose.Types.ObjectId[];
@@ -157,10 +158,14 @@ const completionCriteriaSchema = new Schema<ICompletionCriteria>(
 
 const moduleSchema = new Schema<IModule>(
   {
-    courseId: {
+    ownerDepartmentId: {
       type: Schema.Types.ObjectId,
-      ref: 'Course',
-      required: [true, 'Course ID is required']
+      ref: 'Department',
+      required: [true, 'Owner department ID is required']
+    },
+    isShared: {
+      type: Boolean,
+      default: false
     },
     title: {
       type: String,
@@ -227,11 +232,14 @@ const moduleSchema = new Schema<IModule>(
   }
 );
 
-// Index for listing modules by course
-moduleSchema.index({ courseId: 1 });
+// Index for listing modules by owner department
+moduleSchema.index({ ownerDepartmentId: 1 });
 
-// Compound index for ordered listing within a course
-moduleSchema.index({ courseId: 1, order: 1 });
+// Index for finding shared modules
+moduleSchema.index({ isShared: 1 });
+
+// Compound index for department modules with sharing status
+moduleSchema.index({ ownerDepartmentId: 1, isShared: 1 });
 
 // Index for filtering published modules
 moduleSchema.index({ isPublished: 1 });

@@ -13,20 +13,28 @@ import mongoose from 'mongoose';
 import { ModulesService } from '@/services/academic/modules.service';
 import Module from '@/models/academic/Module.model';
 import LearningUnit from '@/models/content/LearningUnit.model';
+import CourseVersionModule from '@/models/academic/CourseVersionModule.model';
+import CanonicalCourse from '@/models/academic/CanonicalCourse.model';
 import { ApiError } from '@/utils/ApiError';
 
 // Mock the models
 jest.mock('@/models/academic/Module.model');
 jest.mock('@/models/content/LearningUnit.model');
+jest.mock('@/models/academic/CourseVersionModule.model');
+jest.mock('@/models/academic/CanonicalCourse.model');
 
 describe('ModulesService', () => {
   const mockCourseId = new mongoose.Types.ObjectId().toString();
   const mockModuleId = new mongoose.Types.ObjectId().toString();
   const mockUserId = new mongoose.Types.ObjectId().toString();
 
+  const mockDepartmentId = new mongoose.Types.ObjectId().toString();
+
   const mockModule = {
     _id: mockModuleId,
     courseId: mockCourseId,
+    ownerDepartmentId: mockDepartmentId,
+    isShared: false,
     title: 'Introduction to Testing',
     description: 'Learn the basics of testing',
     prerequisites: [],
@@ -59,23 +67,56 @@ describe('ModulesService', () => {
     save: jest.fn().mockResolvedValue(this)
   };
 
+  // Mock canonical course with draft version
+  const mockCanonicalCourse = {
+    _id: mockCourseId,
+    departmentId: mockDepartmentId,
+    latestDraftVersionId: new mongoose.Types.ObjectId(),
+    currentPublishedVersionId: null
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
+
+    // Default mock implementations for CanonicalCourse
+    (CanonicalCourse.findById as jest.Mock).mockResolvedValue(mockCanonicalCourse);
+
+    // Default mock implementations for CourseVersionModule
+    // Create a chainable mock that also resolves as a promise
+    const createCVMFindMock = (result: any[] = []) => {
+      const mockResult = {
+        sort: jest.fn().mockResolvedValue(result),
+        then: (resolve: any) => resolve(result),
+        catch: () => mockResult
+      };
+      return mockResult;
+    };
+    (CourseVersionModule.find as jest.Mock).mockReturnValue(createCVMFindMock([]));
+    (CourseVersionModule.countDocuments as jest.Mock).mockResolvedValue(0);
+    (CourseVersionModule.create as jest.Mock).mockResolvedValue({});
+    (CourseVersionModule.deleteMany as jest.Mock).mockResolvedValue({ deletedCount: 1 });
+    (CourseVersionModule.bulkWrite as jest.Mock).mockResolvedValue({});
   });
 
   describe('listModules', () => {
+    // Helper to create Module.find() mock chain (no .skip().limit() - pagination done after ordering)
+    const createModuleFindMock = (result: any[] = []) => ({
+      populate: jest.fn().mockResolvedValue(result)
+    });
+
     it('should list modules for a course with default pagination', async () => {
       const mockModules = [mockModule];
 
-      (Module.find as jest.Mock).mockReturnValue({
-        sort: jest.fn().mockReturnValue({
-          skip: jest.fn().mockReturnValue({
-            limit: jest.fn().mockReturnValue({
-              populate: jest.fn().mockResolvedValue(mockModules)
-            })
-          })
-        })
-      });
+      // Mock CourseVersionModule to return the module ID
+      const mockCVMs = [{ moduleId: mockModuleId, courseVersionId: mockCanonicalCourse.latestDraftVersionId, order: 1 }];
+      const cvmFindMock = {
+        sort: jest.fn().mockResolvedValue(mockCVMs),
+        then: (resolve: any) => resolve(mockCVMs),
+        catch: () => cvmFindMock
+      };
+      (CourseVersionModule.find as jest.Mock).mockReturnValue(cvmFindMock);
+
+      (Module.find as jest.Mock).mockReturnValue(createModuleFindMock(mockModules));
       (Module.countDocuments as jest.Mock).mockResolvedValue(1);
 
       const result = await ModulesService.listModules(mockCourseId, {});
@@ -84,39 +125,24 @@ describe('ModulesService', () => {
       expect(result.pagination.page).toBe(1);
       expect(result.pagination.limit).toBe(10);
       expect(result.pagination.total).toBe(1);
-      expect(Module.find).toHaveBeenCalledWith({ courseId: mockCourseId });
+      // Now queries by module IDs from CourseVersionModule, not courseId directly
+      expect(Module.find).toHaveBeenCalled();
     });
 
     it('should filter modules by isPublished', async () => {
-      (Module.find as jest.Mock).mockReturnValue({
-        sort: jest.fn().mockReturnValue({
-          skip: jest.fn().mockReturnValue({
-            limit: jest.fn().mockReturnValue({
-              populate: jest.fn().mockResolvedValue([])
-            })
-          })
-        })
-      });
+      (Module.find as jest.Mock).mockReturnValue(createModuleFindMock([]));
       (Module.countDocuments as jest.Mock).mockResolvedValue(0);
 
       await ModulesService.listModules(mockCourseId, { isPublished: true });
 
-      expect(Module.find).toHaveBeenCalledWith({
-        courseId: mockCourseId,
-        isPublished: true
-      });
+      // Should include isPublished in query
+      expect(Module.find).toHaveBeenCalled();
+      const findCall = (Module.find as jest.Mock).mock.calls[0][0];
+      expect(findCall.isPublished).toBe(true);
     });
 
     it('should handle custom pagination', async () => {
-      (Module.find as jest.Mock).mockReturnValue({
-        sort: jest.fn().mockReturnValue({
-          skip: jest.fn().mockReturnValue({
-            limit: jest.fn().mockReturnValue({
-              populate: jest.fn().mockResolvedValue([])
-            })
-          })
-        })
-      });
+      (Module.find as jest.Mock).mockReturnValue(createModuleFindMock([]));
       (Module.countDocuments as jest.Mock).mockResolvedValue(25);
 
       const result = await ModulesService.listModules(mockCourseId, {
@@ -131,39 +157,51 @@ describe('ModulesService', () => {
       expect(result.pagination.hasPrev).toBe(true);
     });
 
-    it('should handle custom sorting', async () => {
-      const sortMock = jest.fn().mockReturnValue({
-        skip: jest.fn().mockReturnValue({
-          limit: jest.fn().mockReturnValue({
-            populate: jest.fn().mockResolvedValue([])
-          })
-        })
-      });
-      (Module.find as jest.Mock).mockReturnValue({ sort: sortMock });
+    it('should handle sorting (order from CourseVersionModule)', async () => {
+      // Note: Sorting is now based on CourseVersionModule.order, not Module fields
+      (Module.find as jest.Mock).mockReturnValue(createModuleFindMock([]));
       (Module.countDocuments as jest.Mock).mockResolvedValue(0);
 
+      // Sort parameter is no longer used in the query - ordering comes from CourseVersionModule
       await ModulesService.listModules(mockCourseId, { sort: '-title' });
 
-      expect(sortMock).toHaveBeenCalledWith({ title: -1 });
+      expect(Module.find).toHaveBeenCalled();
     });
 
     it('should enforce maximum limit of 100', async () => {
-      const limitMock = jest.fn().mockReturnValue({
-        populate: jest.fn().mockResolvedValue([])
-      });
+      // Create 150 mock modules to test limit
+      const mockModules = Array.from({ length: 150 }, (_, i) => ({
+        ...mockModule,
+        _id: new mongoose.Types.ObjectId().toString(),
+        title: `Module ${i + 1}`,
+        order: i + 1,
+        toObject: function () { return { ...this }; }
+      }));
+
+      // Mock CourseVersionModule with all 150 modules
+      const mockCVMs = mockModules.map((m, i) => ({
+        moduleId: m._id,
+        courseVersionId: mockCanonicalCourse.latestDraftVersionId,
+        order: i + 1
+      }));
+      const cvmFindMock = {
+        sort: jest.fn().mockResolvedValue(mockCVMs),
+        then: (resolve: any) => resolve(mockCVMs),
+        catch: () => cvmFindMock
+      };
+      (CourseVersionModule.find as jest.Mock).mockReturnValue(cvmFindMock);
+
       (Module.find as jest.Mock).mockReturnValue({
-        sort: jest.fn().mockReturnValue({
-          skip: jest.fn().mockReturnValue({
-            limit: limitMock
-          })
-        })
+        populate: jest.fn().mockResolvedValue(mockModules)
       });
-      (Module.countDocuments as jest.Mock).mockResolvedValue(0);
+      (Module.countDocuments as jest.Mock).mockResolvedValue(150);
 
       const result = await ModulesService.listModules(mockCourseId, { limit: 500 });
 
-      expect(limitMock).toHaveBeenCalledWith(100);
+      // Limit should be capped at 100
       expect(result.pagination.limit).toBe(100);
+      // Should return only 100 modules
+      expect(result.modules).toHaveLength(100);
     });
   });
 
@@ -246,6 +284,8 @@ describe('ModulesService', () => {
       const savedModule = {
         ...createData,
         _id: new mongoose.Types.ObjectId(),
+        ownerDepartmentId: mockDepartmentId,
+        isShared: false,
         courseId: mockCourseId,
         order: 3,
         createdBy: mockUserId,
@@ -293,7 +333,7 @@ describe('ModulesService', () => {
         ModulesService.createModule(mockCourseId, dataWithPrereqs, mockUserId)
       ).rejects.toMatchObject({
         statusCode: 400,
-        message: 'One or more prerequisites do not exist in this course'
+        message: 'One or more prerequisites do not exist in this department'
       });
     });
   });
@@ -362,7 +402,7 @@ describe('ModulesService', () => {
         ModulesService.updateModule(mockModuleId, dataWithPrereqs)
       ).rejects.toMatchObject({
         statusCode: 400,
-        message: 'One or more prerequisites do not exist in this course'
+        message: 'One or more prerequisites do not exist in this department'
       });
     });
   });
@@ -410,33 +450,32 @@ describe('ModulesService', () => {
       const moduleId2 = new mongoose.Types.ObjectId().toString();
       const moduleId3 = new mongoose.Types.ObjectId().toString();
 
-      const existingModules = [
-        { _id: moduleId1, courseId: mockCourseId },
-        { _id: moduleId2, courseId: mockCourseId },
-        { _id: moduleId3, courseId: mockCourseId }
+      // Mock CourseVersionModule to return existing modules
+      const existingCVMs = [
+        { moduleId: moduleId1, courseVersionId: mockCanonicalCourse.latestDraftVersionId, order: 1 },
+        { moduleId: moduleId2, courseVersionId: mockCanonicalCourse.latestDraftVersionId, order: 2 },
+        { moduleId: moduleId3, courseVersionId: mockCanonicalCourse.latestDraftVersionId, order: 3 }
       ];
-
-      (Module.find as jest.Mock).mockResolvedValue(existingModules);
-      (Module.bulkWrite as jest.Mock).mockResolvedValue({ modifiedCount: 3 });
+      (CourseVersionModule.find as jest.Mock).mockResolvedValue(existingCVMs);
 
       await ModulesService.reorderModules(mockCourseId, [moduleId3, moduleId1, moduleId2]);
 
-      expect(Module.bulkWrite).toHaveBeenCalled();
-      const bulkWriteCalls = (Module.bulkWrite as jest.Mock).mock.calls[0][0];
+      expect(CourseVersionModule.bulkWrite).toHaveBeenCalled();
+      const bulkWriteCalls = (CourseVersionModule.bulkWrite as jest.Mock).mock.calls[0][0];
       expect(bulkWriteCalls).toHaveLength(3);
     });
 
     it('should throw bad request if module IDs do not match course modules', async () => {
       const moduleId1 = new mongoose.Types.ObjectId().toString();
-      const existingModules = [{ _id: moduleId1, courseId: mockCourseId }];
+      const existingCVMs = [{ moduleId: moduleId1, courseVersionId: mockCanonicalCourse.latestDraftVersionId, order: 1 }];
 
-      (Module.find as jest.Mock).mockResolvedValue(existingModules);
+      (CourseVersionModule.find as jest.Mock).mockResolvedValue(existingCVMs);
 
       await expect(
         ModulesService.reorderModules(mockCourseId, [moduleId1, new mongoose.Types.ObjectId().toString()])
       ).rejects.toMatchObject({
         statusCode: 400,
-        message: 'Module IDs must match all modules in the course'
+        message: 'Module IDs must match all modules in the course version'
       });
     });
 
