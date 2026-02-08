@@ -48,6 +48,8 @@ export interface IExercise extends Document {
   updatedAt: Date;
   // Matching exercise configuration
   matchingConfig?: IMatchingConfig;
+  maxAttempts?: number | null;
+  gradingPolicy?: 'best' | 'last' | 'average';
 }
 
 const ExerciseQuestionSchema = new Schema<IExerciseQuestion>(
@@ -224,6 +226,26 @@ const ExerciseSchema = new Schema<IExercise>(
     matchingConfig: {
       type: MatchingConfigSchema,
       default: undefined
+    },
+    maxAttempts: {
+      type: Schema.Types.Mixed,
+      default: undefined,
+      validate: {
+        validator: function(v: number | null | undefined) {
+          if (v === undefined || v === null) return true;
+          if (typeof v === 'number' && v >= 1) return true;
+          return false;
+        },
+        message: 'maxAttempts must be null or a positive number (at least 1)'
+      }
+    },
+    gradingPolicy: {
+      type: String,
+      enum: {
+        values: ['best', 'last', 'average'],
+        message: '{VALUE} is not a valid grading policy'
+      },
+      default: 'best'
     }
   },
   {

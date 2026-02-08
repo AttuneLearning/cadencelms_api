@@ -19,12 +19,14 @@ Development issue tracking for API and UI teams.
 ### API Team (`issues/api/`)
 | Folder | Count | Description |
 |--------|-------|-------------|
-| `queue/` | 14 | Ready to work |
+| `queue/` | 4 | Ready to work |
 | `active/` | 0 | In progress |
-| `completed/` | 1 | Done |
+| `completed/` | 13 | Done |
 
-**Recently Completed (2026-02-05):**
-- API-ISS-024: Legacy Role Authorization Cleanup (High) - COMPLETE
+**Recently Completed (2026-02-08):**
+- API-ISS-025: Exercise Retry Settings (High) - COMPLETE
+- API-ISS-030: Learner Program Enrollment Progress (Medium) - COMPLETE
+- UI-ISS-104: Audio Content Type confirmed (Trivial) - COMPLETE
 
 **Queue:**
 - API-ISS-009: Question Model - Monolithic Design Update (High)
@@ -108,8 +110,8 @@ Examples:
 
 | Team | Prefix | Next Number |
 |------|--------|-------------|
-| API | API-ISS- | 025 |
-| UI | UI-ISS- | 105 |
+| API | API-ISS- | 031 |
+| UI | UI-ISS- | 107 |
 
 *Update "Next Number" when creating issues*
 

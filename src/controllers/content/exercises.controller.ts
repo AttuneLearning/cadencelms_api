@@ -418,6 +418,30 @@ export const removeQuestionFromExercise = asyncHandler(async (req: Request, res:
 });
 
 /**
+ * GET /api/v2/content/exercises/:id/attempts
+ * List attempts for a specific exercise
+ */
+export const listExerciseAttempts = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const userId = (req as any).user?.userId || (req as any).user?.id || (req as any).user?._id;
+
+  if (!id) {
+    throw ApiError.badRequest('Exercise ID is required');
+  }
+
+  const filters = {
+    page: req.query.page ? parseInt(req.query.page as string, 10) : 1,
+    limit: req.query.limit ? parseInt(req.query.limit as string, 10) : 10,
+    status: req.query.status as string | undefined,
+    sort: req.query.sort as string | undefined
+  };
+
+  const { ExamAttemptsService } = await import('@/services/assessment/exam-attempts.service');
+  const result = await ExamAttemptsService.listExerciseAttempts(id, filters, userId);
+  res.status(200).json(ApiResponse.success(result));
+});
+
+/**
  * PATCH /api/v2/content/exercises/:id/questions/reorder
  * Reorder questions in an exercise
  */

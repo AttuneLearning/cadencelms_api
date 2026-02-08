@@ -1655,6 +1655,70 @@ describeIfMongo('Assessment Model', () => {
     });
   });
 
+  describe('GradingPolicy in Attempts Subdocument', () => {
+    const validAssessmentData = () => ({
+      departmentId: new mongoose.Types.ObjectId(),
+      title: 'Grading Policy Test',
+      style: 'quiz',
+      questionSelection: {
+        questionBankIds: ['bank1'],
+        questionCount: 10,
+        selectionMode: 'random'
+      },
+      timing: {
+        showTimer: true,
+        autoSubmitOnExpiry: false
+      },
+      attempts: {
+        maxAttempts: 3,
+        retakePolicy: 'anytime'
+      },
+      scoring: {
+        passingScore: 70,
+        showScore: true,
+        showCorrectAnswers: 'after_submit',
+        partialCredit: true
+      },
+      feedback: {
+        showFeedback: true,
+        feedbackTiming: 'after_submit',
+        showExplanations: true
+      },
+      createdBy: new mongoose.Types.ObjectId()
+    });
+
+    it('should default gradingPolicy to "best" when not provided', async () => {
+      const data = validAssessmentData();
+      const assessment = await Assessment.create(data);
+
+      expect(assessment.attempts.gradingPolicy).toBe('best');
+    });
+
+    it('should accept "last" as gradingPolicy value', async () => {
+      const data = validAssessmentData();
+      data.attempts = { ...data.attempts, gradingPolicy: 'last' } as any;
+      const assessment = await Assessment.create(data);
+
+      expect(assessment.attempts.gradingPolicy).toBe('last');
+    });
+
+    it('should accept "average" as gradingPolicy value', async () => {
+      const data = validAssessmentData();
+      data.attempts = { ...data.attempts, gradingPolicy: 'average' } as any;
+      const assessment = await Assessment.create(data);
+
+      expect(assessment.attempts.gradingPolicy).toBe('average');
+    });
+
+    it('should reject invalid gradingPolicy value', async () => {
+      const data = validAssessmentData();
+      data.attempts = { ...data.attempts, gradingPolicy: 'invalid' } as any;
+      const assessment = new Assessment(data);
+
+      await expect(assessment.save()).rejects.toThrow();
+    });
+  });
+
   describe('Query Methods', () => {
     beforeEach(async () => {
       const dept1 = new mongoose.Types.ObjectId();

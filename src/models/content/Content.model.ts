@@ -1,13 +1,14 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-export type ContentType = 
-  | 'scorm' 
-  | 'video' 
-  | 'document' 
-  | 'quiz' 
-  | 'assignment' 
-  | 'external-link' 
-  | 'text';
+export type ContentType =
+  | 'scorm'
+  | 'video'
+  | 'document'
+  | 'quiz'
+  | 'assignment'
+  | 'external-link'
+  | 'text'
+  | 'audio';
 
 export interface ISCORMData {
   version: string;
@@ -104,7 +105,7 @@ const contentSchema = new Schema<IContent>(
       type: String,
       required: [true, 'Content type is required'],
       enum: {
-        values: ['scorm', 'video', 'document', 'quiz', 'assignment', 'external-link', 'text'],
+        values: ['scorm', 'video', 'document', 'quiz', 'assignment', 'external-link', 'text', 'audio'],
         message: '{VALUE} is not a valid content type'
       }
     },

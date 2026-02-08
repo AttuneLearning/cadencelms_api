@@ -33,7 +33,6 @@ CadenceLMS is a Learning Management System API built with Node.js, Express, Type
 
 | Skill | Purpose |
 |-------|---------|
-| `/develop` | **Mandatory** dev lifecycle — processes issues with full verification |
 | `/comms` | Inter-team communication (inbox, issues, messages) |
 | `/adr` | Architecture decisions, gaps, suggestions |
 | `/context` | Load relevant ADRs, patterns, and memory before work |

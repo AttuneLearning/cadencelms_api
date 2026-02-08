@@ -245,6 +245,19 @@ export class ExamAttemptsService {
       throw ApiError.conflict('Cannot start new attempt while another is in progress');
     }
 
+    // Enforce maxAttempts limit
+    const maxAttempts = (exam as any).maxAttempts ?? (exam as any).matchingConfig?.maxAttempts ?? null;
+    if (maxAttempts !== null && maxAttempts !== undefined) {
+      const completedAttemptCount = await ExamResult.countDocuments({
+        examId: data.examId,
+        learnerId: userId,
+        status: { $in: ['completed', 'graded', 'submitted'] }
+      });
+      if (completedAttemptCount >= maxAttempts) {
+        throw ApiError.conflict('Maximum attempts reached');
+      }
+    }
+
     // Get next attempt number
     const lastAttempt = await ExamResult.findOne({
       examId: data.examId,
@@ -320,6 +333,8 @@ export class ExamAttemptsService {
       questions: orderedQuestions,
       instructions: exam.instructions || '',
       allowReview: exam.allowReview,
+      maxAttempts: (exam as any).maxAttempts ?? null,
+      gradingPolicy: (exam as any).gradingPolicy ?? 'best',
       startedAt: attempt.startedAt,
       createdAt: attempt.createdAt
     };
@@ -1061,5 +1076,66 @@ export class ExamAttemptsService {
         hasPrev: page > 1
       }
     };
+  }
+
+  /**
+   * Calculate the official grade for a learner based on grading policy
+   */
+  static async calculateOfficialGrade(
+    examId: string,
+    learnerId: string,
+    policy: 'best' | 'last' | 'average' = 'best'
+  ): Promise<{ score: number; percentage: number; passed: boolean; gradeLetter: string } | null> {
+    const gradedAttempts = await ExamResult.find({
+      examId,
+      learnerId,
+      status: 'graded'
+    }).sort({ gradedAt: -1 }).lean();
+
+    if (gradedAttempts.length === 0) return null;
+
+    let officialScore: number;
+    let officialPercentage: number;
+
+    switch (policy) {
+      case 'best':
+        officialPercentage = Math.max(...gradedAttempts.map(a => a.percentage || 0));
+        officialScore = gradedAttempts.reduce((best, a) =>
+          (a.percentage || 0) >= (best.percentage || 0) ? a : best
+        ).score;
+        break;
+      case 'last':
+        officialScore = gradedAttempts[0].score;
+        officialPercentage = gradedAttempts[0].percentage || 0;
+        break;
+      case 'average':
+        officialScore = gradedAttempts.reduce((sum, a) => sum + a.score, 0) / gradedAttempts.length;
+        officialPercentage = gradedAttempts.reduce((sum, a) => sum + (a.percentage || 0), 0) / gradedAttempts.length;
+        break;
+      default:
+        officialPercentage = Math.max(...gradedAttempts.map(a => a.percentage || 0));
+        officialScore = gradedAttempts.reduce((best, a) =>
+          (a.percentage || 0) >= (best.percentage || 0) ? a : best
+        ).score;
+    }
+
+    // Get the exam to check passing score
+    const exam = await Exercise.findById(examId).lean();
+    const passingScore = exam?.passingScore || 70;
+    const passed = officialPercentage >= passingScore;
+    const gradeLetter = calculateGradeLetter(officialPercentage);
+
+    return { score: officialScore, percentage: officialPercentage, passed, gradeLetter };
+  }
+
+  /**
+   * List attempts for a specific exercise (convenience wrapper)
+   */
+  static async listExerciseAttempts(
+    exerciseId: string,
+    filters: ListAttemptsFilters,
+    userId: string
+  ): Promise<any> {
+    return this.listAttempts({ ...filters, examId: exerciseId }, userId);
   }
 }

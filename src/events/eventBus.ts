@@ -32,6 +32,13 @@ export interface CourseVersionPublishedPayload {
   publishedBy: string;
 }
 
+export interface ProgramCompletedPayload {
+  enrollmentId: string;
+  programId: string;
+  learnerId: string;
+  completedAt: string;
+}
+
 // Event names as constants for type safety
 export const EVENTS = {
   COURSE_VERSION_PUBLISHED: 'course.version.published',
@@ -40,7 +47,8 @@ export const EVENTS = {
   CERTIFICATE_ISSUED: 'certificate.issued',
   CERTIFICATE_REVOKED: 'certificate.revoked',
   CERTIFICATE_UPGRADED: 'certificate.upgraded',
-  COURSE_COMPLETED: 'course.completed'
+  COURSE_COMPLETED: 'course.completed',
+  PROGRAM_COMPLETED: 'program.completed'
 } as const;
 
 // Create the event bus with increased max listeners for scalability

@@ -84,6 +84,22 @@ describeIfMongo('Content Model', () => {
       expect(content.quizData?.timeLimit).toBe(1800);
     });
 
+    it('should create valid audio content', async () => {
+      const content = await Content.create({
+        title: 'Podcast Episode 1',
+        type: 'audio',
+        fileUrl: 'https://example.com/podcast.mp3',
+        mimeType: 'audio/mpeg',
+        duration: 1800,
+        isActive: true
+      });
+
+      expect(content.type).toBe('audio');
+      expect(content.fileUrl).toBe('https://example.com/podcast.mp3');
+      expect(content.mimeType).toBe('audio/mpeg');
+      expect(content.duration).toBe(1800);
+    });
+
     it('should require title field', async () => {
       const content = new Content({
         type: 'video'
@@ -110,7 +126,7 @@ describeIfMongo('Content Model', () => {
     });
 
     it('should accept valid content types', async () => {
-      const types = ['scorm', 'video', 'document', 'quiz', 'assignment', 'external-link', 'text'];
+      const types = ['scorm', 'video', 'document', 'quiz', 'assignment', 'external-link', 'text', 'audio'];
 
       for (const type of types) {
         const content = await Content.create({

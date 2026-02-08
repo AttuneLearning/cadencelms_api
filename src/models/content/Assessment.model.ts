@@ -6,6 +6,7 @@ export type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced';
 export type RetakePolicy = 'anytime' | 'after_cooldown' | 'instructor_unlock';
 export type ShowCorrectAnswers = 'never' | 'after_submit' | 'after_all_attempts';
 export type FeedbackTiming = 'immediate' | 'after_submit' | 'after_grading';
+export type GradingPolicy = 'best' | 'last' | 'average';
 
 export interface IQuestionSelection {
   questionBankIds: string[];
@@ -25,6 +26,7 @@ export interface IAttempts {
   maxAttempts: number | null;
   cooldownMinutes?: number;
   retakePolicy: RetakePolicy;
+  gradingPolicy?: GradingPolicy;
 }
 
 export interface IScoring {
@@ -150,6 +152,14 @@ const AttemptsSchema = new Schema<IAttempts>(
         values: ['anytime', 'after_cooldown', 'instructor_unlock'],
         message: '{VALUE} is not a valid retake policy'
       }
+    },
+    gradingPolicy: {
+      type: String,
+      enum: {
+        values: ['best', 'last', 'average'],
+        message: '{VALUE} is not a valid grading policy'
+      },
+      default: 'best'
     }
   },
   { _id: false }

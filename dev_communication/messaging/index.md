@@ -46,13 +46,14 @@ Examples:
 
 ### API → UI (Unread by UI)
 
-- `2026-02-05_bulk-course-enrollment-response.md` - Endpoint ready for integration (High)
-- `2026-02-05_permission-string-alignment-response.md` - Permissions clarified and added (Medium)
-- `2026-02-05_department-scoped-question-banks-response.md` - All endpoints ready (High)
+- `2026-02-08_p1-issues-implemented.md` - P1 issues complete: audio content, exercise retry, program progress (High)
+- `2026-02-08_learner-experience-features-response.md` - Feasibility response for all 6 learner experience features (High)
+- `2026-02-08_p1-questions-response.md` - Answers to UI team's P1 follow-up questions (High)
 
 ### UI → API (Unread by API)
 
-*No pending messages*
+- ~~`2026-02-08_p1-confirmations-response.md`~~ - Processed, response sent
+- ~~`2026-02-08_api-requirements-learner-experience-features.md`~~ - Processed, all 6 issues reviewed
 
 ## Processing Messages
 

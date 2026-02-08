@@ -57,6 +57,12 @@ router.patch('/:id/questions/reorder', exercisesController.reorderExerciseQuesti
 router.delete('/:id/questions/:questionId', exercisesController.removeQuestionFromExercise);
 
 /**
+ * GET /api/v2/content/exercises/:id/attempts
+ * List all attempts for an exercise
+ */
+router.get('/:id/attempts', exercisesController.listExerciseAttempts);
+
+/**
  * GET /api/v2/content/exercises/:id
  * Get detailed information about a specific exercise
  */

@@ -513,3 +513,20 @@ export const bulkEnrollCourse = asyncHandler(async (req: Request, res: Response)
 
   res.status(200).json(ApiResponse.success(result, 'Bulk enrollment completed'));
 });
+
+/**
+ * GET /api/v2/enrollments/:enrollmentId/progress
+ * Get enrollment progress for a program enrollment
+ */
+export const getEnrollmentProgress = asyncHandler(async (req: Request, res: Response) => {
+  const userId = (req as any).user.userId;
+  const { enrollmentId } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(enrollmentId)) {
+    throw ApiError.badRequest('Invalid enrollment ID');
+  }
+
+  const { ProgramProgressService } = await import('@/services/enrollment/programProgress.service');
+  const result = await ProgramProgressService.getEnrollmentProgress(enrollmentId, userId);
+  res.status(200).json(ApiResponse.success(result));
+});
