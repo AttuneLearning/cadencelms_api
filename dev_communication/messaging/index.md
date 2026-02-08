@@ -52,8 +52,10 @@ Examples:
 
 ### UI → API (Unread by API)
 
-- ~~`2026-02-08_p1-confirmations-response.md`~~ - Processed, response sent
-- ~~`2026-02-08_api-requirements-learner-experience-features.md`~~ - Processed, all 6 issues reviewed
+- `2026-02-08_p1-confirmations-response.md` - P1 confirmations and follow-up questions (responded)
+- `2026-02-08_api-requirements-learner-experience-features.md` - API requirements for 6 features (responded)
+
+*Both processed — awaiting thread closure after UI confirms.*
 
 ## Processing Messages
 
