@@ -20,8 +20,8 @@ Certificates should be available for both **courses** and **programs**. Signific
 **API Side (implemented):**
 - `PUT /api/v2/programs/:id/certificate` — certificate config per program (API-ISS-002/003)
 - `GET /api/v2/certificate-templates` — list templates (API-ISS-004)
-- API-ISS-017 (PENDING): Credential Groups & Certificate Definitions (versioned)
-- API-ISS-018 (PENDING): Certificate Issuance & Verification
+- API-ISS-017 (COMPLETED 2026-02-07): Credential Groups & Certificate Definitions (versioned)
+- API-ISS-018 (COMPLETED 2026-02-07): Certificate Issuance & Verification
 
 **UI Side (partially implemented):**
 - `src/entities/certificate/` — certificate entity with API, keys, types
@@ -77,8 +77,8 @@ Certificates should be available for both **courses** and **programs**. Signific
 
 ### Dependencies
 
-- **API-ISS-017** (PENDING): Credential Groups & Certificate Definitions must be implemented first
-- **API-ISS-018** (PENDING): Certificate Issuance & Verification must be implemented first
+- **API-ISS-017** (COMPLETED): Credential Groups & Certificate Definitions — implemented and tested (commit 5eb129e)
+- **API-ISS-018** (COMPLETED): Certificate Issuance & Verification — implemented and tested (commit 5eb129e)
 
 ### Files to Modify/Create
 
@@ -94,7 +94,7 @@ Certificates should be available for both **courses** and **programs**. Signific
 
 ### Approach
 
-1. Wait for API-ISS-017 and API-ISS-018 to complete (or develop against contract)
+1. ~~Wait for API-ISS-017 and API-ISS-018 to complete~~ DONE — see `api-to-ui/2026-02-07_credential-certificate-system-complete.md`
 2. Update certificate entity to support the CertificateIssuance model
 3. Wire CertificatesPage to list actual issued certificates (both course and program)
 4. Implement PDF download (either via `pdfUrl` from API or client-side generation with jsPDF/html2canvas)
@@ -136,7 +136,7 @@ Certificates should be available for both **courses** and **programs**. Signific
    Server-side (API returns `pdfUrl`) is preferred for consistency. Need to confirm API team approach.
 
 2. **Are API-ISS-017 and API-ISS-018 in progress?**
-   Both are PENDING. This issue can proceed with UI scaffolding against the contract, but full integration requires those API issues.
+   Both are COMPLETED as of 2026-02-07. Full integration can proceed. See `api-to-ui/2026-02-07_credential-certificate-system-complete.md` for all endpoints and integration notes.
 
 ---
 
