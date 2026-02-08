@@ -1,6 +1,6 @@
 # API-ISS-018: Certificate Issuance & Verification
 
-## Status: PENDING
+## Status: COMPLETED
 ## Priority: High
 ## Created: 2026-02-04
 ## Updated: 2026-02-04
@@ -295,19 +295,19 @@ eventBus.on('enrollment.completed', async (event) => {
 
 ## Implementation Notes
 
-*Add notes during implementation*
+CertificateIssuance model, services (issuance, verification, upgrade), controller, routes, and validators all implemented. Verification code generation uses URL-safe characters. Upgrade flow checks credential group compatibility. PDF generation deferred per spec.
 
 ---
 
 ## Completion
 
-**Completed Date:**
+**Completed Date:** 2026-02-07
 **Commits:**
 | Hash | Description |
 |------|-------------|
-| | |
+| 5eb129e | feat: add course versioning, certificates, notifications, access policies, and comprehensive unit tests |
 
 **Verification:**
-- [ ] All acceptance criteria met
-- [ ] Tests passing
-- [ ] Phase 3 complete notification sent
+- [x] All acceptance criteria met
+- [x] Tests passing (338 tests across models, services, validators)
+- [x] Phase 3 complete notification sent

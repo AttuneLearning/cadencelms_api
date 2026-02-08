@@ -53,7 +53,7 @@ Development issue tracking for API and UI teams.
 ### UI Team (`issues/ui/`)
 | Folder | Count | Description |
 |--------|-------|-------------|
-| `queue/` | 20 | Ready to work |
+| `queue/` | 31 | Ready to work |
 | `active/` | 3 | In progress |
 | `completed/` | 4 | Done |
 
@@ -73,6 +73,27 @@ Development issue tracking for API and UI teams.
 - UI-ISS-079: API Integration (Medium) - Depends on 075
 - UI-ISS-080: Testing & Polish (Medium) - Depends on 075-079
 
+**Learner Course Experience — Critical Gaps (UI-ISS-094 to UI-ISS-096):**
+- UI-ISS-094: Multi-Lesson Module Support in Course Player (Critical)
+- UI-ISS-095: Course Completion Flow & Celebration (Critical)
+- UI-ISS-096: Exercise Retry Flow with Configurable Attempt Limits (Critical)
+
+**Certificate & Credential System:**
+- UI-ISS-097: Certificate & Badge System — Full Integration (High) - Depends on API-ISS-017, API-ISS-018
+
+**Placeholders — Future Exploration:**
+- UI-ISS-098: Dates, Deadlines & Valid-Until — Exploration (Low)
+- UI-ISS-099: Messaging, Announcements & Reminders System (Medium) — Placeholder
+
+**Next Phase — After Critical Gaps:**
+- UI-ISS-100: Discussion Forums & Exceptions (Medium)
+- UI-ISS-101: Assignment Submissions (Medium)
+- UI-ISS-102: Learning Paths & Programs — Learner View (Medium)
+- UI-ISS-104: Audio Content Type (Medium)
+
+**Delayed — Later Priority:**
+- UI-ISS-103: Notifications — Full Wiring & Integration (Low)
+
 ## Naming Convention
 
 ```
@@ -88,7 +109,7 @@ Examples:
 | Team | Prefix | Next Number |
 |------|--------|-------------|
 | API | API-ISS- | 025 |
-| UI | UI-ISS- | 084 |
+| UI | UI-ISS- | 105 |
 
 *Update "Next Number" when creating issues*
 
