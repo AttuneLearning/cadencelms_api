@@ -1,0 +1,113 @@
+# =============================================================================
+# Frontend Team Definition
+# =============================================================================
+
+team:
+  id: frontend
+  name: Frontend
+  alias: ui
+  repo: cadencelms_ui
+
+# -----------------------------------------------------------------------------
+# Identity
+# -----------------------------------------------------------------------------
+
+identity:
+  issue_prefix: UI-ISS
+  inbox: frontend/inbox/
+  issues: frontend/issues/
+  status: frontend/status.md
+
+# -----------------------------------------------------------------------------
+# Responsibilities
+# -----------------------------------------------------------------------------
+
+owns:
+  - Client-side React application (src/)
+  - Component library and design system (src/shared/ui/)
+  - Client state management and API hooks (src/entities/, src/features/)
+  - Page layouts and routing (src/pages/, src/app/router/)
+  - Client-side validation and error handling
+  - Unit and integration tests (vitest, @testing-library/react)
+  - UAT / E2E tests (Playwright)
+  - Build configuration (Vite, TypeScript)
+
+does_not_own:
+  - Server-side API logic, database schemas, migrations
+  - Authentication/authorization enforcement (server-side)
+  - Background jobs, queues, cron tasks
+  - Infrastructure, deployment, CI/CD pipelines
+  - Data warehousing, analytics pipelines
+
+# -----------------------------------------------------------------------------
+# Communication Rules
+# -----------------------------------------------------------------------------
+
+communication:
+  cross_team_bugs:
+    action: send_message
+    target: "{other_team}/inbox/"
+    description: >
+      Send a message describing the bug with evidence (endpoint,
+      expected vs actual, reproduction steps). Do NOT create issues
+      in the other team's queue.
+
+  api_requests:
+    action: send_message
+    target: "backend/inbox/"
+    description: >
+      Send a message with the endpoint contract (method, path,
+      request/response shapes). Include priority and what it blocks.
+
+  own_issues:
+    description: >
+      Create issues only in frontend/issues/queue/. The frontend team owns
+      its own issue lifecycle. Other teams send messages — the frontend
+      team triages and decides whether to create an issue.
+
+  issue_creation:
+    allowed:
+      - frontend
+      - human
+    not_allowed:
+      - backend
+      - any_other
+
+# -----------------------------------------------------------------------------
+# Workflow
+# -----------------------------------------------------------------------------
+
+workflow:
+  before_implementation:
+    - Check inbox for pending messages (/comms)
+    - Load context for relevant ADRs and patterns (/context)
+    - If new/changed API endpoints needed, define contracts and send to backend team
+
+  implementation:
+    - Follow FSD architecture (entities → features → widgets → pages)
+    - Co-locate tests in __tests__/ directories
+    - Use existing patterns from memory and ADRs
+
+  verification:
+    - "npx tsc --noEmit"
+    - "npx vitest run"
+    - "npx vitest run --config vitest.integration.config.ts"
+
+  after_implementation:
+    - Update memory if new pattern discovered (/memory)
+    - Suggest ADR if architectural decision made (/adr suggest)
+    - Send message if work affects other teams (/comms send)
+    - Move issue to completed (/comms move)
+
+# -----------------------------------------------------------------------------
+# Tech Stack
+# -----------------------------------------------------------------------------
+
+stack:
+  language: TypeScript
+  framework: React 18
+  build: Vite
+  styling: Tailwind CSS + shadcn/ui
+  state: TanStack Query (React Query) + Zustand
+  testing: Vitest + @testing-library/react + Playwright
+  architecture: Feature-Sliced Design (FSD)

@@ -1,53 +1,93 @@
-# Dev Communication Hub
+# Issues
 
-Central dashboard for inter-team communication and issue tracking.
+Development issue tracking across teams.
 
-## Guides
+## Issue Lifecycle
 
-- [[PROCESS_GUIDE|Process Guide]] - Complete workflow documentation
-- [[INSTALL_GUIDE|Installation Guide]] - Setup instructions
+```
+┌─────────┐      ┌─────────┐      ┌───────────┐
+│  queue/  │ ───► │ active/ │ ───► │ completed/│
+└─────────┘      └─────────┘      └───────────┘
+  Ready to        In progress       Done
+  work
+```
 
-## Quick Links
+**Move the file** between folders as status changes.
 
-- [[messaging/index|Messages]]
-- [[issues/index|Issues]]
-- [[coordination/index|Coordination]]
-- [[architecture/index|Architecture]]
+## Teams
 
-## Current Status
+### Backend (`backend/issues/`)
+| Folder | Count | Description |
+|--------|-------|-------------|
+| `queue/` | 0 | Ready to work |
+| `active/` | 0 | In progress |
+| `completed/` | 34 | Done |
 
-### API Team
-- **Focus:** See [[coordination/api-team-status]]
-- **Queue:** [[issues/api/queue/]]
-- **Active:** [[issues/api/active/]]
+**Current Queue (0):**
+_(No issues in queue)_
 
-### UI Team
-- **Focus:** See [[coordination/ui-team-status]]
-- **Queue:** [[issues/ui/queue/]]
-- **Active:** [[issues/ui/active/]]
+**Completed (34):**
+- ~~API-ISS-009 through API-ISS-042~~ All moved to completed/
 
-## Recent Activity
+### Frontend (`frontend/issues/`)
+| Folder | Count | Description |
+|--------|-------|-------------|
+| `queue/` | 1 | Ready to work |
+| `active/` | 1 | In progress |
+| `completed/` | 75 | Done |
 
-| Date | Type | From | Subject |
-|------|------|------|---------|
-| | | | |
+**Active (1):**
+- UI-ISS-138: Courses Missing Content — Seed Data + Learner UAT (High) — IN PROGRESS
 
-*Update this table when adding messages or completing issues*
+**Current Queue (1):**
+- UI-ISS-137: Grading Form — No Editable Fields / Submit Fails (High)
 
-## Message Counts
+**All UI issues through UI-ISS-136 have been completed.**
 
-| Direction | Pending | Archived |
-|-----------|---------|----------|
-| API → UI | 0 | 0 |
-| UI → API | 0 | 0 |
+## Naming Convention
 
-## Issue Counts
+```
+{TEAM}-ISS-{NNN}_{brief_description}.md
+```
 
-| Team | Queue | Active | Completed |
-|------|-------|--------|-----------|
-| API | 0 | 0 | 0 |
-| UI | 0 | 0 | 0 |
+## Issue Numbering
 
----
+| Team | Prefix | Next Number |
+|------|--------|-------------|
+| Backend | API-ISS- | 043 |
+| Frontend | UI-ISS- | 139 |
 
-*Last updated: 2026-01-27*
+*Update "Next Number" when creating issues*
+
+## Creating an Issue
+
+1. Copy template from `templates/issue-template.md`
+2. Fill in all sections
+3. Save to `{team}/issues/queue/` with proper naming
+4. Update "Next Number" above
+
+## Working an Issue
+
+1. Move file from `queue/` to `active/`
+2. Update status in file to "IN PROGRESS"
+3. Work the issue
+4. When complete, update status to "COMPLETE"
+5. Move file from `active/` to `completed/`
+
+## Cross-Team Work
+
+When work requires another team's involvement:
+
+1. **Send a message** to their inbox (`{team}/inbox/`)
+2. **Do NOT create issues** in their queue — they triage inbound messages
+3. The receiving team decides whether to create a local issue
+4. Track the dependency in `shared/dependencies.md`
+
+## Priority Levels
+
+| Priority | Description | Response Time |
+|----------|-------------|---------------|
+| Critical | Blocking production | Immediate |
+| High | Blocking development | Same day |
+| Medium | Important feature | This sprint |
+| Low | Nice to have | When available |

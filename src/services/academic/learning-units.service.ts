@@ -11,6 +11,19 @@ interface ListLearningUnitsFilters {
   sort?: string;
 }
 
+interface AdaptiveData {
+  teachesNodes?: string[];
+  assessesNodes?: string[];
+  isGate?: boolean;
+  isSkippable?: boolean;
+  gateConfig?: {
+    masteryThreshold?: number;
+    minQuestions?: number;
+    maxRetries?: number;
+    failStrategy?: 'allow-continue' | 'hold' | 'inject-practice' | 'prescribe-review';
+  };
+}
+
 interface CreateLearningUnitData {
   title: string;
   description?: string;
@@ -21,6 +34,7 @@ interface CreateLearningUnitData {
   isReplayable?: boolean;
   weight?: number;
   estimatedDuration?: number;
+  adaptive?: AdaptiveData;
 }
 
 interface UpdateLearningUnitData {
@@ -33,6 +47,7 @@ interface UpdateLearningUnitData {
   isReplayable?: boolean;
   weight?: number;
   estimatedDuration?: number;
+  adaptive?: AdaptiveData;
 }
 
 interface PaginationResult {
@@ -42,6 +57,19 @@ interface PaginationResult {
   totalPages: number;
   hasNext: boolean;
   hasPrev: boolean;
+}
+
+interface AdaptiveResponse {
+  teachesNodes: string[];
+  assessesNodes: string[];
+  isGate: boolean;
+  isSkippable: boolean;
+  gateConfig?: {
+    masteryThreshold: number;
+    minQuestions: number;
+    maxRetries: number;
+    failStrategy: string;
+  };
 }
 
 interface LearningUnitResponse {
@@ -57,10 +85,46 @@ interface LearningUnitResponse {
   weight: number;
   sequence: number;
   estimatedDuration?: number;
+  adaptive?: AdaptiveResponse;
   isActive: boolean;
   createdBy?: string;
   createdAt: Date;
   updatedAt: Date;
+}
+
+function formatAdaptive(unit: any): AdaptiveResponse | undefined {
+  if (!unit.adaptive) return undefined;
+  const a = unit.adaptive;
+  const hasContent = (a.teachesNodes && a.teachesNodes.length > 0) ||
+    (a.assessesNodes && a.assessesNodes.length > 0) ||
+    a.isGate || a.isSkippable;
+  if (!hasContent) return undefined;
+  return {
+    teachesNodes: (a.teachesNodes || []).map((id: any) => id.toString()),
+    assessesNodes: (a.assessesNodes || []).map((id: any) => id.toString()),
+    isGate: a.isGate || false,
+    isSkippable: a.isSkippable || false,
+    gateConfig: a.gateConfig ? {
+      masteryThreshold: a.gateConfig.masteryThreshold ?? 0.8,
+      minQuestions: a.gateConfig.minQuestions ?? 3,
+      maxRetries: a.gateConfig.maxRetries ?? -1,
+      failStrategy: a.gateConfig.failStrategy || 'hold'
+    } : undefined
+  };
+}
+
+function buildAdaptiveUpdate(data: AdaptiveData): any {
+  const adaptive: any = {};
+  if (data.teachesNodes !== undefined) {
+    adaptive.teachesNodes = data.teachesNodes.map(id => new mongoose.Types.ObjectId(id));
+  }
+  if (data.assessesNodes !== undefined) {
+    adaptive.assessesNodes = data.assessesNodes.map(id => new mongoose.Types.ObjectId(id));
+  }
+  if (data.isGate !== undefined) adaptive.isGate = data.isGate;
+  if (data.isSkippable !== undefined) adaptive.isSkippable = data.isSkippable;
+  if (data.gateConfig !== undefined) adaptive.gateConfig = data.gateConfig;
+  return adaptive;
 }
 
 export class LearningUnitsService {
@@ -126,6 +190,7 @@ export class LearningUnitsService {
       weight: unit.weight,
       sequence: unit.sequence,
       estimatedDuration: unit.estimatedDuration,
+      adaptive: formatAdaptive(unit),
       isActive: unit.isActive,
       createdBy: unit.createdBy?.toString(),
       createdAt: unit.createdAt,
@@ -172,6 +237,7 @@ export class LearningUnitsService {
       weight: learningUnit.weight,
       sequence: learningUnit.sequence,
       estimatedDuration: learningUnit.estimatedDuration,
+      adaptive: formatAdaptive(learningUnit),
       isActive: learningUnit.isActive,
       createdBy: learningUnit.createdBy?.toString(),
       createdAt: learningUnit.createdAt,
@@ -206,7 +272,7 @@ export class LearningUnitsService {
     const nextSequence = maxSequenceUnit ? maxSequenceUnit.sequence + 1 : 1;
 
     // Create the learning unit
-    const learningUnit = await LearningUnit.create({
+    const createData: any = {
       moduleId: new mongoose.Types.ObjectId(moduleId),
       title: data.title,
       description: data.description,
@@ -220,7 +286,13 @@ export class LearningUnitsService {
       estimatedDuration: data.estimatedDuration,
       isActive: true,
       createdBy: new mongoose.Types.ObjectId(createdBy)
-    });
+    };
+
+    if (data.adaptive) {
+      createData.adaptive = buildAdaptiveUpdate(data.adaptive);
+    }
+
+    const learningUnit = await LearningUnit.create(createData);
 
     return {
       id: learningUnit._id.toString(),
@@ -235,6 +307,7 @@ export class LearningUnitsService {
       weight: learningUnit.weight,
       sequence: learningUnit.sequence,
       estimatedDuration: learningUnit.estimatedDuration,
+      adaptive: formatAdaptive(learningUnit),
       isActive: learningUnit.isActive,
       createdBy: learningUnit.createdBy?.toString(),
       createdAt: learningUnit.createdAt,
@@ -273,6 +346,9 @@ export class LearningUnitsService {
     if (data.isReplayable !== undefined) learningUnit.isReplayable = data.isReplayable;
     if (data.weight !== undefined) learningUnit.weight = data.weight;
     if (data.estimatedDuration !== undefined) learningUnit.estimatedDuration = data.estimatedDuration;
+    if (data.adaptive !== undefined) {
+      learningUnit.adaptive = buildAdaptiveUpdate(data.adaptive) as any;
+    }
 
     await learningUnit.save();
 
@@ -289,6 +365,7 @@ export class LearningUnitsService {
       weight: learningUnit.weight,
       sequence: learningUnit.sequence,
       estimatedDuration: learningUnit.estimatedDuration,
+      adaptive: formatAdaptive(learningUnit),
       isActive: learningUnit.isActive,
       createdBy: learningUnit.createdBy?.toString(),
       createdAt: learningUnit.createdAt,
@@ -453,6 +530,7 @@ export class LearningUnitsService {
       weight: learningUnit.weight,
       sequence: learningUnit.sequence,
       estimatedDuration: learningUnit.estimatedDuration,
+      adaptive: formatAdaptive(learningUnit),
       isActive: learningUnit.isActive,
       createdBy: learningUnit.createdBy?.toString(),
       createdAt: learningUnit.createdAt,

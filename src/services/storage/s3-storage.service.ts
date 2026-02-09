@@ -191,6 +191,25 @@ export class S3StorageProvider implements IStorageProvider {
   }
 
   /**
+   * Upload a buffer directly to S3 (server-side upload)
+   */
+  async putObject(key: string, buffer: Buffer, contentType: string): Promise<string> {
+    try {
+      const command = new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        Body: buffer,
+        ContentType: contentType
+      });
+
+      await this.client.send(command);
+      return this.getPublicUrl(key);
+    } catch (error: any) {
+      throw ApiError.internal(`Failed to upload object: ${error.message}`);
+    }
+  }
+
+  /**
    * Generate a presigned URL for reading an object (for private buckets)
    * Useful for generating temporary download links
    */

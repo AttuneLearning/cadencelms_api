@@ -184,6 +184,21 @@ export class LocalStorageProvider implements IStorageProvider {
   }
 
   /**
+   * Upload a buffer directly to local storage (server-side upload)
+   */
+  async putObject(key: string, buffer: Buffer, _contentType: string): Promise<string> {
+    const fullPath = path.join(this.storagePath, key);
+
+    try {
+      await fs.ensureDir(path.dirname(fullPath));
+      await fs.writeFile(fullPath, buffer);
+      return this.getPublicUrl(key);
+    } catch (error: any) {
+      throw ApiError.internal(`Failed to upload file: ${error.message}`);
+    }
+  }
+
+  /**
    * Validate an upload token and get associated data
    * Used by the local upload endpoint
    */

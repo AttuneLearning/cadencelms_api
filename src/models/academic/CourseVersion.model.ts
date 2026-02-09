@@ -24,6 +24,17 @@ export interface ICourseSettings {
 }
 
 /**
+ * Adaptive playlist engine settings for a course version
+ */
+export type AdaptiveMode = 'off' | 'guided' | 'full';
+
+export interface ICourseAdaptiveSettings {
+  mode: AdaptiveMode;
+  allowLearnerChoice: boolean;       // Can learner toggle mode?
+  preAssessmentEnabled: boolean;     // Run pre-assessment before starting?
+}
+
+/**
  * Statistics snapshot captured when a version is locked
  */
 export interface ICourseVersionStats {
@@ -51,6 +62,7 @@ export interface ICourseVersion extends Document {
   credits: number;
   duration: number;                            // in minutes
   settings: ICourseSettings;
+  adaptiveSettings: ICourseAdaptiveSettings;
   instructorIds: mongoose.Types.ObjectId[];
 
   // Lifecycle
@@ -120,6 +132,28 @@ const courseSettingsSchema = new Schema<ICourseSettings>(
   { _id: false }
 );
 
+const courseAdaptiveSettingsSchema = new Schema<ICourseAdaptiveSettings>(
+  {
+    mode: {
+      type: String,
+      enum: {
+        values: ['off', 'guided', 'full'],
+        message: 'Adaptive mode must be off, guided, or full'
+      },
+      default: 'off'
+    },
+    allowLearnerChoice: {
+      type: Boolean,
+      default: false
+    },
+    preAssessmentEnabled: {
+      type: Boolean,
+      default: false
+    }
+  },
+  { _id: false }
+);
+
 const courseVersionStatsSchema = new Schema<ICourseVersionStats>(
   {
     moduleCount: {
@@ -180,6 +214,10 @@ const courseVersionSchema = new Schema<ICourseVersion>(
     settings: {
       type: courseSettingsSchema,
       default: () => ({})
+    },
+    adaptiveSettings: {
+      type: courseAdaptiveSettingsSchema,
+      default: () => ({ mode: 'off', allowLearnerChoice: false, preAssessmentEnabled: false })
     },
     instructorIds: {
       type: [Schema.Types.ObjectId],

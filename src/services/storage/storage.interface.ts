@@ -112,4 +112,14 @@ export interface IStorageProvider {
    * @param destinationKey - Destination storage key
    */
   copyObject(sourceKey: string, destinationKey: string): Promise<void>;
+
+  /**
+   * Upload a buffer directly to storage (server-side upload)
+   *
+   * @param key - The storage key (path) for the file
+   * @param buffer - The file content as a Buffer
+   * @param contentType - MIME type of the file
+   * @returns Public URL for accessing the uploaded file
+   */
+  putObject(key: string, buffer: Buffer, contentType: string): Promise<string>;
 }

@@ -1,0 +1,30 @@
+# =============================================================================
+# Project Team Registry
+# =============================================================================
+#
+# Which teams are active in this project and how they map to directories.
+# Generic role catalog lives in .claude-workflow/teams/catalog.yaml
+#
+# =============================================================================
+
+project: CadenceLMS
+
+active_teams:
+  - id: backend
+    name: Backend
+    alias: api
+    role: backend
+    repo: cadencelms_api
+    definition: backend/definition.yaml
+
+  - id: frontend
+    name: Frontend
+    alias: ui
+    role: frontend
+    repo: cadencelms_ui
+    definition: frontend/definition.yaml
+
+# Alias mapping for backward compatibility and CLI shortcuts
+aliases:
+  api: backend
+  ui: frontend

@@ -617,15 +617,27 @@ describe('EnrollmentsService', () => {
         }
       ];
 
-      // Mock Enrollment.find chain for program enrollments
-      const findChain = {
+      // Mock Enrollment.find chain for program enrollments (first call)
+      // and course enrollments (second call - returns empty)
+      const programFindChain = {
         sort: jest.fn().mockReturnThis(),
         skip: jest.fn().mockReturnThis(),
         limit: jest.fn().mockReturnThis(),
         lean: jest.fn().mockResolvedValue(mockEnrollments)
       };
-      (Enrollment.find as jest.Mock).mockReturnValue(findChain);
-      (Enrollment.countDocuments as jest.Mock).mockResolvedValue(1);
+      const courseFindChain = {
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue([])
+      };
+      (Enrollment.find as jest.Mock)
+        .mockReturnValueOnce(programFindChain)
+        .mockReturnValueOnce(courseFindChain);
+      // First call (program query) returns 1, second call (course query) returns 0
+      (Enrollment.countDocuments as jest.Mock)
+        .mockResolvedValueOnce(1)
+        .mockResolvedValueOnce(0);
 
       // Mock ClassEnrollment.find chain for class enrollments
       const classFindChain = {
@@ -1187,6 +1199,218 @@ describe('EnrollmentsService', () => {
       ).rejects.toMatchObject({
         statusCode: 403,
         message: 'Self-enrollment is not allowed in this department. Please contact your department administrator.'
+      });
+    });
+  });
+
+  // ============================================================
+  // getMyPrograms
+  // ============================================================
+  describe('getMyPrograms', () => {
+    const mockEnrollment1Id = new mongoose.Types.ObjectId();
+    const mockEnrollment2Id = new mongoose.Types.ObjectId();
+    const mockProgram1Id = new mongoose.Types.ObjectId();
+    const mockProgram2Id = new mongoose.Types.ObjectId();
+
+    const mockEnrollments = [
+      {
+        _id: mockEnrollment1Id,
+        learnerId: new mongoose.Types.ObjectId(mockLearnerId),
+        programId: mockProgram1Id,
+        status: 'active',
+        enrollmentDate: new Date('2026-01-15'),
+        completionDate: null,
+        metadata: {}
+      },
+      {
+        _id: mockEnrollment2Id,
+        learnerId: new mongoose.Types.ObjectId(mockLearnerId),
+        programId: mockProgram2Id,
+        status: 'completed',
+        enrollmentDate: new Date('2025-09-01'),
+        completionDate: new Date('2026-01-10'),
+        metadata: {}
+      }
+    ];
+
+    const setupFindMock = (enrollments: any[], total: number) => {
+      const mockLean = jest.fn().mockResolvedValue(enrollments);
+      const mockLimit = jest.fn().mockReturnValue({ lean: mockLean });
+      const mockSkip = jest.fn().mockReturnValue({ limit: mockLimit });
+      const mockSort = jest.fn().mockReturnValue({ skip: mockSkip });
+      (Enrollment.find as jest.Mock).mockReturnValue({ sort: mockSort });
+      (Enrollment.countDocuments as jest.Mock).mockResolvedValue(total);
+    };
+
+    const setupProgramFindById = (programs: Record<string, any>) => {
+      (Program.findById as jest.Mock).mockImplementation((id: any) => {
+        const idStr = id.toString();
+        const program = programs[idStr] || null;
+        return { populate: jest.fn().mockResolvedValue(program) };
+      });
+    };
+
+    it('should return program enrollments for the authenticated user', async () => {
+      setupFindMock(mockEnrollments, 2);
+
+      const mockPrograms: Record<string, any> = {};
+      mockPrograms[mockProgram1Id.toString()] = {
+        _id: mockProgram1Id,
+        name: 'Computer Science',
+        code: 'CS-001',
+        description: 'CS program',
+        departmentId: {
+          _id: new mongoose.Types.ObjectId(mockDeptId),
+          name: 'Engineering'
+        }
+      };
+      mockPrograms[mockProgram2Id.toString()] = {
+        _id: mockProgram2Id,
+        name: 'Mathematics',
+        code: 'MATH-001',
+        description: 'Math program',
+        departmentId: {
+          _id: new mongoose.Types.ObjectId(mockDeptId),
+          name: 'Engineering'
+        }
+      };
+      setupProgramFindById(mockPrograms);
+
+      const result = await EnrollmentsService.getMyPrograms(mockLearnerId, {});
+
+      expect(result.programs).toHaveLength(2);
+      expect(result.programs[0]).toMatchObject({
+        id: mockProgram1Id.toString(),
+        name: 'Computer Science',
+        code: 'CS-001',
+        description: 'CS program'
+      });
+      expect(result.programs[0].enrollment).toMatchObject({
+        id: mockEnrollment1Id.toString(),
+        status: 'active'
+      });
+      expect(result.programs[1]).toMatchObject({
+        id: mockProgram2Id.toString(),
+        name: 'Mathematics',
+        code: 'MATH-001'
+      });
+      expect(result.pagination).toMatchObject({
+        page: 1,
+        limit: 20,
+        total: 2,
+        totalPages: 1,
+        hasNext: false,
+        hasPrev: false
+      });
+    });
+
+    it('should default page=1 and limit=20', async () => {
+      setupFindMock([], 0);
+
+      const result = await EnrollmentsService.getMyPrograms(mockLearnerId, {});
+
+      expect(result.pagination.page).toBe(1);
+      expect(result.pagination.limit).toBe(20);
+    });
+
+    it('should respect page and limit filters', async () => {
+      setupFindMock([], 0);
+
+      const result = await EnrollmentsService.getMyPrograms(mockLearnerId, { page: 2, limit: 5 });
+
+      expect(result.pagination.page).toBe(2);
+      expect(result.pagination.limit).toBe(5);
+    });
+
+    it('should clamp limit to max 100', async () => {
+      setupFindMock([], 0);
+
+      const result = await EnrollmentsService.getMyPrograms(mockLearnerId, { limit: 200 });
+
+      expect(result.pagination.limit).toBe(100);
+    });
+
+    it('should clamp page to min 1', async () => {
+      setupFindMock([], 0);
+
+      const result = await EnrollmentsService.getMyPrograms(mockLearnerId, { page: -5 });
+
+      expect(result.pagination.page).toBe(1);
+    });
+
+    it('should filter by status when provided', async () => {
+      setupFindMock([], 0);
+
+      await EnrollmentsService.getMyPrograms(mockLearnerId, { status: 'active' });
+
+      const findCall = (Enrollment.find as jest.Mock).mock.calls[0][0];
+      expect(findCall.status).toBe('active');
+    });
+
+    it('should exclude course-type enrollments', async () => {
+      setupFindMock([], 0);
+
+      await EnrollmentsService.getMyPrograms(mockLearnerId, {});
+
+      const findCall = (Enrollment.find as jest.Mock).mock.calls[0][0];
+      expect(findCall['metadata.enrollmentType']).toEqual({ $ne: 'course' });
+    });
+
+    it('should filter null programs from results', async () => {
+      setupFindMock([mockEnrollments[0]], 1);
+
+      // Program not found
+      (Program.findById as jest.Mock).mockReturnValue({
+        populate: jest.fn().mockResolvedValue(null)
+      });
+
+      const result = await EnrollmentsService.getMyPrograms(mockLearnerId, {});
+
+      expect(result.programs).toHaveLength(0);
+    });
+
+    it('should return empty array when no enrollments', async () => {
+      setupFindMock([], 0);
+
+      const result = await EnrollmentsService.getMyPrograms(mockLearnerId, {});
+
+      expect(result.programs).toHaveLength(0);
+      expect(result.pagination.total).toBe(0);
+      expect(result.pagination.totalPages).toBe(0);
+    });
+
+    it('should compute hasNext/hasPrev correctly for middle page', async () => {
+      setupFindMock([], 50);
+
+      const result = await EnrollmentsService.getMyPrograms(mockLearnerId, { page: 2, limit: 20 });
+
+      expect(result.pagination.hasNext).toBe(true);
+      expect(result.pagination.hasPrev).toBe(true);
+      expect(result.pagination.totalPages).toBe(3);
+    });
+
+    it('should include department info in program response', async () => {
+      setupFindMock([mockEnrollments[0]], 1);
+
+      const deptObjId = new mongoose.Types.ObjectId(mockDeptId);
+      const mockPrograms: Record<string, any> = {};
+      mockPrograms[mockProgram1Id.toString()] = {
+        _id: mockProgram1Id,
+        name: 'Computer Science',
+        code: 'CS-001',
+        description: 'CS program',
+        departmentId: {
+          _id: deptObjId,
+          name: 'Engineering'
+        }
+      };
+      setupProgramFindById(mockPrograms);
+
+      const result = await EnrollmentsService.getMyPrograms(mockLearnerId, {});
+
+      expect(result.programs[0].department).toEqual({
+        id: deptObjId.toString(),
+        name: 'Engineering'
       });
     });
   });

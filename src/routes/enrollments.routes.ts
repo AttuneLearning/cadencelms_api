@@ -102,6 +102,16 @@ router.get('/class/:classId',
 );
 
 /**
+ * GET /api/v2/enrollments/my/programs
+ * Get authenticated user's program enrollments
+ * Access Right: enrollment:own:read
+ */
+router.get('/my/programs',
+  authorize('enrollment:own:read'),
+  enrollmentsController.getMyPrograms
+);
+
+/**
  * GET /api/v2/enrollments/:enrollmentId/progress
  * Get enrollment progress for a program enrollment
  * Access Right: enrollment:department:read OR enrollment:own:read

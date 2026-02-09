@@ -41,8 +41,12 @@ describe('EventBus', () => {
       expect(EVENTS.COURSE_COMPLETED).toBe('course.completed');
     });
 
-    it('should have exactly 7 event constants', () => {
-      expect(Object.keys(EVENTS)).toHaveLength(7);
+    it('should have correct PROGRAM_COMPLETED value', () => {
+      expect(EVENTS.PROGRAM_COMPLETED).toBe('program.completed');
+    });
+
+    it('should have exactly 8 event constants', () => {
+      expect(Object.keys(EVENTS)).toHaveLength(8);
     });
   });
 

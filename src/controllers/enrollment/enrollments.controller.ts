@@ -530,3 +530,30 @@ export const getEnrollmentProgress = asyncHandler(async (req: Request, res: Resp
   const result = await ProgramProgressService.getEnrollmentProgress(enrollmentId, userId);
   res.status(200).json(ApiResponse.success(result));
 });
+
+/**
+ * GET /api/v2/enrollments/my/programs
+ * Get authenticated user's program enrollments
+ */
+export const getMyPrograms = asyncHandler(async (req: Request, res: Response) => {
+  const userId = (req as any).user.userId;
+
+  const filters = {
+    page: req.query.page ? parseInt(req.query.page as string) : 1,
+    limit: req.query.limit ? parseInt(req.query.limit as string) : 20,
+    status: req.query.status as string | undefined
+  };
+
+  if (filters.page < 1) {
+    throw ApiError.badRequest('Page must be at least 1');
+  }
+  if (filters.limit < 1 || filters.limit > 100) {
+    throw ApiError.badRequest('Limit must be between 1 and 100');
+  }
+  if (filters.status && !['active', 'completed', 'withdrawn', 'suspended', 'expired'].includes(filters.status)) {
+    throw ApiError.badRequest('Invalid status');
+  }
+
+  const result = await EnrollmentsService.getMyPrograms(userId, filters);
+  res.status(200).json(ApiResponse.success(result));
+});

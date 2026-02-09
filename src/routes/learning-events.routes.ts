@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { isAuthenticated } from '@/middlewares/isAuthenticated';
+import { assertLearnerOwnership } from '@/middlewares/assertLearnerOwnership';
 import * as learningEventsController from '@/controllers/activity/learning-events.controller';
 
 const router = Router();
@@ -117,7 +118,7 @@ router.get('/stats', learningEventsController.getStats);
  * - Array of events with pagination
  * - Summary statistics (total events, courses started/completed, content completed, average score, total study time)
  */
-router.get('/learner/:learnerId', learningEventsController.getLearnerActivity);
+router.get('/learner/:learnerId', assertLearnerOwnership('learnerId'), learningEventsController.getLearnerActivity);
 
 /**
  * GET /api/v2/learning-events/course/:courseId

@@ -6,6 +6,7 @@ import AssessmentAttempt, {
 import Assessment, { IAssessment } from '@/models/content/Assessment.model';
 import Question from '@/models/assessment/Question.model';
 import { ApiError } from '@/utils/ApiError';
+import { LearnerExceptionService } from '@/services/exception/learnerException.service';
 
 interface ListAttemptsFilters {
   status?: 'in_progress' | 'submitted' | 'graded';
@@ -75,9 +76,13 @@ export class AssessmentAttemptsService {
       status: { $in: ['submitted', 'graded', 'abandoned'] }
     });
 
-    // Check max attempts limit
-    if (assessment.attempts.maxAttempts !== null && previousAttemptCount >= assessment.attempts.maxAttempts) {
-      throw ApiError.conflict('Maximum attempts reached for this assessment');
+    // Check max attempts limit (with learner exception support)
+    if (assessment.attempts.maxAttempts !== null) {
+      const additionalAttempts = await LearnerExceptionService.getAdditionalAttempts(learnerId, assessmentId);
+      const effectiveMax = assessment.attempts.maxAttempts + additionalAttempts;
+      if (previousAttemptCount >= effectiveMax) {
+        throw ApiError.conflict('Maximum attempts reached for this assessment');
+      }
     }
 
     // Get questions from question banks

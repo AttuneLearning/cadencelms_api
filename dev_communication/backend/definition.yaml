@@ -1,0 +1,104 @@
+# =============================================================================
+# Backend Team Definition
+# =============================================================================
+
+team:
+  id: backend
+  name: Backend
+  alias: api
+  repo: cadencelms_api
+
+# -----------------------------------------------------------------------------
+# Identity
+# -----------------------------------------------------------------------------
+
+identity:
+  issue_prefix: API-ISS
+  inbox: backend/inbox/
+  issues: backend/issues/
+  status: backend/status.md
+
+# -----------------------------------------------------------------------------
+# Responsibilities
+# -----------------------------------------------------------------------------
+
+owns:
+  - Express API server and route handlers (src/routes/, src/controllers/)
+  - Business logic services (src/services/)
+  - Database models and schemas (src/models/)
+  - Database migrations and seeds (src/seeds/)
+  - Authentication and authorization middleware (src/middlewares/)
+  - Background jobs and queue processing
+  - API request validation and error handling
+  - Server-side tests (Jest/Vitest)
+
+does_not_own:
+  - Client-side UI components, pages, or styling
+  - Client-side state management or routing
+  - Browser-based testing (Playwright, Cypress)
+  - Frontend build tooling (Vite, Webpack)
+  - Data warehousing, analytics pipelines
+
+# -----------------------------------------------------------------------------
+# Communication Rules
+# -----------------------------------------------------------------------------
+
+communication:
+  cross_team_bugs:
+    action: send_message
+    target: "{other_team}/inbox/"
+    description: >
+      Send a message describing the bug with evidence. Do NOT
+      create issues in the other team's queue.
+
+  own_issues:
+    description: >
+      Create issues only in backend/issues/queue/. The backend team owns
+      its own issue lifecycle. Other teams send messages — the backend
+      team triages and decides whether to create an issue.
+
+  issue_creation:
+    allowed:
+      - backend
+      - human
+    not_allowed:
+      - frontend
+      - any_other
+
+# -----------------------------------------------------------------------------
+# Workflow
+# -----------------------------------------------------------------------------
+
+workflow:
+  before_implementation:
+    - Check inbox for pending messages (/comms)
+    - Load context for relevant ADRs and patterns (/context)
+    - If endpoint contract changes, notify frontend team
+
+  implementation:
+    - Follow service-controller-model layering
+    - Validate requests at controller level
+    - Business logic in services, not controllers
+    - Database access through models only
+
+  verification:
+    - "npx tsc --noEmit"
+    - "npm test"
+
+  after_implementation:
+    - Update memory if new pattern discovered
+    - Send message if work affects other teams (/comms send)
+    - Move issue to completed (/comms move)
+
+# -----------------------------------------------------------------------------
+# Tech Stack
+# -----------------------------------------------------------------------------
+
+stack:
+  language: TypeScript
+  framework: Express
+  database: MongoDB (Mongoose)
+  cache: Redis
+  auth: JWT + Role-based (RoleRegistry)
+  testing: Jest
+  architecture: Service-Controller-Model

@@ -1,6 +1,21 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { validateLookupValue } from '@/utils/lookup-validators';
 
+export interface IGateConfig {
+  masteryThreshold: number;   // 0-1, required mastery to pass gate
+  minQuestions: number;        // Minimum questions in gate challenge
+  maxRetries: number;          // Max retry attempts (-1 = unlimited)
+  failStrategy: 'allow-continue' | 'hold' | 'inject-practice' | 'prescribe-review';
+}
+
+export interface ILearningUnitAdaptive {
+  teachesNodes?: mongoose.Types.ObjectId[];   // Knowledge node IDs this LU teaches
+  assessesNodes?: mongoose.Types.ObjectId[];  // Knowledge node IDs this LU assesses
+  isGate?: boolean;                           // Whether this LU acts as a gate checkpoint
+  isSkippable?: boolean;                      // Whether engine can skip if nodes already mastered
+  gateConfig?: IGateConfig;
+}
+
 export interface ILearningUnit extends Document {
   moduleId: mongoose.Types.ObjectId;
   title: string;
@@ -28,6 +43,8 @@ export interface ILearningUnit extends Document {
     shuffleQuestions?: boolean;
     passingScore?: number;
   };
+
+  adaptive?: ILearningUnitAdaptive;
 
   estimatedDuration?: number;
 
@@ -104,6 +121,52 @@ const learningUnitSchema = new Schema<ILearningUnit>(
       showFeedback: { type: Boolean },
       shuffleQuestions: { type: Boolean },
       passingScore: { type: Number }
+    },
+    adaptive: {
+      teachesNodes: {
+        type: [Schema.Types.ObjectId],
+        ref: 'KnowledgeNode',
+        default: undefined
+      },
+      assessesNodes: {
+        type: [Schema.Types.ObjectId],
+        ref: 'KnowledgeNode',
+        default: undefined
+      },
+      isGate: {
+        type: Boolean,
+        default: false
+      },
+      isSkippable: {
+        type: Boolean,
+        default: false
+      },
+      gateConfig: {
+        masteryThreshold: {
+          type: Number,
+          min: [0, 'masteryThreshold must be at least 0'],
+          max: [1, 'masteryThreshold cannot exceed 1'],
+          default: 0.8
+        },
+        minQuestions: {
+          type: Number,
+          min: [1, 'minQuestions must be at least 1'],
+          default: 3
+        },
+        maxRetries: {
+          type: Number,
+          min: [-1, 'maxRetries must be at least -1 (unlimited)'],
+          default: -1
+        },
+        failStrategy: {
+          type: String,
+          enum: {
+            values: ['allow-continue', 'hold', 'inject-practice', 'prescribe-review'],
+            message: '{VALUE} is not a valid fail strategy'
+          },
+          default: 'hold'
+        }
+      }
     },
     estimatedDuration: {
       type: Number

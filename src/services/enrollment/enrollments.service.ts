@@ -142,7 +142,12 @@ export class EnrollmentsService {
   /**
    * List enrollments with comprehensive filtering
    */
-  static async listEnrollments(filters: ListEnrollmentsFilters, _userId: string): Promise<any> {
+  static async listEnrollments(filters: ListEnrollmentsFilters, userId: string): Promise<any> {
+    // Default to authenticated user's enrollments if no learner filter specified
+    if (!filters.learner) {
+      filters.learner = userId;
+    }
+
     const page = Math.max(1, filters.page || 1);
     const limit = Math.min(100, Math.max(1, filters.limit || 10));
     const skip = (page - 1) * limit;
@@ -208,6 +213,33 @@ export class EnrollmentsService {
 
       total += classTotal;
       enrollments.push(...classEnrollments.map(e => ({ ...e, type: 'class' })));
+    }
+
+    if (!filters.type || filters.type === 'course') {
+      // Query course enrollments (stored in Enrollment model with metadata.enrollmentType: 'course')
+      const courseQuery: any = { 'metadata.enrollmentType': 'course' };
+      if (filters.learner) courseQuery.learnerId = new mongoose.Types.ObjectId(filters.learner);
+      if (filters.course) courseQuery['metadata.courseId'] = new mongoose.Types.ObjectId(filters.course);
+      if (filters.status) {
+        courseQuery.status = this.mapStatusToEnrollmentStatus(filters.status);
+      }
+      if (filters.enrolledAfter) courseQuery.enrollmentDate = { $gte: filters.enrolledAfter };
+      if (filters.enrolledBefore) {
+        courseQuery.enrollmentDate = courseQuery.enrollmentDate || {};
+        courseQuery.enrollmentDate.$lte = filters.enrolledBefore;
+      }
+
+      const [courseEnrollments, courseTotal] = await Promise.all([
+        Enrollment.find(courseQuery)
+          .sort(sort)
+          .skip(skip)
+          .limit(limit)
+          .lean(),
+        Enrollment.countDocuments(courseQuery)
+      ]);
+
+      total += courseTotal;
+      enrollments.push(...courseEnrollments.map(e => ({ ...e, type: 'course' })));
     }
 
     // Enrich enrollments with data
@@ -1039,6 +1071,78 @@ export class EnrollmentsService {
     };
   }
 
+  /**
+   * Get authenticated user's program enrollments with program details
+   */
+  static async getMyPrograms(
+    userId: string,
+    filters: { page?: number; limit?: number; status?: string }
+  ): Promise<any> {
+    const page = Math.max(1, filters.page || 1);
+    const limit = Math.min(100, Math.max(1, filters.limit || 20));
+    const skip = (page - 1) * limit;
+
+    const query: any = { learnerId: new mongoose.Types.ObjectId(userId) };
+    if (filters.status) {
+      query.status = this.mapStatusToEnrollmentStatus(filters.status);
+    }
+    // Exclude course-type enrollments (those have metadata.enrollmentType === 'course')
+    query['metadata.enrollmentType'] = { $ne: 'course' };
+
+    const [enrollments, total] = await Promise.all([
+      Enrollment.find(query)
+        .sort({ enrollmentDate: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Enrollment.countDocuments(query)
+    ]);
+
+    const programs = await Promise.all(
+      enrollments.map(async (enrollment) => {
+        const program = await Program.findById(enrollment.programId).populate('departmentId');
+        if (!program) return null;
+
+        const department = program.departmentId as any;
+
+        return {
+          id: program._id.toString(),
+          name: program.name,
+          code: program.code,
+          description: program.description || null,
+          credential: (program as any).credential || null,
+          department: department ? {
+            id: department._id.toString(),
+            name: department.name
+          } : null,
+          enrollment: {
+            id: enrollment._id.toString(),
+            status: this.mapModelStatusToContractStatus(enrollment.status),
+            enrolledAt: enrollment.enrollmentDate,
+            completedAt: enrollment.completionDate || null,
+            progress: 0
+          },
+          coursesCompleted: 0,
+          coursesTotal: 0
+        };
+      })
+    );
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      programs: programs.filter(p => p !== null),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1
+      }
+    };
+  }
+
   // Helper methods
 
   private static async enrichEnrollment(enrollment: any): Promise<any> {
@@ -1089,7 +1193,7 @@ export class EnrollmentsService {
           createdAt: enrollment.createdAt,
           updatedAt: enrollment.updatedAt
         };
-      } else {
+      } else if (enrollment.type === 'class') {
         // Class enrollment
         const user = await User.findById(enrollment.learnerId);
         const learner = await Learner.findById(enrollment.learnerId);
@@ -1129,6 +1233,53 @@ export class EnrollmentsService {
           grade: {
             score: enrollment.gradePercentage || null,
             letter: enrollment.gradeLetter || null,
+            passed: null
+          },
+          department: department ? {
+            id: department._id.toString(),
+            name: department.name
+          } : null,
+          createdAt: enrollment.createdAt,
+          updatedAt: enrollment.updatedAt
+        };
+      } else if (enrollment.type === 'course') {
+        // Course enrollment
+        const user = await User.findById(enrollment.learnerId);
+        const learner = await Learner.findById(enrollment.learnerId);
+        const course = await Course.findById(enrollment.metadata?.courseId).populate('departmentId');
+
+        if (!user || !learner || !course) return null;
+
+        const department = course.departmentId as any;
+
+        return {
+          id: enrollment._id.toString(),
+          type: 'course',
+          learner: {
+            id: user._id.toString(),
+            firstName: learner.person.firstName,
+            lastName: learner.person.lastName,
+            email: user.email
+          },
+          target: {
+            id: course._id.toString(),
+            name: course.name,
+            code: course.code,
+            type: 'course'
+          },
+          status: this.mapModelStatusToContractStatus(enrollment.status),
+          enrolledAt: enrollment.enrollmentDate,
+          completedAt: enrollment.completionDate || null,
+          withdrawnAt: enrollment.withdrawalDate || null,
+          expiresAt: enrollment.metadata?.expiresAt || null,
+          progress: {
+            percentage: 0,
+            completedItems: 0,
+            totalItems: 0
+          },
+          grade: {
+            score: enrollment.cumulativeGPA ? enrollment.cumulativeGPA * 25 : null,
+            letter: null,
             passed: null
           },
           department: department ? {

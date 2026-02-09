@@ -1,3 +1,4 @@
+// Note: Exception-aware max attempts logic is tested in assessment-attempts-exception.test.ts
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
 import { AssessmentAttemptsService } from '@/services/progress/assessment-attempts.service';

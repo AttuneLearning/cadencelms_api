@@ -5,15 +5,17 @@
 **STOP.** Before implementing any feature, endpoint, or issue:
 
 1. **Read the checklist:** `dev_communication/guidance/FEATURE_DEVELOPMENT_CHECKLIST.md`
-2. **Check relevant ADRs:** Run `/adr` or read `dev_communication/architecture/decisions/`
-3. **Implementation workflow (per ADR-DEV-001):**
+2. **Check comms:** `/comms` for inbox messages and blockers
+3. **Define endpoint contracts:** If the work involves new or changed API endpoints, define the contracts first and send to the UI team (`/comms send`). Getting cross-team agreement on contracts early prevents rework and is second in priority only to team configuration.
+4. **Check relevant ADRs:** Run `/adr` or read `dev_communication/architecture/decisions/`
+5. **Implementation workflow (per ADR-DEV-001):**
    ```
    1. Implement Feature/Fix
    2. Write Tests for Implementation  ← DO NOT SKIP
    3. Run Related Tests: npm test [path]
    4. Verify: npx tsc --noEmit
    ```
-4. **When spawning agents:** Include testing requirements. Agents must create tests and verify they pass.
+6. **When spawning agents:** Include testing requirements. Agents must create tests and verify they pass.
 
 ---
 

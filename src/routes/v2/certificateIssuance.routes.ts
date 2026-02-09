@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { isAuthenticated } from '@/middlewares/isAuthenticated';
 import { authorize } from '@/middlewares/authorize';
+import { assertLearnerOwnership } from '@/middlewares/assertLearnerOwnership';
 import {
   validateManualIssuance,
   validateRevokeIssuance,
@@ -107,6 +108,23 @@ certificateIssuanceRouter.get(
 );
 
 /**
+ * GET /api/v2/certificate-issuances/:id/pdf
+ * Get or generate a certificate PDF.
+ *
+ * Access Right: certificates:read
+ *
+ * Query Parameters:
+ * - download?: boolean - If true (or Accept: application/pdf), returns 302 redirect to PDF URL
+ *
+ * Returns: { pdfUrl } or 302 redirect
+ */
+certificateIssuanceRouter.get(
+  '/:id/pdf',
+  authorize('content:certificates:read'),
+  certificateIssuanceController.getCertificatePdf
+);
+
+/**
  * POST /api/v2/certificate-issuances/:id/revoke
  * Revoke a certificate issuance.
  *
@@ -198,6 +216,7 @@ learnerCertificateRouter.use(isAuthenticated);
 learnerCertificateRouter.get(
   '/certificates',
   authorize('learner:pii:read'),
+  assertLearnerOwnership('id'),
   certificateIssuanceController.getLearnerCertificates
 );
 

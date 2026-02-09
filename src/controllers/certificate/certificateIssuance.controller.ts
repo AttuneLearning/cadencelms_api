@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { CertificateIssuanceService } from '@/services/certificate/certificateIssuance.service';
 import { CertificateVerificationService } from '@/services/certificate/certificateVerification.service';
 import { CertificateUpgradeService } from '@/services/certificate/certificateUpgrade.service';
+import { CertificatePdfService } from '@/services/certificate/certificatePdf.service';
 import { ApiResponse } from '@/utils/ApiResponse';
 import { asyncHandler } from '@/utils/asyncHandler';
 
@@ -52,6 +53,27 @@ export const getIssuanceById = asyncHandler(async (req: Request, res: Response) 
   const { id } = req.params;
 
   const result = await CertificateIssuanceService.getIssuanceById(id, userId);
+  res.status(200).json(ApiResponse.success(result));
+});
+
+/**
+ * GET /api/v2/certificate-issuances/:id/pdf
+ * Get or generate a certificate PDF
+ */
+export const getCertificatePdf = asyncHandler(async (req: Request, res: Response) => {
+  const userId = (req as any).user.userId;
+  const { id } = req.params;
+
+  const result = await CertificatePdfService.getOrGeneratePdf(id, userId);
+
+  const wantsDownload = req.query.download === 'true' ||
+    req.headers.accept === 'application/pdf';
+
+  if (wantsDownload) {
+    res.redirect(302, result.pdfUrl);
+    return;
+  }
+
   res.status(200).json(ApiResponse.success(result));
 });
 

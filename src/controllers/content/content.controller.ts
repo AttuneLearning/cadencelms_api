@@ -52,7 +52,7 @@ export const listContent = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const result = await ContentService.listAllContent(filters, user.userId);
-  res.status(200).json(ApiResponse.success({ data: result }));
+  res.status(200).json(ApiResponse.success(result));
 });
 
 /**
@@ -64,7 +64,7 @@ export const getContent = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
 
   const result = await ContentService.getContentById(id, user.userId);
-  res.status(200).json(ApiResponse.success({ data: result }));
+  res.status(200).json(ApiResponse.success(result));
 });
 
 /**
@@ -110,7 +110,7 @@ export const listScorm = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const result = await ContentService.listScormPackages(filters, user.userId);
-  res.status(200).json(ApiResponse.success({ data: result }));
+  res.status(200).json(ApiResponse.success(result));
 });
 
 /**
@@ -148,7 +148,7 @@ export const uploadScorm = asyncHandler(async (req: Request, res: Response) => {
   const result = await ContentService.uploadScormPackage(data);
   res.status(201).json(
     ApiResponse.success(
-      { data: result },
+      result,
       'SCORM package uploaded and extracted successfully'
     )
   );
@@ -163,7 +163,7 @@ export const getScorm = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
 
   const result = await ContentService.getScormPackageById(id, user.userId);
-  res.status(200).json(ApiResponse.success({ data: result }));
+  res.status(200).json(ApiResponse.success(result));
 });
 
 /**
@@ -208,7 +208,7 @@ export const updateScorm = asyncHandler(async (req: Request, res: Response) => {
 
   const result = await ContentService.updateScormPackage(id, updateData, user.userId);
   res.status(200).json(
-    ApiResponse.success({ data: result }, 'SCORM package metadata updated successfully')
+    ApiResponse.success(result, 'SCORM package metadata updated successfully')
   );
 });
 
@@ -245,7 +245,7 @@ export const launchScorm = asyncHandler(async (req: Request, res: Response) => {
   };
 
   const result = await ContentService.launchScormPackage(id, data);
-  res.status(200).json(ApiResponse.success({ data: result }));
+  res.status(200).json(ApiResponse.success(result));
 });
 
 /**
@@ -268,7 +268,7 @@ export const publishScorm = asyncHandler(async (req: Request, res: Response) => 
 
   const result = await ContentService.publishScormPackage(id, user.userId, publishedAtDate);
   res.status(200).json(
-    ApiResponse.success({ data: result }, 'SCORM package published successfully')
+    ApiResponse.success(result, 'SCORM package published successfully')
   );
 });
 
@@ -282,7 +282,7 @@ export const unpublishScorm = asyncHandler(async (req: Request, res: Response) =
 
   const result = await ContentService.unpublishScormPackage(id, user.userId);
   res.status(200).json(
-    ApiResponse.success({ data: result }, 'SCORM package unpublished successfully')
+    ApiResponse.success(result, 'SCORM package unpublished successfully')
   );
 });
 
@@ -323,7 +323,7 @@ export const listMedia = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const result = await ContentService.listMediaFiles(filters, user.userId);
-  res.status(200).json(ApiResponse.success({ data: result }));
+  res.status(200).json(ApiResponse.success(result));
 });
 
 /**
@@ -372,7 +372,7 @@ export const uploadMedia = asyncHandler(async (req: Request, res: Response) => {
 
   const result = await ContentService.uploadMediaFile(data);
   res.status(201).json(
-    ApiResponse.success({ data: result }, 'Media file uploaded successfully')
+    ApiResponse.success(result, 'Media file uploaded successfully')
   );
 });
 
@@ -385,7 +385,7 @@ export const getMedia = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
 
   const result = await ContentService.getMediaFileById(id, user.userId);
-  res.status(200).json(ApiResponse.success({ data: result }));
+  res.status(200).json(ApiResponse.success(result));
 });
 
 /**
@@ -424,7 +424,7 @@ export const updateMedia = asyncHandler(async (req: Request, res: Response) => {
 
   const result = await ContentService.updateMediaFile(id, updateData, user.userId);
   res.status(200).json(
-    ApiResponse.success({ data: result }, 'Media metadata updated successfully')
+    ApiResponse.success(result, 'Media metadata updated successfully')
   );
 });
 

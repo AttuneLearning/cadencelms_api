@@ -102,8 +102,26 @@ import {
   departmentModulesRouter
 } from './routes/v2/module-completion.routes';
 
+// Learner Exception routes
+import { enrollmentExceptionRouter, exceptionRouter } from './routes/v2/learnerException.routes';
+
 // Notification routes
 import notificationRouter from './routes/v2/notification.routes';
+
+// Discussion Forum routes
+import { courseDiscussionRouter, threadRouter, replyRouter } from './routes/v2/discussion.routes';
+
+// Assignment Submission routes
+import { assignmentRouter, submissionRouter } from './routes/v2/assignment.routes';
+
+// Calendar Feed routes
+import calendarFeedsRoutes from './routes/v2/calendar-feeds.routes';
+
+// Playlist Session routes
+import playlistSessionRoutes from './routes/v2/playlist-session.routes';
+
+// Message/Inbox routes
+import messageRoutes from './routes/v2/message.routes';
 
 // Event handlers
 import { registerNotificationHandlers } from './events/handlers/notification.handlers';
@@ -149,6 +167,7 @@ app.use('/api/v2/users/staff', staffRoutes);
 app.use('/api/v2/users/learners', learnersRoutes);
 app.use('/api/v2/departments', departmentsRoutes);
 app.use('/api/v2/calendar', academicYearsRoutes);
+app.use('/api/v2/calendar', calendarFeedsRoutes); // Calendar feed endpoints (learner, staff, system)
 app.use('/api/v2/lookup-values', lookupValuesRoutes);
 app.use('/api/v2/lists', listsRoutes);
 
@@ -181,6 +200,7 @@ app.use('/api/v2/departments/:departmentId/questions', departmentQuestionsRoutes
 // API routes - Phase 4
 app.use('/api/v2/enrollments', enrollmentsRoutes);
 app.use('/api/v2/enrollments', gradeOverrideRoutes); // Grade override endpoints nested under enrollments
+app.use('/api/v2/enrollments/:enrollmentId/playlist-session', playlistSessionRoutes); // Playlist session persistence
 app.use('/api/v2/progress', progressRoutes);
 app.use('/api/v2/content-attempts', contentAttemptsRoutes);
 app.use('/api/v2/learning-events', learningEventsRoutes);
@@ -230,11 +250,27 @@ app.use('/api/v2/learners/:id/module-completions', learnerModuleCompletionsRoute
 app.use('/api/v2/modules', moduleUsageRouter); // Module usage and completion stats
 app.use('/api/v2/departments/:id/modules', departmentModulesRouter); // Department-owned and available modules
 
+// API routes - Learner Exceptions
+app.use('/api/v2/enrollments', enrollmentExceptionRouter); // Enrollment-scoped exception operations
+app.use('/api/v2/exceptions', exceptionRouter); // Exception-level operations (get, revoke)
+
 // API routes - Access Policy & Extension Requests
 app.use('/api/v2/access-extension-requests', accessExtensionRequestsRoutes); // Access extension request management
 
 // API routes - Notifications
 app.use('/api/v2/users/me', notificationRouter); // User notification management
+
+// API routes - Discussion Forums
+app.use('/api/v2/courses/:courseId/discussions', courseDiscussionRouter); // Course-scoped discussion threads
+app.use('/api/v2/discussions', threadRouter); // Thread-level operations
+app.use('/api/v2/replies', replyRouter); // Reply-level operations
+
+// API routes - Assignment Submissions
+app.use('/api/v2/assignments', assignmentRouter); // Assignment CRUD + nested submissions
+app.use('/api/v2/submissions', submissionRouter); // Submission-level operations
+
+// API routes - Messages/Inbox
+app.use('/api/v2/messages', messageRoutes); // User message inbox and management
 
 // Register event handlers
 registerNotificationHandlers();

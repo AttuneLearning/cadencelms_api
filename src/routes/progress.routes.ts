@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { isAuthenticated } from '@/middlewares/isAuthenticated';
 import { authorize } from '@/middlewares/authorize';
+import { assertLearnerOwnership } from '@/middlewares/assertLearnerOwnership';
 import * as progressController from '@/controllers/analytics/progress.controller';
 
 const router = Router();
@@ -69,6 +70,7 @@ router.get('/learner/:learnerId/program/:programId',
  */
 router.get('/learner/:learnerId',
   authorize.anyOf(['learner:grades:read', 'grades:own:read']),
+  assertLearnerOwnership('learnerId'),
   progressController.getLearnerProgress
 );
 

@@ -27,6 +27,7 @@ export type MediaPurpose =
   | 'thumbnail'
   | 'avatar'
   | 'certificate'
+  | 'assignment'
   | 'general';
 
 /**
@@ -196,7 +197,7 @@ const mediaAttachmentSchema = new Schema<IMediaAttachment>(
       type: String,
       required: [true, 'Purpose is required'],
       enum: {
-        values: ['flashcard', 'question', 'content', 'thumbnail', 'avatar', 'certificate', 'general'],
+        values: ['flashcard', 'question', 'content', 'thumbnail', 'avatar', 'certificate', 'assignment', 'general'],
         message: '{VALUE} is not a valid purpose'
       }
     },

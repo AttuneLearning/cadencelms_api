@@ -43,6 +43,8 @@ import CanonicalCourse from '../src/models/academic/CanonicalCourse.model';
 import CourseVersion from '../src/models/academic/CourseVersion.model';
 import CourseVersionModule from '../src/models/academic/CourseVersionModule.model';
 import Module from '../src/models/academic/Module.model';
+import LearningUnit from '../src/models/content/LearningUnit.model';
+import LearningUnitQuestion from '../src/models/content/LearningUnitQuestion.model';
 
 loadEnv();
 
@@ -759,6 +761,441 @@ const CBT_QUESTIONS = [
 ];
 
 /**
+ * EMDR Question Data - 15 questions on Eye Movement Desensitization and Reprocessing
+ */
+const EMDR_QUESTIONS = [
+  {
+    questionText: 'What does EMDR stand for?',
+    correctAnswers: ['Eye Movement Desensitization and Reprocessing'],
+    distractors: ['Eye Memory Distortion Recovery', 'Emotional Memory Desensitization Response', 'Eye Movement Diagnostic Rehearsal'],
+    flashcardPrompt: 'What does EMDR stand for?',
+    matchingPair: { term: 'EMDR', definition: 'Eye Movement Desensitization and Reprocessing' },
+    explanation: 'EMDR is Eye Movement Desensitization and Reprocessing, a psychotherapy approach developed by Francine Shapiro.',
+    difficulty: 'easy' as const
+  },
+  {
+    questionText: 'How many phases are in the standard EMDR protocol?',
+    correctAnswers: ['Eight phases'],
+    distractors: ['Four phases', 'Six phases', 'Ten phases'],
+    flashcardPrompt: 'How many phases does EMDR have?',
+    matchingPair: { term: 'EMDR Protocol', definition: 'Eight-phase treatment approach' },
+    explanation: 'The standard EMDR protocol consists of eight phases from history-taking through reevaluation.',
+    difficulty: 'easy' as const
+  },
+  {
+    questionText: 'What is the Adaptive Information Processing (AIP) model?',
+    correctAnswers: ['A theoretical model explaining how memories are stored and processed in EMDR'],
+    distractors: ['A computer model for data analysis', 'A learning style assessment tool', 'A behavioral conditioning framework'],
+    flashcardPrompt: 'Define the AIP model in EMDR',
+    matchingPair: { term: 'AIP Model', definition: 'Theoretical model for memory storage and processing in EMDR' },
+    explanation: 'The AIP model posits that psychopathology results from unprocessed or maladaptively stored memories.',
+    difficulty: 'medium' as const
+  },
+  {
+    questionText: 'What is bilateral stimulation in EMDR?',
+    correctAnswers: ['Alternating stimulation of both sides of the body, typically through eye movements, taps, or tones'],
+    distractors: ['Stimulation of only the left hemisphere', 'Electrical brain stimulation', 'Biofeedback monitoring'],
+    flashcardPrompt: 'What is bilateral stimulation?',
+    matchingPair: { term: 'Bilateral Stimulation', definition: 'Alternating stimulation of both body sides via eye movements, taps, or tones' },
+    explanation: 'Bilateral stimulation is the core mechanism of EMDR, facilitating memory reprocessing.',
+    difficulty: 'easy' as const
+  },
+  {
+    questionText: 'What occurs during the desensitization phase of EMDR?',
+    correctAnswers: ['The client focuses on the target memory while experiencing bilateral stimulation until distress decreases'],
+    distractors: ['The client avoids thinking about the trauma', 'The therapist provides medication', 'The client practices relaxation only'],
+    flashcardPrompt: 'What happens during EMDR desensitization?',
+    matchingPair: { term: 'Desensitization Phase', definition: 'Focusing on target memory with bilateral stimulation until distress decreases' },
+    explanation: 'Phase 4 (desensitization) aims to reduce the subjective disturbance associated with the target memory.',
+    difficulty: 'medium' as const
+  },
+  {
+    questionText: 'What is the Subjective Units of Disturbance (SUD) scale used for in EMDR?',
+    correctAnswers: ['To measure the level of distress associated with a target memory on a 0-10 scale'],
+    distractors: ['To measure intelligence', 'To assess medication dosage', 'To rate therapist performance'],
+    flashcardPrompt: 'Purpose of the SUD scale in EMDR',
+    matchingPair: { term: 'SUD Scale', definition: 'Measures distress level associated with target memory (0-10)' },
+    explanation: 'The SUD scale helps track progress during desensitization, with 0 being no disturbance and 10 being worst possible.',
+    difficulty: 'medium' as const
+  },
+  {
+    questionText: 'What is the installation phase in EMDR?',
+    correctAnswers: ['Strengthening the positive cognition to replace the negative belief associated with the memory'],
+    distractors: ['Installing monitoring software', 'Setting up the therapy room', 'Initial client intake'],
+    flashcardPrompt: 'Describe the EMDR installation phase',
+    matchingPair: { term: 'Installation Phase', definition: 'Strengthening positive cognition to replace negative belief' },
+    explanation: 'Phase 5 strengthens the desired positive cognition using the Validity of Cognition (VOC) scale.',
+    difficulty: 'medium' as const
+  },
+  {
+    questionText: 'What is a negative cognition (NC) in EMDR assessment?',
+    correctAnswers: ['A negative self-referencing belief connected to the target memory'],
+    distractors: ['A pessimistic worldview', 'A cognitive impairment', 'A therapist judgment'],
+    flashcardPrompt: 'What is a negative cognition in EMDR?',
+    matchingPair: { term: 'Negative Cognition', definition: 'Negative self-referencing belief connected to target memory' },
+    explanation: 'The NC represents the maladaptive belief the client holds about themselves in relation to the traumatic event.',
+    difficulty: 'medium' as const
+  },
+  {
+    questionText: 'What is the body scan phase used for in EMDR?',
+    correctAnswers: ['To identify and process any residual physical tension or sensation related to the target memory'],
+    distractors: ['Medical imaging', 'Weight measurement', 'Sleep assessment'],
+    flashcardPrompt: 'Purpose of body scan in EMDR',
+    matchingPair: { term: 'Body Scan Phase', definition: 'Identifying residual physical tension related to target memory' },
+    explanation: 'Phase 6 checks for any remaining somatic disturbance that may indicate incomplete processing.',
+    difficulty: 'medium' as const
+  },
+  {
+    questionText: 'Who developed EMDR therapy?',
+    correctAnswers: ['Francine Shapiro'],
+    distractors: ['Aaron Beck', 'Sigmund Freud', 'Carl Rogers'],
+    flashcardPrompt: 'Who developed EMDR?',
+    matchingPair: { term: 'Francine Shapiro', definition: 'Developer of EMDR therapy' },
+    explanation: 'Francine Shapiro developed EMDR in 1987 after noticing that eye movements reduced distressing thoughts.',
+    difficulty: 'easy' as const
+  },
+  {
+    questionText: 'What is a "safe place" exercise in EMDR?',
+    correctAnswers: ['A resource development technique where the client imagines a calming, secure environment'],
+    distractors: ['A physical safe room', 'An emergency exit plan', 'A sedation procedure'],
+    flashcardPrompt: 'Describe the safe place exercise',
+    matchingPair: { term: 'Safe Place Exercise', definition: 'Imagining a calming, secure environment for stabilization' },
+    explanation: 'The safe place exercise is used in the preparation phase to ensure the client has self-regulation resources.',
+    difficulty: 'easy' as const
+  },
+  {
+    questionText: 'What conditions is EMDR primarily recommended for treating?',
+    correctAnswers: ['Post-traumatic stress disorder (PTSD) and trauma-related conditions'],
+    distractors: ['Only depression', 'Only eating disorders', 'Only substance abuse'],
+    flashcardPrompt: 'Primary conditions treated with EMDR',
+    matchingPair: { term: 'EMDR Indications', definition: 'Primarily recommended for PTSD and trauma-related conditions' },
+    explanation: 'EMDR has the strongest evidence base for PTSD and is recommended by WHO and APA guidelines.',
+    difficulty: 'easy' as const
+  },
+  {
+    questionText: 'What is the Validity of Cognition (VOC) scale?',
+    correctAnswers: ['A 1-7 scale measuring how true a positive cognition feels to the client'],
+    distractors: ['A measure of IQ', 'A test of memory accuracy', 'A scale for medication effectiveness'],
+    flashcardPrompt: 'What does the VOC scale measure?',
+    matchingPair: { term: 'VOC Scale', definition: 'Measures how true a positive cognition feels (1-7)' },
+    explanation: 'The VOC is used during assessment and installation phases, with 7 being completely true.',
+    difficulty: 'hard' as const
+  },
+  {
+    questionText: 'What is "floatback" technique in EMDR?',
+    correctAnswers: ['A technique to identify earlier memories connected to the current disturbance'],
+    distractors: ['A relaxation position', 'A type of bilateral stimulation', 'A post-session review'],
+    flashcardPrompt: 'Define floatback technique',
+    matchingPair: { term: 'Floatback', definition: 'Identifying earlier memories connected to current disturbance' },
+    explanation: 'Floatback helps trace current symptoms to their earliest memory origin for targeted processing.',
+    difficulty: 'hard' as const
+  },
+  {
+    questionText: 'What are contraindications for starting EMDR processing?',
+    correctAnswers: ['Insufficient stabilization, active psychosis, or inability to manage emotional distress'],
+    distractors: ['Having a headache', 'Being over age 50', 'Having prior therapy experience'],
+    flashcardPrompt: 'EMDR contraindications',
+    matchingPair: { term: 'EMDR Contraindications', definition: 'Insufficient stabilization, active psychosis, inability to manage distress' },
+    explanation: 'EMDR requires adequate client preparation and stabilization before trauma processing begins.',
+    difficulty: 'hard' as const
+  }
+];
+
+/**
+ * Cognitive Therapy Question Data - 15 questions on Cognitive Therapy assessment and interventions
+ */
+const COGNITIVE_THERAPY_QUESTIONS = [
+  {
+    questionText: 'What is the Beck Depression Inventory (BDI)?',
+    correctAnswers: ['A self-report questionnaire measuring severity of depression symptoms'],
+    distractors: ['A therapist observation tool', 'A brain imaging technique', 'A medication guide'],
+    flashcardPrompt: 'What is the BDI?',
+    matchingPair: { term: 'Beck Depression Inventory', definition: 'Self-report questionnaire measuring depression severity' },
+    explanation: 'The BDI is one of the most widely used instruments for measuring depression severity.',
+    difficulty: 'easy' as const
+  },
+  {
+    questionText: 'What is cognitive case formulation?',
+    correctAnswers: ['A structured framework for understanding a client\'s problems through cognitive theory'],
+    distractors: ['A legal case review', 'A pharmaceutical study design', 'A billing procedure'],
+    flashcardPrompt: 'Define cognitive case formulation',
+    matchingPair: { term: 'Case Formulation', definition: 'Structured framework understanding problems through cognitive theory' },
+    explanation: 'Case formulation organizes client information into a cognitive model to guide treatment planning.',
+    difficulty: 'medium' as const
+  },
+  {
+    questionText: 'What is schema therapy?',
+    correctAnswers: ['An approach targeting deep-rooted maladaptive patterns (schemas) developed in childhood'],
+    distractors: ['A database design method', 'A quick-fix therapy', 'A medication protocol'],
+    flashcardPrompt: 'Define schema therapy',
+    matchingPair: { term: 'Schema Therapy', definition: 'Targeting deep-rooted maladaptive patterns from childhood' },
+    explanation: 'Schema therapy integrates cognitive, behavioral, and experiential techniques to address early maladaptive schemas.',
+    difficulty: 'medium' as const
+  },
+  {
+    questionText: 'What is Socratic questioning in cognitive therapy?',
+    correctAnswers: ['A method of guided discovery using questions to help clients examine their own thinking'],
+    distractors: ['Asking trivia questions', 'Interrogating the client', 'Reading from a script'],
+    flashcardPrompt: 'Define Socratic questioning',
+    matchingPair: { term: 'Socratic Questioning', definition: 'Guided discovery using questions to examine thinking' },
+    explanation: 'Socratic questioning helps clients discover inconsistencies and develop more balanced perspectives.',
+    difficulty: 'medium' as const
+  },
+  {
+    questionText: 'What is a thought record used for in cognitive therapy?',
+    correctAnswers: ['Systematically identifying, evaluating, and modifying automatic thoughts'],
+    distractors: ['Recording therapy sessions', 'Documenting medications', 'Tracking appointment attendance'],
+    flashcardPrompt: 'Purpose of a thought record',
+    matchingPair: { term: 'Thought Record', definition: 'Systematically identifying, evaluating, and modifying automatic thoughts' },
+    explanation: 'Thought records help clients see the relationship between situations, thoughts, emotions, and behaviors.',
+    difficulty: 'easy' as const
+  },
+  {
+    questionText: 'What is a behavioral experiment in cognitive therapy?',
+    correctAnswers: ['A planned experiential activity designed to test the validity of a belief'],
+    distractors: ['A laboratory experiment', 'A drug trial', 'A survey study'],
+    flashcardPrompt: 'What is a behavioral experiment?',
+    matchingPair: { term: 'Behavioral Experiment', definition: 'Planned activity to test the validity of a belief' },
+    explanation: 'Behavioral experiments provide direct evidence that can confirm or disconfirm cognitive distortions.',
+    difficulty: 'medium' as const
+  },
+  {
+    questionText: 'What is the downward arrow technique?',
+    correctAnswers: ['A technique to uncover deeper beliefs by repeatedly asking "What does that mean about you?"'],
+    distractors: ['A relaxation exercise', 'A drawing technique', 'A grading method'],
+    flashcardPrompt: 'Describe the downward arrow technique',
+    matchingPair: { term: 'Downward Arrow', definition: 'Uncovering deeper beliefs by asking "What does that mean about you?"' },
+    explanation: 'This technique helps identify intermediate and core beliefs underlying automatic thoughts.',
+    difficulty: 'hard' as const
+  },
+  {
+    questionText: 'What are intermediate beliefs in cognitive therapy?',
+    correctAnswers: ['Rules, attitudes, and assumptions that bridge automatic thoughts and core beliefs'],
+    distractors: ['Average-difficulty problems', 'Mid-session check-ins', 'Moderately effective interventions'],
+    flashcardPrompt: 'Define intermediate beliefs',
+    matchingPair: { term: 'Intermediate Beliefs', definition: 'Rules, attitudes, assumptions bridging automatic thoughts and core beliefs' },
+    explanation: 'Intermediate beliefs often take the form of "If...then" rules or "should" statements.',
+    difficulty: 'hard' as const
+  },
+  {
+    questionText: 'What is the Beck Anxiety Inventory (BAI)?',
+    correctAnswers: ['A self-report measure distinguishing anxiety symptoms from depression symptoms'],
+    distractors: ['A diagnostic brain scan', 'A blood test for anxiety', 'A therapist rating scale'],
+    flashcardPrompt: 'What does the BAI measure?',
+    matchingPair: { term: 'Beck Anxiety Inventory', definition: 'Self-report measure distinguishing anxiety from depression symptoms' },
+    explanation: 'The BAI focuses on somatic symptoms of anxiety to differentiate it from depression.',
+    difficulty: 'easy' as const
+  },
+  {
+    questionText: 'What is cognitive restructuring?',
+    correctAnswers: ['The process of identifying, challenging, and modifying maladaptive thoughts'],
+    distractors: ['Brain surgery', 'Memory erasure', 'Personality change through medication'],
+    flashcardPrompt: 'Define cognitive restructuring',
+    matchingPair: { term: 'Cognitive Restructuring', definition: 'Identifying, challenging, and modifying maladaptive thoughts' },
+    explanation: 'Cognitive restructuring is a core technique for replacing distorted thinking with more balanced alternatives.',
+    difficulty: 'easy' as const
+  },
+  {
+    questionText: 'What is activity scheduling in cognitive therapy?',
+    correctAnswers: ['Planning specific activities to counteract avoidance and increase engagement'],
+    distractors: ['Scheduling therapy appointments', 'Creating a study timetable', 'Organizing a work calendar'],
+    flashcardPrompt: 'What is activity scheduling?',
+    matchingPair: { term: 'Activity Scheduling', definition: 'Planning activities to counteract avoidance and increase engagement' },
+    explanation: 'Activity scheduling helps break the cycle of inactivity and low mood in depression.',
+    difficulty: 'easy' as const
+  },
+  {
+    questionText: 'What is the cognitive triad in Beck\'s model?',
+    correctAnswers: ['Negative views of self, world, and future'],
+    distractors: ['Three types of medication', 'Three therapy sessions', 'Three assessment tools'],
+    flashcardPrompt: 'What is Beck\'s cognitive triad?',
+    matchingPair: { term: 'Cognitive Triad', definition: 'Negative views of self, world, and future' },
+    explanation: 'Beck proposed that depression involves negative automatic thoughts about oneself, the world, and the future.',
+    difficulty: 'medium' as const
+  },
+  {
+    questionText: 'What is a "hot thought" in cognitive therapy?',
+    correctAnswers: ['The most emotionally charged automatic thought in a given situation'],
+    distractors: ['A thought about temperature', 'A trendy idea', 'A therapist\'s opinion'],
+    flashcardPrompt: 'Define "hot thought"',
+    matchingPair: { term: 'Hot Thought', definition: 'Most emotionally charged automatic thought in a situation' },
+    explanation: 'Identifying the hot thought helps focus cognitive restructuring on the most impactful cognition.',
+    difficulty: 'medium' as const
+  },
+  {
+    questionText: 'What is the purpose of guided discovery in cognitive therapy?',
+    correctAnswers: ['To help clients arrive at new understandings through their own reasoning rather than being told'],
+    distractors: ['To lead clients to predetermined answers', 'To discover unconscious memories', 'To find hidden talents'],
+    flashcardPrompt: 'Purpose of guided discovery',
+    matchingPair: { term: 'Guided Discovery', definition: 'Helping clients reach understandings through their own reasoning' },
+    explanation: 'Guided discovery promotes deeper learning by having clients generate their own insights.',
+    difficulty: 'hard' as const
+  },
+  {
+    questionText: 'What distinguishes early maladaptive schemas from ordinary beliefs?',
+    correctAnswers: ['They are broad, pervasive themes developed early in life that are highly resistant to change'],
+    distractors: ['They only form in adulthood', 'They are easy to modify', 'They are always conscious'],
+    flashcardPrompt: 'What makes early maladaptive schemas unique?',
+    matchingPair: { term: 'Early Maladaptive Schemas', definition: 'Broad, pervasive themes from early life, resistant to change' },
+    explanation: 'Early maladaptive schemas serve as templates for processing experience and are self-perpetuating.',
+    difficulty: 'hard' as const
+  }
+];
+
+/**
+ * Course content structure definitions for seedCourseContentData
+ */
+const COURSE_CONTENT_STRUCTURE = {
+  EMDR101: {
+    modules: [
+      {
+        title: 'Foundations of EMDR Theory',
+        description: 'Introduction to EMDR principles and the Adaptive Information Processing model',
+        objectives: ['Explain what EMDR is and its origins', 'Describe the Adaptive Information Processing model', 'Identify the eight phases of EMDR'],
+        learningUnits: [
+          { title: 'Introduction to EMDR', type: 'document' as const, category: 'topic' as const, contentType: 'text' as const, isRequired: true },
+          { title: 'Adaptive Information Processing Model', type: 'document' as const, category: 'topic' as const, contentType: 'document' as const, isRequired: true },
+          { title: 'Module 1 Knowledge Check', type: 'assessment' as const, category: 'graded' as const, questionCount: 5, isRequired: true }
+        ]
+      },
+      {
+        title: 'The Eight Phases of EMDR',
+        description: 'Detailed study of each phase in the EMDR treatment protocol',
+        objectives: ['Describe each of the eight EMDR phases', 'Identify appropriate bilateral stimulation techniques', 'Analyze case studies applying EMDR'],
+        learningUnits: [
+          { title: 'Phase Overview', type: 'document' as const, category: 'topic' as const, contentType: 'text' as const, isRequired: true },
+          { title: 'Phase Identification Exercise', type: 'exercise' as const, category: 'practice' as const, questionCount: 4, isRequired: false },
+          { title: 'Case Study: EMDR in Trauma', type: 'document' as const, category: 'topic' as const, contentType: 'document' as const, isRequired: true },
+          { title: 'Module 2 Quiz', type: 'assessment' as const, category: 'graded' as const, questionCount: 5, isRequired: true }
+        ]
+      },
+      {
+        title: 'EMDR Clinical Application',
+        description: 'Practical application of EMDR in clinical settings',
+        objectives: ['Assess client readiness for EMDR', 'Apply EMDR techniques in clinical scenarios', 'Identify contraindications and safety considerations'],
+        learningUnits: [
+          { title: 'Client Assessment & Readiness', type: 'document' as const, category: 'topic' as const, contentType: 'text' as const, isRequired: true },
+          { title: 'Clinical Scenario Practice', type: 'exercise' as const, category: 'practice' as const, questionCount: 4, isRequired: false },
+          { title: 'EMDR Final Assessment', type: 'assessment' as const, category: 'graded' as const, questionCount: 6, isRequired: true }
+        ]
+      }
+    ]
+  },
+  CBT101: {
+    modules: [
+      {
+        title: 'Introduction to CBT',
+        description: 'Core principles and foundations of Cognitive Behavioral Therapy',
+        objectives: ['Explain the cognitive model', 'Identify the relationship between thoughts, feelings, and behaviors', 'Describe the evidence base for CBT'],
+        learningUnits: [
+          { title: 'The Cognitive Model', type: 'document' as const, category: 'topic' as const, contentType: 'text' as const, isRequired: true },
+          { title: 'CBT History and Evidence Base', type: 'document' as const, category: 'topic' as const, contentType: 'document' as const, isRequired: true },
+          { title: 'Module 1 Knowledge Check', type: 'assessment' as const, category: 'graded' as const, questionCount: 5, isRequired: true }
+        ]
+      },
+      {
+        title: 'Cognitive Distortions',
+        description: 'Identifying and understanding common patterns of distorted thinking',
+        objectives: ['List common cognitive distortions', 'Recognize distortions in clinical examples', 'Apply cognitive restructuring to distorted thoughts'],
+        learningUnits: [
+          { title: 'Common Cognitive Distortions', type: 'document' as const, category: 'topic' as const, contentType: 'text' as const, isRequired: true },
+          { title: 'Distortion Identification Exercise', type: 'exercise' as const, category: 'practice' as const, questionCount: 4, isRequired: false },
+          { title: 'Case Study: Cognitive Restructuring', type: 'document' as const, category: 'topic' as const, contentType: 'document' as const, isRequired: true },
+          { title: 'Module 2 Quiz', type: 'assessment' as const, category: 'graded' as const, questionCount: 5, isRequired: true }
+        ]
+      },
+      {
+        title: 'CBT Techniques in Practice',
+        description: 'Hands-on application of core CBT techniques',
+        objectives: ['Use thought records effectively', 'Design behavioral experiments', 'Apply CBT techniques to common presentations'],
+        learningUnits: [
+          { title: 'Thought Records and Behavioral Experiments', type: 'document' as const, category: 'topic' as const, contentType: 'text' as const, isRequired: true },
+          { title: 'Technique Application Exercise', type: 'exercise' as const, category: 'practice' as const, questionCount: 4, isRequired: false },
+          { title: 'CBT Final Assessment', type: 'assessment' as const, category: 'graded' as const, questionCount: 6, isRequired: true }
+        ]
+      }
+    ]
+  },
+  BH101: {
+    modules: [
+      {
+        title: 'Introduction to Behavioral Health',
+        description: 'Foundational concepts in behavioral health and the biopsychosocial model',
+        objectives: ['Define behavioral health and its scope', 'Explain the biopsychosocial model', 'Identify key behavioral health disciplines'],
+        learningUnits: [
+          { title: 'What is Behavioral Health?', type: 'document' as const, category: 'topic' as const, contentType: 'text' as const, isRequired: true },
+          { title: 'The Biopsychosocial Model', type: 'document' as const, category: 'topic' as const, contentType: 'document' as const, isRequired: true },
+          { title: 'Module 1 Knowledge Check', type: 'assessment' as const, category: 'graded' as const, questionCount: 5, isRequired: true }
+        ]
+      },
+      {
+        title: 'Assessment and Screening',
+        description: 'Clinical assessment methods and screening tools in behavioral health',
+        objectives: ['Describe common assessment methods', 'Apply screening tools appropriately', 'Interpret initial assessment findings'],
+        learningUnits: [
+          { title: 'Clinical Assessment Methods', type: 'document' as const, category: 'topic' as const, contentType: 'text' as const, isRequired: true },
+          { title: 'Assessment Tool Practice', type: 'exercise' as const, category: 'practice' as const, questionCount: 4, isRequired: false },
+          { title: 'Case Study: Initial Assessment', type: 'document' as const, category: 'topic' as const, contentType: 'document' as const, isRequired: true },
+          { title: 'Module 2 Quiz', type: 'assessment' as const, category: 'graded' as const, questionCount: 5, isRequired: true }
+        ]
+      },
+      {
+        title: 'Intervention Strategies',
+        description: 'Evidence-based intervention approaches in behavioral health',
+        objectives: ['Identify evidence-based interventions', 'Plan intervention strategies', 'Evaluate intervention effectiveness'],
+        learningUnits: [
+          { title: 'Evidence-Based Interventions', type: 'document' as const, category: 'topic' as const, contentType: 'text' as const, isRequired: true },
+          { title: 'Intervention Planning Exercise', type: 'exercise' as const, category: 'practice' as const, questionCount: 4, isRequired: false },
+          { title: 'BH Final Assessment', type: 'assessment' as const, category: 'graded' as const, questionCount: 6, isRequired: true }
+        ]
+      }
+    ]
+  }
+};
+
+/**
+ * Text content templates for learning units
+ */
+const TEXT_CONTENT_TEMPLATES: Record<string, { title: string; body: string }> = {
+  'Introduction to EMDR': {
+    title: 'Introduction to EMDR',
+    body: '<h2>What is EMDR?</h2><p>Eye Movement Desensitization and Reprocessing (EMDR) is an integrative psychotherapy approach developed by Francine Shapiro in 1987. It is designed to alleviate the distress associated with traumatic memories.</p><h3>Key Concepts</h3><ul><li>EMDR uses bilateral stimulation (eye movements, taps, or tones) to facilitate memory processing</li><li>The Adaptive Information Processing (AIP) model provides the theoretical foundation</li><li>Treatment follows a structured eight-phase protocol</li></ul><p>EMDR has been extensively researched and is recognized by the WHO, APA, and other organizations as an effective treatment for PTSD.</p>'
+  },
+  'Phase Overview': {
+    title: 'The Eight Phases of EMDR',
+    body: '<h2>EMDR Treatment Phases</h2><ol><li><strong>History Taking:</strong> Gathering client history and identifying target memories</li><li><strong>Preparation:</strong> Establishing therapeutic rapport and teaching stabilization techniques</li><li><strong>Assessment:</strong> Identifying target memory components (image, negative cognition, positive cognition, emotions, body sensations)</li><li><strong>Desensitization:</strong> Processing the target memory using bilateral stimulation</li><li><strong>Installation:</strong> Strengthening the positive cognition</li><li><strong>Body Scan:</strong> Checking for residual physical sensations</li><li><strong>Closure:</strong> Ensuring client stability at session end</li><li><strong>Reevaluation:</strong> Reviewing progress at subsequent sessions</li></ol>'
+  },
+  'Client Assessment & Readiness': {
+    title: 'Client Assessment and Readiness for EMDR',
+    body: '<h2>Assessing Client Readiness</h2><p>Before beginning EMDR processing, clinicians must assess whether the client has adequate stabilization and resources.</p><h3>Key Assessment Areas</h3><ul><li><strong>Emotional Regulation:</strong> Can the client manage intense emotions?</li><li><strong>Support System:</strong> Does the client have adequate social support?</li><li><strong>Contraindications:</strong> Active psychosis, severe dissociation, or substance dependence may require additional preparation</li><li><strong>Resource Development:</strong> Safe place exercise and other stabilization resources should be established</li></ul><h3>The SUD and VOC Scales</h3><p>The Subjective Units of Disturbance (0-10) and Validity of Cognition (1-7) scales are essential tools for tracking processing progress.</p>'
+  },
+  'The Cognitive Model': {
+    title: 'The Cognitive Model',
+    body: '<h2>Understanding the Cognitive Model</h2><p>The cognitive model, developed by Aaron Beck, proposes that our interpretations of events—not the events themselves—determine our emotional and behavioral responses.</p><h3>Core Components</h3><ul><li><strong>Situations:</strong> Events or circumstances that trigger thoughts</li><li><strong>Automatic Thoughts:</strong> Quick, evaluative thoughts that occur spontaneously</li><li><strong>Emotions:</strong> Feelings that arise from our interpretations</li><li><strong>Behaviors:</strong> Actions taken in response to thoughts and emotions</li></ul><h3>Levels of Cognition</h3><p>Beck identified three levels: automatic thoughts (surface level), intermediate beliefs (rules and assumptions), and core beliefs (deep, fundamental beliefs about self, others, and the world).</p>'
+  },
+  'Common Cognitive Distortions': {
+    title: 'Common Cognitive Distortions',
+    body: '<h2>Patterns of Distorted Thinking</h2><p>Cognitive distortions are systematic errors in thinking that maintain negative beliefs despite contradictory evidence.</p><h3>Common Distortions</h3><ul><li><strong>All-or-Nothing Thinking:</strong> Seeing things in black-and-white categories</li><li><strong>Catastrophizing:</strong> Expecting the worst possible outcome</li><li><strong>Mind Reading:</strong> Assuming you know what others think</li><li><strong>Emotional Reasoning:</strong> Believing something is true because it feels true</li><li><strong>Overgeneralization:</strong> Drawing broad conclusions from single events</li><li><strong>Personalization:</strong> Taking excessive responsibility for external events</li></ul>'
+  },
+  'Thought Records and Behavioral Experiments': {
+    title: 'Thought Records and Behavioral Experiments',
+    body: '<h2>Practical CBT Techniques</h2><h3>Thought Records</h3><p>A thought record is a structured tool for capturing and examining automatic thoughts. Columns typically include:</p><ol><li>Situation</li><li>Automatic Thought</li><li>Emotion (with intensity rating)</li><li>Evidence For the thought</li><li>Evidence Against the thought</li><li>Balanced Alternative Thought</li><li>Outcome (re-rated emotion)</li></ol><h3>Behavioral Experiments</h3><p>Behavioral experiments are planned activities designed to test the validity of beliefs. Steps include:</p><ol><li>Identify the belief to test</li><li>Design an experiment</li><li>Predict the outcome based on the old belief</li><li>Carry out the experiment</li><li>Record what actually happened</li><li>Evaluate what was learned</li></ol>'
+  },
+  'What is Behavioral Health?': {
+    title: 'What is Behavioral Health?',
+    body: '<h2>Understanding Behavioral Health</h2><p>Behavioral health encompasses the connection between behaviors and the health and well-being of the body, mind, and spirit. It includes not just mental health but also substance abuse, lifestyle factors, and behavioral patterns.</p><h3>Scope of Behavioral Health</h3><ul><li>Mental health disorders and treatment</li><li>Substance use disorders</li><li>Health behaviors (exercise, diet, sleep)</li><li>Stress management</li><li>Prevention and early intervention</li></ul><h3>The Continuum of Care</h3><p>Behavioral health operates across a continuum from prevention through acute treatment to maintenance and recovery.</p>'
+  },
+  'Clinical Assessment Methods': {
+    title: 'Clinical Assessment Methods',
+    body: '<h2>Assessment in Behavioral Health</h2><p>Clinical assessment is the systematic evaluation of a client\'s presenting concerns, history, and functioning to guide treatment planning.</p><h3>Key Components</h3><ul><li><strong>Clinical Interview:</strong> Structured or semi-structured gathering of history</li><li><strong>Standardized Measures:</strong> Validated instruments (BDI, BAI, PHQ-9)</li><li><strong>Behavioral Observation:</strong> Direct observation of client behavior</li><li><strong>Risk Assessment:</strong> Evaluating risk for self-harm or harm to others</li></ul><h3>Biopsychosocial Assessment</h3><p>A comprehensive assessment considers biological factors (medical history, genetics), psychological factors (cognition, emotion, behavior), and social factors (relationships, culture, environment).</p>'
+  },
+  'Evidence-Based Interventions': {
+    title: 'Evidence-Based Interventions',
+    body: '<h2>Evidence-Based Intervention Strategies</h2><p>Evidence-based interventions are treatments that have been scientifically tested and shown to produce positive outcomes.</p><h3>Common Approaches</h3><ul><li><strong>Cognitive Behavioral Therapy (CBT):</strong> Targeting thoughts and behaviors</li><li><strong>Motivational Interviewing (MI):</strong> Enhancing motivation for change</li><li><strong>Dialectical Behavior Therapy (DBT):</strong> Skills for emotion regulation</li><li><strong>EMDR:</strong> Processing traumatic memories</li></ul><h3>Treatment Planning</h3><p>Effective treatment planning matches interventions to client needs, considers client preferences, and includes measurable goals with regular progress monitoring.</p>'
+  }
+};
+
+/**
  * CBT Versioned Course Data - 5 courses with modules
  */
 const CBT_COURSES = [
@@ -995,6 +1432,325 @@ async function seedCBTContent(departmentId: mongoose.Types.ObjectId, creatorId: 
       console.log(`Course ${courseData.code} already exists, skipping...`);
     }
   }
+}
+
+/**
+ * Seeds course content data (LearningUnits, Content, Questions) for EMDR101, CBT101, BH101.
+ * Creates the full CanonicalCourse → CourseVersion → Module → CourseVersionModule → LearningUnit chain.
+ */
+async function seedCourseContentData(
+  courses: Record<string, any>,
+  departments: Record<string, any>,
+  creatorId: mongoose.Types.ObjectId
+) {
+  console.log('Seeding course content data (LearningUnits) for EMDR101, CBT101, BH101...');
+
+  // Create EMDR question bank + questions
+  let emdrBank = await QuestionBank.findOne({ name: 'EMDR Assessment Bank' });
+  if (!emdrBank) {
+    emdrBank = await QuestionBank.create({
+      name: 'EMDR Assessment Bank',
+      description: 'Comprehensive question bank for EMDR therapy assessments',
+      departmentId: departments.emdr._id,
+      tags: ['emdr', 'trauma-therapy', 'assessment'],
+      questionIds: [],
+      isActive: true
+    });
+  }
+
+  const existingEmdrQCount = await Question.countDocuments({ questionBankIds: emdrBank._id.toString() });
+  const emdrQuestionDocs: any[] = [];
+  if (existingEmdrQCount < 15) {
+    console.log('  Creating 15 EMDR questions...');
+    for (const q of EMDR_QUESTIONS) {
+      const question = await Question.create({
+        questionText: q.questionText,
+        questionTypes: ['multiple_choice', 'flashcard'],
+        departmentId: departments.emdr._id,
+        points: 10,
+        correctAnswers: q.correctAnswers,
+        distractors: q.distractors,
+        difficulty: q.difficulty,
+        tags: ['emdr', `difficulty-${q.difficulty}`],
+        questionBankIds: [emdrBank._id.toString()],
+        explanation: q.explanation,
+        flashcardData: { prompts: [{ text: q.flashcardPrompt }] },
+        matchingPairs: { [q.matchingPair.term]: q.matchingPair.definition },
+        matchingData: { pairExplanation: q.explanation },
+        isActive: true
+      });
+      emdrQuestionDocs.push(question);
+    }
+    emdrBank.questionIds = emdrQuestionDocs.map(q => q._id);
+    await emdrBank.save();
+  } else {
+    const existing = await Question.find({ questionBankIds: emdrBank._id.toString() });
+    emdrQuestionDocs.push(...existing);
+  }
+
+  // Create Cognitive Therapy question bank + questions
+  let cogBank = await QuestionBank.findOne({ name: 'Cognitive Therapy Assessment Bank' });
+  if (!cogBank) {
+    cogBank = await QuestionBank.create({
+      name: 'Cognitive Therapy Assessment Bank',
+      description: 'Comprehensive question bank for Cognitive Therapy assessments',
+      departmentId: departments.cognitive._id,
+      tags: ['cognitive-therapy', 'assessment', 'psychology'],
+      questionIds: [],
+      isActive: true
+    });
+  }
+
+  const existingCogQCount = await Question.countDocuments({ questionBankIds: cogBank._id.toString() });
+  const cogQuestionDocs: any[] = [];
+  if (existingCogQCount < 15) {
+    console.log('  Creating 15 Cognitive Therapy questions...');
+    for (const q of COGNITIVE_THERAPY_QUESTIONS) {
+      const question = await Question.create({
+        questionText: q.questionText,
+        questionTypes: ['multiple_choice', 'flashcard'],
+        departmentId: departments.cognitive._id,
+        points: 10,
+        correctAnswers: q.correctAnswers,
+        distractors: q.distractors,
+        difficulty: q.difficulty,
+        tags: ['cognitive-therapy', `difficulty-${q.difficulty}`],
+        questionBankIds: [cogBank._id.toString()],
+        explanation: q.explanation,
+        flashcardData: { prompts: [{ text: q.flashcardPrompt }] },
+        matchingPairs: { [q.matchingPair.term]: q.matchingPair.definition },
+        matchingData: { pairExplanation: q.explanation },
+        isActive: true
+      });
+      cogQuestionDocs.push(question);
+    }
+    cogBank.questionIds = cogQuestionDocs.map(q => q._id);
+    await cogBank.save();
+  } else {
+    const existing = await Question.find({ questionBankIds: cogBank._id.toString() });
+    cogQuestionDocs.push(...existing);
+  }
+
+  // Map course codes to question banks and questions
+  const courseBankMap: Record<string, { bank: any; questions: any[] }> = {
+    EMDR101: { bank: emdrBank, questions: emdrQuestionDocs },
+    CBT101: { bank: emdrBank, questions: emdrQuestionDocs }, // CBT101 uses CBT_QUESTIONS bank (already seeded), but for LU questions we use the CBT questions
+    BH101: { bank: cogBank, questions: cogQuestionDocs }
+  };
+
+  // We need to get the existing CBT Assessment Bank questions for CBT101
+  const cbtBank = await QuestionBank.findOne({ name: 'CBT Assessment Bank' });
+  if (cbtBank) {
+    const cbtQuestions = await Question.find({ questionBankIds: cbtBank._id.toString() });
+    courseBankMap.CBT101 = { bank: cbtBank, questions: cbtQuestions };
+  }
+
+  // Process each target course
+  const targetCourses = [
+    { code: 'EMDR101', course: courses.EMDR101, departmentId: departments.emdr._id },
+    { code: 'CBT101', course: courses.CBT101, departmentId: departments.cbtFundamentals._id },
+    { code: 'BH101', course: courses.BH101, departmentId: departments.behavioral._id }
+  ];
+
+  for (const target of targetCourses) {
+    const structure = COURSE_CONTENT_STRUCTURE[target.code as keyof typeof COURSE_CONTENT_STRUCTURE];
+    if (!structure || !target.course) {
+      console.log(`  Skipping ${target.code}: course or structure not found`);
+      continue;
+    }
+
+    // Check if canonical course already exists for this code
+    let canonical = await CanonicalCourse.findOne({ code: target.code, departmentId: target.departmentId });
+    if (canonical) {
+      console.log(`  CanonicalCourse for ${target.code} already exists, skipping...`);
+      continue;
+    }
+
+    console.log(`  Creating content chain for ${target.code}...`);
+
+    // Create canonical course
+    canonical = await CanonicalCourse.create({
+      code: target.code,
+      departmentId: target.departmentId,
+      programId: null,
+      currentPublishedVersionId: null,
+      latestDraftVersionId: null,
+      totalVersions: 0,
+      createdBy: creatorId
+    });
+
+    // Create course version (published)
+    const version = await CourseVersion.create({
+      canonicalCourseId: canonical._id,
+      version: 1,
+      title: target.course.name,
+      description: `${target.course.name} — comprehensive course content`,
+      credits: target.course.credits,
+      duration: 480,
+      settings: {
+        allowSelfEnrollment: true,
+        passingScore: 70,
+        maxAttempts: 3,
+        certificateEnabled: true,
+        enforcePrerequisites: true,
+        showProgressBar: true,
+        allowModuleSkipping: false
+      },
+      instructorIds: [creatorId],
+      status: 'published',
+      isLocked: false,
+      isLatest: true,
+      parentVersionId: null,
+      createdBy: creatorId,
+      publishedAt: new Date(),
+      publishedBy: creatorId,
+      changeNotes: 'Initial published version with learning units'
+    });
+
+    // Update canonical with version references
+    canonical.currentPublishedVersionId = version._id;
+    canonical.latestDraftVersionId = version._id;
+    canonical.totalVersions = 1;
+    await canonical.save();
+
+    // Track question index for distributing questions across LUs
+    let questionIndex = 0;
+    const bankInfo = courseBankMap[target.code];
+
+    // Create modules and learning units
+    for (let moduleIdx = 0; moduleIdx < structure.modules.length; moduleIdx++) {
+      const moduleDef = structure.modules[moduleIdx];
+
+      const module = await Module.create({
+        ownerDepartmentId: target.departmentId,
+        isShared: false,
+        title: moduleDef.title,
+        description: moduleDef.description,
+        prerequisites: [],
+        completionCriteria: {
+          type: 'percentage',
+          percentageRequired: 80
+        },
+        presentationRules: {
+          presentationMode: 'prescribed',
+          repetitionMode: 'until_passed',
+          masteryThreshold: 80,
+          maxRepetitions: 3,
+          repeatOn: {
+            failedAttempt: true,
+            belowMastery: true,
+            learnerRequest: true
+          },
+          repeatableCategories: [],
+          showAllAvailable: false,
+          allowSkip: false
+        },
+        isPublished: true,
+        estimatedDuration: 90,
+        objectives: moduleDef.objectives,
+        order: moduleIdx,
+        createdBy: creatorId
+      });
+
+      // Link module to course version
+      await CourseVersionModule.create({
+        courseVersionId: version._id,
+        moduleId: module._id,
+        order: moduleIdx,
+        isRequired: true,
+        availableFrom: null,
+        availableUntil: null
+      });
+
+      // Create learning units for this module
+      for (let luIdx = 0; luIdx < moduleDef.learningUnits.length; luIdx++) {
+        const luDef = moduleDef.learningUnits[luIdx];
+
+        let contentId: mongoose.Types.ObjectId | undefined;
+
+        // Create Content record for text/document LUs
+        if (luDef.type === 'document' && 'contentType' in luDef) {
+          const template = TEXT_CONTENT_TEMPLATES[luDef.title];
+          const contentData: any = {
+            title: `${target.code} - ${moduleDef.title} - ${luDef.title}`,
+            description: `${luDef.title} for ${moduleDef.title}`,
+            type: luDef.contentType,
+            createdBy: creatorId,
+            isActive: true
+          };
+
+          if (luDef.contentType === 'text' && template) {
+            contentData.metadata = { htmlContent: template.body };
+          } else if (luDef.contentType === 'document') {
+            contentData.fileUrl = `https://cdn.example.com/content/${target.code}/${luDef.title.toLowerCase().replace(/\s+/g, '-')}.pdf`;
+            contentData.mimeType = 'application/pdf';
+            contentData.fileSize = randomInt(500000, 3000000);
+          }
+
+          const content = await Content.create(contentData);
+          contentId = content._id;
+        }
+
+        // Build settings based on type
+        let settings: any;
+        if (luDef.type === 'assessment') {
+          settings = {
+            passingScore: 70,
+            showFeedback: true,
+            shuffleQuestions: true,
+            allowMultipleAttempts: true,
+            maxAttempts: 3,
+            timeLimit: 30
+          };
+        } else if (luDef.type === 'exercise') {
+          settings = {
+            passingScore: 70,
+            showFeedback: true,
+            allowMultipleAttempts: true
+          };
+        }
+
+        const learningUnit = await LearningUnit.create({
+          moduleId: module._id,
+          title: luDef.title,
+          description: `${luDef.title} for ${moduleDef.title}`,
+          type: luDef.type,
+          contentId,
+          category: luDef.category,
+          isRequired: luDef.isRequired,
+          isReplayable: luDef.type !== 'assessment',
+          weight: luDef.type === 'assessment' ? 30 : luDef.type === 'exercise' ? 15 : 0,
+          sequence: luIdx + 1,
+          isActive: true,
+          settings,
+          estimatedDuration: luDef.type === 'document' ? 20 : luDef.type === 'exercise' ? 25 : luDef.type === 'assessment' ? 30 : 15,
+          metadata: { seededBy: 'seed-mock-data-course-content' },
+          createdBy: creatorId
+        });
+
+        // Create LearningUnitQuestion records for assessment/exercise LUs
+        if ('questionCount' in luDef && bankInfo && bankInfo.questions.length > 0) {
+          const qCount = luDef.questionCount as number;
+          for (let qi = 0; qi < qCount; qi++) {
+            const qDoc = bankInfo.questions[questionIndex % bankInfo.questions.length];
+            await LearningUnitQuestion.create({
+              learningUnitId: learningUnit._id,
+              questionId: qDoc._id,
+              bankId: bankInfo.bank._id,
+              sequence: qi
+            });
+            questionIndex++;
+          }
+        }
+      }
+
+      console.log(`    Created module: ${moduleDef.title} (${moduleDef.learningUnits.length} learning units)`);
+    }
+
+    console.log(`  ✓ ${target.code}: ${structure.modules.length} modules with learning units created`);
+  }
+
+  console.log('Course content data seeding complete.');
 }
 
 async function main() {
@@ -1672,6 +2428,15 @@ async function main() {
     const adminUser = await User.findOne({ email: ADMIN_EMAIL });
     if (adminUser) {
       await seedCBTContent(cognitive._id, adminUser._id);
+    }
+
+    // Seed course content data (LearningUnits) for EMDR101, CBT101, BH101
+    if (adminUser) {
+      await seedCourseContentData(
+        { EMDR101: courseEMDR101, CBT101: courseCBT101, BH101: courseBH101 },
+        { emdr, cognitive, cbtFundamentals, behavioral },
+        adminUser._id
+      );
     }
 
     console.log('Creating enrollments...');
