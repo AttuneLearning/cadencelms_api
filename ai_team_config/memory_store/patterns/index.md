@@ -22,7 +22,7 @@ Recurring solutions, conventions, and best practices in the CadenceLMS API.
 
 ## Service Patterns
 
-(Add as discovered)
+- [[canonical-template-usage-resolution]] - Resolve template usage via Program -> CanonicalCourse -> CourseVersion
 
 ---
 

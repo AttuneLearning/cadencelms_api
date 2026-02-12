@@ -1,7 +1,9 @@
 import mongoose from 'mongoose';
 import Template, { TemplateType, TemplateStatus } from '@/models/content/Template.model';
 import Department from '@/models/organization/Department.model';
-import Course from '@/models/academic/Course.model';
+import Program from '@/models/academic/Program.model';
+import CanonicalCourse from '@/models/academic/CanonicalCourse.model';
+import CourseVersion from '@/models/academic/CourseVersion.model';
 import { ApiError } from '@/utils/ApiError';
 
 interface ListTemplatesFilters {
@@ -41,7 +43,101 @@ interface DuplicateTemplateOptions {
   createdBy: string;
 }
 
+interface TemplateUsageCourseRow {
+  id: string;
+  code: string;
+  title: string;
+  versionId?: string;
+  version?: number;
+  versionStatus?: string;
+}
+
+interface TemplateUsageData {
+  linkedProgramIds: mongoose.Types.ObjectId[];
+  usedByCourses: TemplateUsageCourseRow[];
+}
+
 export class TemplatesService {
+  /**
+   * Resolve template usage through canonical course architecture:
+   * Program.certificate.templateId -> CanonicalCourse.programId -> CourseVersion title/status.
+   */
+  private static async resolveTemplateUsage(templateId: mongoose.Types.ObjectId): Promise<TemplateUsageData> {
+    const linkedPrograms = (await Program.find({ 'certificate.templateId': templateId })
+      .select('_id')
+      .lean()) as Array<{ _id: mongoose.Types.ObjectId }>;
+
+    const linkedProgramIds = linkedPrograms.map((program) => new mongoose.Types.ObjectId(program._id));
+    if (linkedProgramIds.length === 0) {
+      return { linkedProgramIds: [], usedByCourses: [] };
+    }
+
+    const canonicalCourses = (await CanonicalCourse.find({
+      programId: { $in: linkedProgramIds }
+    })
+      .select('_id code currentPublishedVersionId latestDraftVersionId')
+      .lean()) as Array<{
+      _id: mongoose.Types.ObjectId;
+      code: string;
+      currentPublishedVersionId: mongoose.Types.ObjectId | null;
+      latestDraftVersionId: mongoose.Types.ObjectId | null;
+    }>;
+
+    if (canonicalCourses.length === 0) {
+      return { linkedProgramIds, usedByCourses: [] };
+    }
+
+    const preferredVersionIds = canonicalCourses
+      .map((course) => course.currentPublishedVersionId || course.latestDraftVersionId)
+      .filter((versionId): versionId is mongoose.Types.ObjectId => Boolean(versionId));
+
+    const uniqueVersionIdStrings = Array.from(new Set(preferredVersionIds.map((id) => id.toString())));
+    const uniqueVersionIds = uniqueVersionIdStrings.map((id) => new mongoose.Types.ObjectId(id));
+
+    const courseVersions = uniqueVersionIds.length > 0
+      ? ((await CourseVersion.find({ _id: { $in: uniqueVersionIds } })
+          .select('_id title status version')
+          .lean()) as Array<{
+          _id: mongoose.Types.ObjectId;
+          title: string;
+          status: string;
+          version: number;
+        }>)
+      : [];
+
+    const versionById = new Map(
+      courseVersions.map((courseVersion) => [courseVersion._id.toString(), courseVersion])
+    );
+
+    const usedByCourses = canonicalCourses
+      .map((course) => {
+        const selectedVersionId = course.currentPublishedVersionId || course.latestDraftVersionId;
+        const selectedVersion = selectedVersionId
+          ? versionById.get(selectedVersionId.toString())
+          : undefined;
+
+        const row: TemplateUsageCourseRow = {
+          id: course._id.toString(),
+          code: course.code,
+          title: selectedVersion?.title || course.code
+        };
+
+        if (selectedVersion) {
+          row.versionId = selectedVersion._id.toString();
+          row.version = selectedVersion.version;
+          row.versionStatus = selectedVersion.status;
+        }
+
+        return row;
+      })
+      .sort((a, b) => a.code.localeCompare(b.code));
+
+    return {
+      linkedProgramIds,
+      usedByCourses
+    };
+  }
+
   /**
    * Sanitize CSS content to prevent XSS attacks
    */
@@ -326,20 +422,8 @@ export class TemplatesService {
       throw ApiError.notFound('Template does not exist');
     }
 
-    // Get courses using this template (from metadata field in Course model)
-    // Note: This assumes courses store templateId in metadata.templateId
-    const courses = await Course.find({
-      'metadata.templateId': template._id,
-      isActive: true
-    })
-      .select('_id name code')
-      .limit(100);
-
-    const usedByCourses = courses.map((course) => ({
-      id: course._id.toString(),
-      title: course.name,
-      code: course.code
-    }));
+    const usage = await this.resolveTemplateUsage(template._id as mongoose.Types.ObjectId);
+    const usageCount = usage.usedByCourses.length;
 
     const createdBy = template.createdBy as any;
     const department = template.departmentId as any;
@@ -360,8 +444,8 @@ export class TemplatesService {
         lastName: createdBy.lastName,
         email: createdBy.email || ''
       },
-      usageCount: template.usageCount,
-      usedByCourses,
+      usageCount,
+      usedByCourses: usage.usedByCourses,
       previewUrl: `/api/v2/templates/${template._id}/preview`,
       createdAt: template.createdAt,
       updatedAt: template.updatedAt
@@ -491,8 +575,11 @@ export class TemplatesService {
       throw ApiError.notFound('Template does not exist');
     }
 
+    const usage = await this.resolveTemplateUsage(template._id as mongoose.Types.ObjectId);
+    const usageCount = usage.usedByCourses.length;
+
     // Check if template is in use
-    if (template.usageCount > 0 && !force) {
+    if (usageCount > 0 && !force) {
       throw ApiError.conflict(
         'Cannot delete template in use by courses. Use force=true or reassign courses first.'
       );
@@ -502,25 +589,18 @@ export class TemplatesService {
     let replacedWith = null;
 
     // If force delete and template is in use, remove from courses
-    if (force && template.usageCount > 0) {
-      // Find courses using this template
-      const courses = await Course.find({
-        'metadata.templateId': template._id
-      });
+    if (force && usageCount > 0) {
+      // Unlink template from program certificate configs.
+      await Program.updateMany(
+        { _id: { $in: usage.linkedProgramIds }, 'certificate.templateId': template._id },
+        { $unset: { 'certificate.templateId': 1 } }
+      );
 
-      affectedCourses = courses.length;
-
-      // Remove template reference from courses
-      for (const course of courses) {
-        if (course.metadata) {
-          delete course.metadata.templateId;
-          await course.save();
-        }
-      }
-
-      // Reset usage count
-      template.usageCount = 0;
+      affectedCourses = usageCount;
     }
+
+    // Keep stored usage count aligned with canonical usage.
+    template.usageCount = force ? 0 : usageCount;
 
     // Perform soft delete
     template.isDeleted = true;

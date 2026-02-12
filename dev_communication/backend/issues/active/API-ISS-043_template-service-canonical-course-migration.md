@@ -1,11 +1,11 @@
 # API-ISS-043: Template Service CanonicalCourse Migration
 
-## Status: PENDING
+## Status: REVIEW
 ## Priority: High
 ## Created: 2026-02-11
-## Updated: 2026-02-11
+## Updated: 2026-02-12
 ## Requested By: UI Team (inbox message: 2026-02-11_template-service-canonical-course-migration-request.md)
-## Assigned To: Unassigned
+## Assigned To: Codex
 ## Related: UI-ISS-144
 
 ---
@@ -52,8 +52,42 @@ Current evidence:
 
 ## Acceptance Criteria
 
-- [ ] No runtime dependency on legacy `Course` for template usage/unlink operations.
-- [ ] `usedByCourses` returns canonical course identity and UI-safe display fields.
-- [ ] Force-delete unlink behavior remains correct.
-- [ ] Tests pass.
+- [x] No runtime dependency on legacy `Course` for template usage/unlink operations.
+- [x] `usedByCourses` returns canonical course identity and UI-safe display fields.
+- [x] Force-delete unlink behavior remains correct.
+- [x] Tests pass.
 
+---
+
+## Progress Notes
+
+- 2026-02-12: Migrated template usage resolution to canonical path:
+  - `Program.certificate.templateId` -> `CanonicalCourse.programId` -> `CourseVersion` title/status.
+- 2026-02-12: Removed legacy runtime dependency on `Course.metadata.templateId` from `TemplatesService`.
+- 2026-02-12: Force delete now unlinks `Program.certificate.templateId` and reports affected canonical courses.
+- 2026-02-12: Added regression tests in `tests/unit/services/templates.service.test.ts` for:
+  - canonical `usedByCourses` payload,
+  - stale `usageCount` guard behavior,
+  - force-delete unlink flow.
+
+## Response Contract Notes (UI)
+
+`GET /api/v2/templates/:id` now returns:
+
+```json
+{
+  "usedByCourses": [
+    {
+      "id": "canonicalCourseId",
+      "code": "COURSE101",
+      "title": "Course Title",
+      "versionId": "optionalCourseVersionId",
+      "version": 2,
+      "versionStatus": "published"
+    }
+  ]
+}
+```
+
+- `id` is canonical course ID.
+- `versionId`, `version`, and `versionStatus` are optional when version resolution is available.
