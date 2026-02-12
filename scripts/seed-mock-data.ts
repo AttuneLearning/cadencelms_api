@@ -1254,6 +1254,76 @@ const COURSE_CONTENT_STRUCTURE = {
         ]
       }
     ]
+  },
+  EMDR201: {
+    modules: [
+      {
+        title: 'Advanced EMDR Case Conceptualization',
+        description: 'Applying AIP case formulation to complex trauma presentations',
+        objectives: ['Build advanced EMDR case formulations', 'Prioritize target sequences', 'Integrate developmental trauma context'],
+        learningUnits: [
+          { title: 'Case Formulation in EMDR', type: 'document' as const, category: 'topic' as const, contentType: 'text' as const, isRequired: true },
+          { title: 'Complex Trauma Considerations', type: 'document' as const, category: 'topic' as const, contentType: 'document' as const, isRequired: true },
+          { title: 'Module 1 Advanced Knowledge Check', type: 'assessment' as const, category: 'graded' as const, questionCount: 5, isRequired: true }
+        ]
+      },
+      {
+        title: 'Dissociation and Stabilization',
+        description: 'Stabilization sequencing and dissociation-informed EMDR interventions',
+        objectives: ['Identify dissociation risk indicators', 'Select stabilization interventions', 'Sequence processing safely'],
+        learningUnits: [
+          { title: 'Stabilization Planning', type: 'document' as const, category: 'topic' as const, contentType: 'text' as const, isRequired: true },
+          { title: 'Dissociation Triage Exercise', type: 'exercise' as const, category: 'practice' as const, questionCount: 4, isRequired: false },
+          { title: 'Dissociation Risk Review', type: 'document' as const, category: 'topic' as const, contentType: 'document' as const, isRequired: true },
+          { title: 'Module 2 Practicum Quiz', type: 'assessment' as const, category: 'graded' as const, questionCount: 5, isRequired: true }
+        ]
+      },
+      {
+        title: 'EMDR Supervision Practicum',
+        description: 'Clinical judgment and supervision decision-making for EMDR practice',
+        objectives: ['Evaluate readiness to process', 'Apply supervision decision points', 'Document clinical rationale'],
+        learningUnits: [
+          { title: 'Supervision Decision-Making', type: 'document' as const, category: 'topic' as const, contentType: 'text' as const, isRequired: true },
+          { title: 'Session Planning Exercise', type: 'exercise' as const, category: 'practice' as const, questionCount: 4, isRequired: false },
+          { title: 'EMDR Practicum Assessment', type: 'assessment' as const, category: 'graded' as const, questionCount: 6, isRequired: true }
+        ]
+      }
+    ]
+  },
+  COG101: {
+    modules: [
+      {
+        title: 'Cognitive Assessment Foundations',
+        description: 'Foundational methods and tools used in cognitive therapy assessment',
+        objectives: ['Describe core cognitive assessment domains', 'Select appropriate screening tools', 'Interpret baseline findings'],
+        learningUnits: [
+          { title: 'Introduction to Cognitive Assessment', type: 'document' as const, category: 'topic' as const, contentType: 'text' as const, isRequired: true },
+          { title: 'Assessment Instruments Overview', type: 'document' as const, category: 'topic' as const, contentType: 'document' as const, isRequired: true },
+          { title: 'Module 1 Cognitive Knowledge Check', type: 'assessment' as const, category: 'graded' as const, questionCount: 5, isRequired: true }
+        ]
+      },
+      {
+        title: 'Case Formulation and Treatment Planning',
+        description: 'Using cognitive models to structure formulation and treatment plans',
+        objectives: ['Build cognitive case formulations', 'Link beliefs to intervention targets', 'Draft measurable treatment goals'],
+        learningUnits: [
+          { title: 'Case Formulation Workflow', type: 'document' as const, category: 'topic' as const, contentType: 'text' as const, isRequired: true },
+          { title: 'Formulation Mapping Exercise', type: 'exercise' as const, category: 'practice' as const, questionCount: 4, isRequired: false },
+          { title: 'Treatment Plan Template Review', type: 'document' as const, category: 'topic' as const, contentType: 'document' as const, isRequired: true },
+          { title: 'Module 2 Planning Quiz', type: 'assessment' as const, category: 'graded' as const, questionCount: 5, isRequired: true }
+        ]
+      },
+      {
+        title: 'Intervention Selection and Monitoring',
+        description: 'Selecting cognitive interventions and monitoring outcome data over time',
+        objectives: ['Match interventions to presenting patterns', 'Use progress metrics in supervision', 'Adjust plans based on outcomes'],
+        learningUnits: [
+          { title: 'Intervention Matching Principles', type: 'document' as const, category: 'topic' as const, contentType: 'text' as const, isRequired: true },
+          { title: 'Progress Monitoring Exercise', type: 'exercise' as const, category: 'practice' as const, questionCount: 4, isRequired: false },
+          { title: 'COG101 Final Assessment', type: 'assessment' as const, category: 'graded' as const, questionCount: 6, isRequired: true }
+        ]
+      }
+    ]
   }
 };
 
@@ -1296,6 +1366,30 @@ const TEXT_CONTENT_TEMPLATES: Record<string, { title: string; body: string }> = 
   'Evidence-Based Interventions': {
     title: 'Evidence-Based Interventions',
     body: '<h2>Evidence-Based Intervention Strategies</h2><p>Evidence-based interventions are treatments that have been scientifically tested and shown to produce positive outcomes.</p><h3>Common Approaches</h3><ul><li><strong>Cognitive Behavioral Therapy (CBT):</strong> Targeting thoughts and behaviors</li><li><strong>Motivational Interviewing (MI):</strong> Enhancing motivation for change</li><li><strong>Dialectical Behavior Therapy (DBT):</strong> Skills for emotion regulation</li><li><strong>EMDR:</strong> Processing traumatic memories</li></ul><h3>Treatment Planning</h3><p>Effective treatment planning matches interventions to client needs, considers client preferences, and includes measurable goals with regular progress monitoring.</p>'
+  },
+  'Case Formulation in EMDR': {
+    title: 'Case Formulation in EMDR',
+    body: '<h2>Advanced EMDR Case Formulation</h2><p>Advanced case formulation in EMDR organizes presenting symptoms, target memory networks, and sequencing decisions using the AIP framework.</p><h3>Key Steps</h3><ul><li>Map current triggers to target memories</li><li>Prioritize targets by disturbance, readiness, and safety</li><li>Define positive cognition goals and anticipated barriers</li></ul>'
+  },
+  'Stabilization Planning': {
+    title: 'Stabilization Planning',
+    body: '<h2>Stabilization Before Processing</h2><p>Complex trauma work requires clear stabilization plans before memory processing. Clinicians should evaluate affect tolerance, dissociation risk, and client support systems.</p><h3>Planning Components</h3><ul><li>Grounding and containment tools</li><li>Crisis response procedures</li><li>Session pacing and readiness checkpoints</li></ul>'
+  },
+  'Supervision Decision-Making': {
+    title: 'Supervision Decision-Making',
+    body: '<h2>EMDR Supervision Decisions</h2><p>Supervision in EMDR focuses on case conceptualization quality, protocol fidelity, and risk management.</p><h3>Decision Points</h3><ul><li>When to pause or defer processing</li><li>How to adapt stimulation modalities safely</li><li>How to document rationale for clinical choices</li></ul>'
+  },
+  'Introduction to Cognitive Assessment': {
+    title: 'Introduction to Cognitive Assessment',
+    body: '<h2>Cognitive Assessment Fundamentals</h2><p>Cognitive therapy assessment combines symptom data, functional analysis, and belief-level hypotheses.</p><h3>Core Domains</h3><ul><li>Automatic thoughts and emotional responses</li><li>Intermediate and core beliefs</li><li>Behavioral patterns and maintaining cycles</li></ul>'
+  },
+  'Case Formulation Workflow': {
+    title: 'Case Formulation Workflow',
+    body: '<h2>Building a Cognitive Formulation</h2><p>A structured formulation links presenting concerns to cognition, behavior, and context.</p><h3>Workflow</h3><ol><li>Define target problems</li><li>Identify maintaining thoughts and behaviors</li><li>Map intervention targets and expected outcomes</li></ol>'
+  },
+  'Intervention Matching Principles': {
+    title: 'Intervention Matching Principles',
+    body: '<h2>Matching Interventions to Formulation</h2><p>Interventions should be selected based on formulation hypotheses and measurable treatment goals.</p><h3>Examples</h3><ul><li>Cognitive restructuring for distorted appraisals</li><li>Behavioral experiments for belief testing</li><li>Activity scheduling for withdrawal and low activation</li></ul>'
   }
 };
 
@@ -1547,15 +1641,16 @@ async function seedCBTContent(departmentId: mongoose.Types.ObjectId, creatorId: 
 }
 
 /**
- * Seeds course content data (LearningUnits, Content, Questions) for EMDR101, CBT101, BH101.
- * Creates the full CanonicalCourse → CourseVersion → Module → CourseVersionModule → LearningUnit chain.
+ * Seeds course content data (LearningUnits, Content, Questions) for
+ * EMDR101, EMDR201, CBT101, BH101, and COG101.
+ * Creates the full CanonicalCourse -> CourseVersion -> Module -> CourseVersionModule -> LearningUnit chain.
  */
 async function seedCourseContentData(
   courses: Record<string, any>,
   departments: Record<string, any>,
   creatorId: mongoose.Types.ObjectId
 ) {
-  console.log('Seeding course content data (LearningUnits) for EMDR101, CBT101, BH101...');
+  console.log('Seeding course content data (LearningUnits) for EMDR101, EMDR201, CBT101, BH101, COG101...');
 
   // Create EMDR question bank + questions
   let emdrBank = await QuestionBank.findOne({ name: 'EMDR Assessment Bank' });
@@ -1660,8 +1755,10 @@ async function seedCourseContentData(
   // Map course codes to question banks and questions
   const courseBankMap: Record<string, { bank: any; questions: any[] }> = {
     EMDR101: { bank: emdrBank, questions: emdrQuestionDocs },
+    EMDR201: { bank: emdrBank, questions: emdrQuestionDocs },
     CBT101: { bank: emdrBank, questions: emdrQuestionDocs }, // CBT101 uses CBT_QUESTIONS bank (already seeded), but for LU questions we use the CBT questions
-    BH101: { bank: cogBank, questions: cogQuestionDocs }
+    BH101: { bank: cogBank, questions: cogQuestionDocs },
+    COG101: { bank: cogBank, questions: cogQuestionDocs }
   };
 
   // We need to get the existing CBT Assessment Bank questions for CBT101
@@ -1674,8 +1771,10 @@ async function seedCourseContentData(
   // Process each target course
   const targetCourses = [
     { code: 'EMDR101', course: courses.EMDR101, departmentId: departments.emdr._id },
+    { code: 'EMDR201', course: courses.EMDR201, departmentId: departments.emdr._id },
     { code: 'CBT101', course: courses.CBT101, departmentId: departments.cbtFundamentals._id },
-    { code: 'BH101', course: courses.BH101, departmentId: departments.behavioral._id }
+    { code: 'BH101', course: courses.BH101, departmentId: departments.behavioral._id },
+    { code: 'COG101', course: courses.COG101, departmentId: departments.cognitive._id }
   ];
 
   for (const target of targetCourses) {
@@ -2531,10 +2630,16 @@ async function main() {
       await seedCBTContent(cognitive._id, adminUser._id);
     }
 
-    // Seed course content data (LearningUnits) for EMDR101, CBT101, BH101
+    // Seed course content data (LearningUnits) for core learner-facing courses
     if (adminUser) {
       await seedCourseContentData(
-        { EMDR101: courseEMDR101, CBT101: courseCBT101, BH101: courseBH101 },
+        {
+          EMDR101: courseEMDR101,
+          EMDR201: courseEMDR201,
+          CBT101: courseCBT101,
+          BH101: courseBH101,
+          COG101: courseCOG101
+        },
         { emdr, cognitive, cbtFundamentals, behavioral },
         adminUser._id
       );
