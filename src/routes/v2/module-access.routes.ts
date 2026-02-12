@@ -28,7 +28,7 @@ router.use(isAuthenticated);
  * Note: This route must be defined before /:accessId to avoid conflict
  */
 router.get('/analytics/drop-off',
-  authorize.anyOf(['read:analytics', 'reports:department:read']),
+  authorize.anyOf(['analytics:reports:read', 'reports:department:read']),
   moduleAccessController.getDropOffAnalytics
 );
 
@@ -49,10 +49,10 @@ router.get('/my',
  * GET /api/v2/module-access
  * List module access records with filtering
  * Query params: moduleId OR enrollmentId (one required), hasStartedLearningUnit, status, page, limit
- * Access: read:analytics OR reports:department:read (for module-level), grades:own:read (for own enrollment)
+ * Access: analytics:reports:read OR reports:department:read (for module-level), grades:own:read (for own enrollment)
  */
 router.get('/',
-  authorize.anyOf(['read:analytics', 'reports:department:read', 'grades:own:read']),
+  authorize.anyOf(['analytics:reports:read', 'reports:department:read', 'grades:own:read']),
   moduleAccessController.listAccess
 );
 
@@ -70,10 +70,10 @@ router.post('/',
 /**
  * GET /api/v2/module-access/:accessId
  * Get a specific module access record
- * Access: read:analytics OR grades:own:read
+ * Access: analytics:reports:read OR grades:own:read
  */
 router.get('/:accessId',
-  authorize.anyOf(['read:analytics', 'grades:own:read']),
+  authorize.anyOf(['analytics:reports:read', 'grades:own:read']),
   moduleAccessController.getAccessRecord
 );
 

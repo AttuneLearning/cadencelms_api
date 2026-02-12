@@ -1,0 +1,253 @@
+{
+  "$schema": "Agent team role definitions for Claude Code agent teams (API project override)",
+  "version": "1.1.0",
+  "description": "API-specific role definitions for Claude Code agent teams. Overrides .claude-workflow/team-configs/agent-team-roles.json for backend context.",
+  "created": "2026-02-09",
+
+  "teamStructure": {
+    "lead": {
+      "role": "Team Lead + Code Reviewer Gate",
+      "model": "opus-4.6",
+      "mode": "delegate",
+      "responsibilities": [
+        "Break issue into parallelizable tasks with dependencies",
+        "Spawn and coordinate teammates",
+        "Review completed work against code-reviewer-config.json criteria",
+        "Run Phase 3 (Verification) checks as gate",
+        "Execute Phase 4 (Documentation) and Phase 5 (Completion)",
+        "Synthesize teammate results and resolve conflicts",
+        "Manage dev_communication messaging and issue updates"
+      ],
+      "doesNotDo": [
+        "Write implementation code (delegate mode)",
+        "Write test code (delegate mode)",
+        "Directly modify source files"
+      ]
+    },
+    "teammates": {
+      "implementer": {
+        "role": "Feature Implementation Specialist",
+        "model": "sonnet-4.5",
+        "spawnWhen": "Issue requires code changes",
+        "responsibilities": [
+          "Implement source code following model-service-controller-route architecture",
+          "Create Mongoose schemas and TypeScript interfaces in models",
+          "Follow patterns from memory/ and applicable ADRs",
+          "Use existing abstractions and conventions (ApiError, ApiResponse, asyncHandler)",
+          "Create routes, controllers, services, validators, and event handlers"
+        ],
+        "contextFiles": [
+          "CLAUDE.md",
+          "memory/patterns/",
+          "memory/entities/",
+          "dev_communication/shared/architecture/decisions/"
+        ],
+        "spawnPrompt": "You are an implementer teammate on the CadenceLMS API (Node.js/Express/TypeScript/MongoDB). Your task: {task_description}. Follow the architecture: models > services > controllers > routes > middleware. Use `@/` path aliases for imports from src/. Use ApiError for errors, ApiResponse for responses, asyncHandler for route wrappers. Department-scoped services take departmentId as first param. Use isDeleted/isActive for soft delete. Follow patterns from memory/patterns/. Do NOT write tests - the tester teammate handles that. Ensure TypeScript compiles cleanly with `npx tsc --noEmit`."
+      },
+      "tester": {
+        "role": "Test Implementation Specialist",
+        "model": "sonnet-4.5",
+        "spawnWhen": "Issue requires new tests or has test acceptance criteria",
+        "responsibilities": [
+          "Write unit tests using Jest with Mongoose mock patterns",
+          "Write integration tests using supertest",
+          "Use describeIfMongo with MongoMemoryServer for model tests",
+          "Ensure tests have meaningful assertions",
+          "Cover edge cases (validation errors, not found, unauthorized)",
+          "Create test mocks using jest.mock() (minimal and focused)"
+        ],
+        "contextFiles": [
+          "CLAUDE.md",
+          "memory/patterns/",
+          "jest.config.ts",
+          "tests/helpers/mongo-guard.ts"
+        ],
+        "spawnPrompt": "You are a tester teammate on the CadenceLMS API (Node.js/Express/TypeScript/MongoDB). Your task: {task_description}. Write tests using Jest. For model tests, use `describeIfMongo` with MongoMemoryServer (see tests/helpers/mongo-guard.ts). For service tests, use `jest.mock()` for Mongoose models — mock query chains (.find().populate().sort().skip().limit().lean()) where each method needs mockReturnThis() except the terminal. For constructor mocking: `(Model as unknown as jest.Mock).mockImplementation(data => ({ ...data, _id: new ObjectId(), save: mockSave }))`. Mock eventBus.emit for services that emit events. Run tests with `npm run test:unit`. Check existing test files nearby for conventions."
+      },
+      "researcher": {
+        "role": "Codebase Research & Context Specialist",
+        "model": "sonnet-4.5",
+        "spawnWhen": "Issue is complex and requires deep codebase understanding before implementation",
+        "requiresPlanApproval": true,
+        "responsibilities": [
+          "Analyze existing code patterns relevant to the issue",
+          "Find similar implementations to use as reference",
+          "Identify affected files and potential impacts",
+          "Map model-service-controller-route chain for the change",
+          "Trace Mongoose schema relationships and population chains",
+          "Report findings to lead for task planning"
+        ],
+        "contextFiles": [
+          "CLAUDE.md",
+          "memory/",
+          "dev_communication/"
+        ],
+        "spawnPrompt": "You are a researcher teammate on the CadenceLMS API (Node.js/Express/TypeScript/MongoDB). Investigate the codebase to support: {task_description}. Trace the full chain: model schema → service methods → controller handlers → route definitions → middleware. Find existing patterns, similar implementations, affected files, and potential impacts. Check memory/patterns/ and memory/entities/ for documented conventions. Identify Mongoose schema relationships (refs, populations, subdocuments). Report your findings clearly with file paths and code references. Do NOT write or modify any code."
+      }
+    }
+  },
+
+  "teamPresets": {
+    "solo": {
+      "description": "Single agent, no team. Default for simple issues.",
+      "teammates": [],
+      "selectWhen": [
+        "Issue touches 1-2 files",
+        "Simple bug fix or typo",
+        "Documentation-only change",
+        "Quick mode eligible"
+      ]
+    },
+    "paired": {
+      "description": "Lead + implementer. For focused implementation work.",
+      "teammates": ["implementer"],
+      "selectWhen": [
+        "Issue touches 2-4 files in same architectural layer",
+        "Straightforward feature addition",
+        "Tests already exist and just need updating",
+        "Bug fix requiring moderate investigation"
+      ]
+    },
+    "standard": {
+      "description": "Lead + implementer + tester. Default team mode.",
+      "teammates": ["implementer", "tester"],
+      "selectWhen": [
+        "Issue requires new code AND new tests",
+        "Feature spans 3+ files across architectural layers (model, service, controller, route)",
+        "Acceptance criteria include test requirements",
+        "Most team invocations"
+      ]
+    },
+    "research": {
+      "description": "Lead + researcher + implementer + tester. For complex unknowns.",
+      "teammates": ["researcher", "implementer", "tester"],
+      "selectWhen": [
+        "Issue involves unfamiliar parts of codebase",
+        "Architecture decision needed before implementation",
+        "Cross-team dependency or integration point",
+        "No existing patterns in memory/ match the task"
+      ]
+    },
+    "parallel-impl": {
+      "description": "Lead + 2 implementers + tester. For multi-component features.",
+      "teammates": ["implementer", "implementer", "tester"],
+      "selectWhen": [
+        "Issue has multiple independent components",
+        "Changes span distinct layers (e.g., new model + new route + new middleware)",
+        "Components can be built in parallel without file conflicts",
+        "Large feature with natural component boundaries"
+      ]
+    }
+  },
+
+  "teamSelection": {
+    "phase": "Phase 1.5 - runs after context loading, before implementation",
+    "steps": [
+      "Read issue requirements and acceptance criteria",
+      "Count files likely to be created/modified",
+      "Check if patterns exist in memory/ for this type of work",
+      "Assess complexity: simple (1-2 files), moderate (3-5 files), complex (6+ files)",
+      "Check if issue has cross-team dependencies",
+      "Match against teamPresets.selectWhen criteria",
+      "Select best preset (default: standard for team mode, solo for normal mode)",
+      "Log selection rationale"
+    ],
+    "overrides": {
+      "userExplicit": "User can specify preset name when spawning teams",
+      "leadJudgment": "Lead can override preset during Phase 2T review checkpoint"
+    }
+  },
+
+  "midDevReview": {
+    "phase": "Phase 2T checkpoint - runs after 50% of tasks complete",
+    "triggers": [
+      "Half of team tasks marked complete",
+      "Any teammate blocked by hooks 2+ times consecutively",
+      "Teammate sends message indicating scope change",
+      "30 minutes elapsed since team spawn"
+    ],
+    "actions": [
+      "Assess progress: are tasks completing on schedule?",
+      "Check for scope creep: has the issue grown beyond original plan?",
+      "Evaluate teammate effectiveness: any teammate idle too long or struggling?",
+      "Decide: add teammate, remove teammate, reassign tasks, or continue as-is",
+      "If adding: spawn new teammate with remaining task context",
+      "If removing: shut down underperforming teammate, reassign their tasks",
+      "If scope changed: create new tasks, adjust dependencies",
+      "Log review decision and rationale"
+    ]
+  },
+
+  "postDevReview": {
+    "phase": "Phase 4 - runs during documentation, after implementation complete",
+    "purpose": "Review team config effectiveness and record adjustments for future similar issues",
+    "steps": [
+      "Compare actual team composition to selected preset",
+      "Record which teammates were most/least effective",
+      "Note if mid-dev review changed the team composition",
+      "Identify what preset would have been ideal in hindsight",
+      "Check: did the task dependency pattern match the actual flow?",
+      "Record timing: how long did each teammate's tasks take?",
+      "Write team review to session file under ## Team Review section",
+      "If effectiveness was excellent/good, promote to memory/team-configs/ using _template.json"
+    ],
+    "learnedConfigStorage": {
+      "directory": "memory/team-configs/",
+      "template": "memory/team-configs/_template.json",
+      "naming": "{issue-type}--{qualifier}.json",
+      "promoteWhen": "effectiveness is excellent or good",
+      "purpose": "Structured lookup for Phase 1.5 team selection, avoids parsing session prose"
+    },
+    "sessionFileAddition": {
+      "section": "## Team Review",
+      "fields": [
+        "Preset selected: {preset_name}",
+        "Preset ideal: {ideal_preset_name} (same or different)",
+        "Teammates spawned: {list}",
+        "Mid-dev adjustments: {none | added X | removed X | reassigned Y}",
+        "Bottlenecks: {description or none}",
+        "Recommendation: {use same preset | try different preset} for similar issues"
+      ]
+    }
+  },
+
+  "taskDependencyPatterns": {
+    "newFeature": {
+      "description": "Standard feature implementation with tests",
+      "flow": "researcher (optional) -> implementer -> tester",
+      "tasks": [
+        { "role": "researcher", "subject": "Research: {feature}", "optional": true, "blocks": ["implement"] },
+        { "role": "implementer", "subject": "Implement: {feature}", "id": "implement", "blocks": ["test"] },
+        { "role": "tester", "subject": "Test: {feature}", "id": "test" }
+      ]
+    },
+    "bugFix": {
+      "description": "Bug fix with regression test (TDD style)",
+      "flow": "tester (failing test) -> implementer (fix) -> tester (verify)",
+      "tasks": [
+        { "role": "tester", "subject": "Write failing test: {bug}", "id": "failing-test", "blocks": ["fix"] },
+        { "role": "implementer", "subject": "Fix: {bug}", "id": "fix", "blocks": ["verify"] },
+        { "role": "tester", "subject": "Verify fix passes: {bug}", "id": "verify" }
+      ]
+    },
+    "complexFeature": {
+      "description": "Multi-component feature with parallel implementation",
+      "flow": "researcher -> [implementer-A, implementer-B] (parallel) -> tester",
+      "tasks": [
+        { "role": "researcher", "subject": "Research: {feature}", "blocks": ["impl-a", "impl-b"] },
+        { "role": "implementer", "subject": "Implement component A: {feature}", "id": "impl-a", "blocks": ["test"] },
+        { "role": "implementer", "subject": "Implement component B: {feature}", "id": "impl-b", "blocks": ["test"] },
+        { "role": "tester", "subject": "Test all components: {feature}", "id": "test" }
+      ]
+    }
+  },
+
+  "coordinationRules": {
+    "fileOwnership": "Each teammate owns distinct files. No two teammates edit the same file.",
+    "communicationPattern": "Teammates report to lead via task updates. Lead broadcasts only for scope changes.",
+    "conflictResolution": "Lead resolves conflicts. If teammates disagree on approach, lead decides.",
+    "maxTeammates": 3,
+    "modelOverride": "Lead can specify different models per teammate if needed.",
+    "shutdownOrder": "Shut down all teammates before Phase 4 (Documentation). Lead handles Phases 4-5 solo."
+  }
+}

@@ -513,7 +513,7 @@ src/features/flashcard-player/
 
 ## 10. Related Documents
 
-- **Question System**: `memory/entities/question-system.md` - Monolithic Question design
+- **Question System**: `ai_team_config/memory_store/entities/question-system.md` - Monolithic Question design
 - **Question Types**: `contracts/types/question-types.ts` - TypeScript interfaces
 - **API Contract**: `contracts/api/flashcards.contract.ts`
 - **ADR**: ADR-CONTENT-001 (Content Delivery Architecture)

@@ -41,7 +41,12 @@ interface LinkedQuestionResult {
     difficulty: string;
     points: number;
     tags: string[];
-    options: any[] | null;
+    options: string[] | null;
+    correctAnswers: string[] | null;
+    distractors: string[] | null;
+    explanation: string | null;
+    trueFalseData?: { correctValue: boolean } | null;
+    matchingPairs?: Record<string, string> | null;
   };
 }
 
@@ -107,6 +112,23 @@ export class LearningUnitQuestionsService {
       const points = link.pointsOverride !== null ? link.pointsOverride : (question?.points || 0);
       totalPoints += points;
 
+      // Build options from correctAnswers + distractors if options field is empty
+      let options: string[] | null = null;
+      if (question) {
+        if (question.options && question.options.length > 0) {
+          options = question.options;
+        } else if (question.correctAnswers && question.distractors) {
+          // Combine correct answers and distractors into shuffled options
+          const allOptions = [...question.correctAnswers, ...question.distractors];
+          // Fisher-Yates shuffle
+          for (let i = allOptions.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [allOptions[i], allOptions[j]] = [allOptions[j], allOptions[i]];
+          }
+          options = allOptions;
+        }
+      }
+
       return {
         id: link._id.toString(),
         questionId: link.questionId.toString(),
@@ -120,7 +142,12 @@ export class LearningUnitQuestionsService {
           difficulty: question.difficulty || 'medium',
           points: question.points,
           tags: question.tags || [],
-          options: question.options || null
+          options,
+          correctAnswers: question.correctAnswers || null,
+          distractors: question.distractors || null,
+          explanation: question.explanation || null,
+          trueFalseData: question.trueFalseData || null,
+          matchingPairs: question.matchingPairs || null
         } : undefined
       };
     });

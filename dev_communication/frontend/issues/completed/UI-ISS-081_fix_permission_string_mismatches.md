@@ -7,7 +7,7 @@
 ## Completed: 2026-02-05
 ## Requested By: Internal
 ## Assigned To: Unassigned
-## Related: memory/context/permission-string-audit.md, memory/patterns/permission-string-debugging.md
+## Related: ai_team_config/memory_store/context/permission-string-audit.md, ai_team_config/memory_store/patterns/permission-string-debugging.md
 
 ---
 
@@ -74,7 +74,7 @@ Examples:
 
 ### Approach
 
-1. Reference `memory/context/permission-string-audit.md` for complete list
+1. Reference `ai_team_config/memory_store/context/permission-string-audit.md` for complete list
 2. Update each permission string to match API format
 3. For permissions not in API (e.g., `learner:transcripts:read`):
    - Either remove the check (if not needed)
@@ -139,7 +139,7 @@ All permission strings have been fixed:
 - Message sent: `ui-to-api/2026-02-05_permission-string-alignment.md`
 - Questions about learner self-enrollment, FERPA granular permissions, and grade override
 
-Full audit documented in: `memory/context/permission-string-audit.md`
+Full audit documented in: `ai_team_config/memory_store/context/permission-string-audit.md`
 
 ---
 

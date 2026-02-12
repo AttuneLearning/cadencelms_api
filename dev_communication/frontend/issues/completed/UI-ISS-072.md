@@ -146,7 +146,7 @@ src/features/matching-player/
 3. **Phase 3:** Integrate with API when endpoints ready
 
 **Reference Docs:**
-- `memory/entities/question-system.md`
+- `ai_team_config/memory_store/entities/question-system.md`
 - `contracts/api/matching-exercises.contract.ts`
 
 ### 2026-01-28: Moved to Active - API Complete

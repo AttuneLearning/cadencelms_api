@@ -10,7 +10,7 @@
 - `dev_communication/specs/learning/COURSE_VERSIONING_DESIGN.md`
 - `dev_communication/specs/learning/COURSE_VERSIONING_TYPES.md`
 - `dev_communication/specs/learning/LEARNER_ACCESS_AND_NOTIFICATIONS.md`
-- `dev_communication/architecture/decisions/ADR-VERS-001-COURSE-VERSIONING-SYSTEM.md`
+- `dev_communication/shared/architecture/decisions/ADR-VERS-001-COURSE-VERSIONING-SYSTEM.md`
 
 ---
 

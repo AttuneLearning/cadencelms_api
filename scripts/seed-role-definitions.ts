@@ -56,6 +56,7 @@ const ROLE_DEFINITIONS = [
       'learner:profile:read',
       'learner:profile:update',
       'learner:progress:read',
+      'grades:own:read',        // View own course/program/class progress
       'learner:certificates:read',
       'learner:certificates:download'
     ],

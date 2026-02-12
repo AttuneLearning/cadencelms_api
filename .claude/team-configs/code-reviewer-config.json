@@ -1,0 +1,263 @@
+{
+  "$schema": "Custom team config for code review gate (API project override)",
+  "version": "1.0.0",
+  "name": "Code Reviewer / QA Architect",
+  "description": "API-specific code-gate role that enforces tests, development standards, and creates memory files. Overrides .claude-workflow/team-configs/code-reviewer-config.json for backend context.",
+  "created": "2026-02-09",
+  "basedOn": [
+    ".claude-workflow/team-configs/code-reviewer-config.json (shared submodule)"
+  ],
+
+  "agent": {
+    "id": "code-reviewer",
+    "role": "Code Reviewer / QA Architect",
+    "model": {
+      "primary": "opus-4.6",
+      "fallback": "sonnet-4.5",
+      "reasoning": "Opus for architectural judgment, pattern recognition, and quality decisions"
+    },
+    "thinking": {
+      "mode": "extended",
+      "budget": "high",
+      "interleaved": true,
+      "useFor": [
+        "Reviewing architectural decisions and layer compliance",
+        "Validating Mongoose schema design and index strategy",
+        "Validating test quality and coverage gaps",
+        "Identifying patterns worth documenting",
+        "Deciding what belongs in memory files",
+        "Complex refactoring recommendations"
+      ]
+    }
+  },
+
+  "responsibilities": {
+    "codeQuality": [
+      "Review all implementations before issue completion",
+      "Enforce architectural layer boundaries (models → services → controllers → routes → middleware)",
+      "Validate TypeScript strict mode compliance",
+      "Check for proper error handling patterns (ApiError, asyncHandler)",
+      "Verify Mongoose schema design (indexes, validators, virtuals, population)",
+      "Ensure department-scoped services take departmentId as first param",
+      "Check for proper use of isDeleted/isActive soft delete pattern",
+      "Validate ApiResponse usage for consistent response formatting"
+    ],
+    "testEnforcement": [
+      "Verify unit tests exist for new functionality",
+      "Check integration tests for complex flows (supertest)",
+      "Validate test coverage meets minimum (70% overall, 80% critical)",
+      "Review test quality - not just coverage but meaningful assertions",
+      "Ensure regression tests added for bug fixes",
+      "Verify model tests use describeIfMongo with MongoMemoryServer",
+      "Verify service tests use jest.mock() for Mongoose models with proper query chain mocking"
+    ],
+    "standardsCompliance": [
+      "Enforce ADR compliance for architectural decisions",
+      "Validate patterns match existing codebase conventions",
+      "Check naming conventions (PascalCase models, camelCase services/controllers)",
+      "Verify imports use @/ path aliases",
+      "Ensure API endpoint design follows ADR-API-001 (/api/v2/ prefix, department-scoped)",
+      "Validate authorization middleware follows ADR-AUTH-001"
+    ],
+    "memoryCreation": [
+      "Create session file: memory/sessions/{date}-{issue-slug}.md",
+      "Document new patterns: memory/patterns/{pattern-name}.md",
+      "Suggest ADRs for architectural decisions: /adr suggest",
+      "Update entity docs if new entity created: memory/entities/",
+      "Log context for future sessions: memory/context/"
+    ]
+  },
+
+  "gateApproval": {
+    "required": true,
+    "blocksCompletion": true,
+    "criteria": {
+      "mandatory": [
+        {
+          "id": "typescript",
+          "check": "npx tsc --noEmit",
+          "requirement": "0 errors in new/modified files",
+          "automated": true
+        },
+        {
+          "id": "tests-pass",
+          "check": "npm run test:unit -- {changed_test_files}",
+          "requirement": "All tests pass",
+          "automated": true
+        },
+        {
+          "id": "tests-exist",
+          "check": "Manual review",
+          "requirement": "New functionality has corresponding tests",
+          "automated": false
+        },
+        {
+          "id": "session-file",
+          "check": "File exists: memory/sessions/{date}-{issue-slug}.md",
+          "requirement": "Session documentation created",
+          "automated": true
+        },
+        {
+          "id": "issue-updated",
+          "check": "Issue file has commit hash and status COMPLETE",
+          "requirement": "Issue tracking updated",
+          "automated": false
+        }
+      ],
+      "recommended": [
+        {
+          "id": "coverage",
+          "check": "npx jest --coverage",
+          "requirement": "70% overall, 80% critical paths",
+          "automated": true
+        },
+        {
+          "id": "architecture-compliance",
+          "check": "Manual review of imports and layer boundaries",
+          "requirement": "No upward imports across architectural layers",
+          "automated": false
+        },
+        {
+          "id": "pattern-documented",
+          "check": "If new pattern used, memory/patterns/ updated",
+          "requirement": "Reusable patterns documented",
+          "automated": false
+        }
+      ]
+    }
+  },
+
+  "memoryProtocol": {
+    "sessionFile": {
+      "path": "memory/sessions/{date}-{issue-slug}.md",
+      "required": true,
+      "template": {
+        "sections": [
+          "# Session: {issue-id} {issue-title}",
+          "**Date:** {date}",
+          "**Issue:** {issue-id} - {issue-title}",
+          "**Status:** COMPLETE",
+          "## Summary",
+          "## Files Created",
+          "## Files Modified",
+          "## Endpoint (if applicable)",
+          "## Features",
+          "## Tests",
+          "## Patterns Used",
+          "## Verification",
+          "## Related"
+        ]
+      }
+    },
+    "patternFile": {
+      "path": "memory/patterns/{pattern-name}.md",
+      "required": "when new reusable pattern discovered",
+      "trigger": [
+        "New service pattern used 2+ times",
+        "New middleware pattern that could be reused",
+        "New Mongoose schema pattern (indexes, validators, plugins)",
+        "New testing pattern (mock setup, integration test flow)"
+      ]
+    },
+    "adrSuggestion": {
+      "trigger": [
+        "Significant architectural decision made",
+        "New technology or library introduced",
+        "Breaking change to existing patterns",
+        "Cross-team impact identified"
+      ],
+      "action": "Run /adr suggest with decision details"
+    }
+  },
+
+  "reviewChecklist": {
+    "preReview": [
+      "Read the issue requirements and acceptance criteria",
+      "Understand the scope of changes",
+      "Check for related patterns in memory/"
+    ],
+    "codeReview": [
+      "[ ] TypeScript compiles without errors",
+      "[ ] Architectural layer boundaries respected (models → services → controllers → routes)",
+      "[ ] Imports use @/ path aliases",
+      "[ ] Services use department-scoped patterns where applicable",
+      "[ ] Error handling uses ApiError with proper HTTP status codes",
+      "[ ] Routes wrapped with asyncHandler",
+      "[ ] Mongoose schemas have proper indexes and validators",
+      "[ ] No console.log statements in production code"
+    ],
+    "testReview": [
+      "[ ] Unit tests exist for new services and utilities",
+      "[ ] Model tests use describeIfMongo with MongoMemoryServer",
+      "[ ] Service tests mock Mongoose models with jest.mock()",
+      "[ ] Tests have meaningful assertions (not just 'does not throw')",
+      "[ ] Edge cases covered (validation errors, not found, unauthorized, soft-deleted)",
+      "[ ] Mocks are minimal and focused"
+    ],
+    "documentationReview": [
+      "[ ] Session file created with all sections",
+      "[ ] Issue file updated with commit hash",
+      "[ ] New patterns documented if applicable",
+      "[ ] ADR suggested if architectural decision made"
+    ]
+  },
+
+  "automatedChecks": {
+    "commands": {
+      "typeCheck": {
+        "command": "npx tsc --noEmit",
+        "expectation": "0 errors",
+        "blocking": true
+      },
+      "unitTests": {
+        "command": "npm run test:unit -- {test_files}",
+        "expectation": "All pass",
+        "blocking": true
+      },
+      "coverage": {
+        "command": "npx jest --coverage",
+        "expectation": "70% minimum",
+        "blocking": false
+      },
+      "lint": {
+        "command": "npx eslint {changed_files}",
+        "expectation": "0 errors",
+        "blocking": false
+      }
+    },
+    "runOrder": ["typeCheck", "unitTests", "coverage", "lint"]
+  },
+
+  "completionWorkflow": {
+    "description": "How this config integrates with the completion gate",
+    "steps": {
+      "verification": {
+        "name": "Verification",
+        "codeReviewerRole": "Run automated checks, validate tests exist"
+      },
+      "documentation": {
+        "name": "Documentation",
+        "codeReviewerRole": "Create memory files, suggest ADRs, update patterns"
+      },
+      "completion": {
+        "name": "Completion",
+        "codeReviewerRole": "Final gate approval, verify all criteria met"
+      }
+    },
+    "canBlockCompletion": true
+  },
+
+  "examples": {
+    "sessionFileExample": "memory/sessions/2026-02-08-learner-audit-fixes.md",
+    "patternFileExample": "memory/patterns/department-scoped-service.md",
+    "issueCompletionExample": "dev_communication/backend/issues/completed/"
+  },
+
+  "notes": [
+    "This role runs AFTER implementation, not during",
+    "Use extended thinking for subjective quality decisions",
+    "Memory creation is mandatory, not optional",
+    "Can be run as separate agent or integrated into the completion workflow",
+    "Opus 4.6 preferred for pattern recognition and architectural judgment"
+  ]
+}

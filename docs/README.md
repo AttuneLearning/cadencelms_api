@@ -38,7 +38,7 @@ Historical documentation from previous implementation phases. See `old/README.md
 
 | Location | Description |
 |----------|-------------|
-| `dev_communication/architecture/` | Architecture Decision Records (ADRs) |
+| `dev_communication/shared/architecture/` | Architecture Decision Records (ADRs) |
 | `dev_communication/PROCESS_GUIDE.md` | Team communication processes |
-| `memory/` | Extended memory vault |
+| `ai_team_config/memory_store/` | Extended memory vault |
 | `CLAUDE.md` | Claude Code instructions |

@@ -156,7 +156,7 @@ All feeds return `{ success: true, data: { events: CalendarEvent[] } }`.
 29. `src/pages/*/calendar/__tests__/*.test.tsx` (3 page tests)
 
 ### Phase 6: ADR + comms
-30. Create `dev_communication/architecture/decisions/ADR-UI-004-CALENDAR-WIDGET-ARCHITECTURE.md`
+30. Create `dev_communication/shared/architecture/decisions/ADR-UI-004-CALENDAR-WIDGET-ARCHITECTURE.md`
 31. Send comms to API team with endpoint contract
 
 ---

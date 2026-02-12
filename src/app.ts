@@ -120,6 +120,9 @@ import calendarFeedsRoutes from './routes/v2/calendar-feeds.routes';
 // Playlist Session routes
 import playlistSessionRoutes from './routes/v2/playlist-session.routes';
 
+// Module Access routes
+import moduleAccessRoutes from './routes/v2/module-access.routes';
+
 // Message/Inbox routes
 import messageRoutes from './routes/v2/message.routes';
 
@@ -249,6 +252,7 @@ app.use('/api/v2/module-completions', moduleCompletionsRouter); // Global module
 app.use('/api/v2/learners/:id/module-completions', learnerModuleCompletionsRouter); // Learner module completions
 app.use('/api/v2/modules', moduleUsageRouter); // Module usage and completion stats
 app.use('/api/v2/departments/:id/modules', departmentModulesRouter); // Department-owned and available modules
+app.use('/api/v2/module-access', moduleAccessRoutes); // Module access tracking and analytics
 
 // API routes - Learner Exceptions
 app.use('/api/v2/enrollments', enrollmentExceptionRouter); // Enrollment-scoped exception operations

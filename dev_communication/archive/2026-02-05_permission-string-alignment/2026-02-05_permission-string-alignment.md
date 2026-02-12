@@ -16,7 +16,7 @@ During a UI audit, we discovered significant mismatches between permission strin
 
 The UI has been using permission strings that don't exist in `scripts/seed-role-definitions.ts`. We've fixed many UI-side issues, but some permissions may be legitimately needed and should be added to the API.
 
-Full audit documented in: `memory/context/permission-string-audit.md`
+Full audit documented in: `ai_team_config/memory_store/context/permission-string-audit.md`
 
 ## Clarifications Needed
 

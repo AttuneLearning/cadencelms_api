@@ -5,6 +5,8 @@ import ScormAttempt from '@/models/activity/ScormAttempt.model';
 import ExamResult from '@/models/activity/ExamResult.model';
 import Program from '@/models/academic/Program.model';
 import Course from '@/models/academic/Course.model';
+import CanonicalCourse from '@/models/academic/CanonicalCourse.model';
+import CourseVersion from '@/models/academic/CourseVersion.model';
 import Class from '@/models/academic/Class.model';
 import CourseContent from '@/models/content/CourseContent.model';
 import { Learner } from '@/models/auth/Learner.model';
@@ -12,6 +14,60 @@ import { User } from '@/models/auth/User.model';
 import { ApiError } from '@/utils/ApiError';
 import { maskLastName } from '@/utils/dataMasking';
 import { getDepartmentAndSubdepartments } from '@/utils/departmentHierarchy';
+
+/**
+ * Helper: Resolve a courseId to a course-like object with name, code, _id, and credits.
+ * Checks Course (legacy) first, then CanonicalCourse + CourseVersion.
+ */
+async function resolveCourse(courseId: string): Promise<{
+  _id: mongoose.Types.ObjectId;
+  name: string;
+  code: string;
+  credits: number;
+  departmentId: mongoose.Types.ObjectId;
+  isActive: boolean;
+} | null> {
+  // Try legacy Course model first
+  const legacyCourse = await Course.findById(courseId);
+  if (legacyCourse) {
+    return {
+      _id: legacyCourse._id as mongoose.Types.ObjectId,
+      name: legacyCourse.name,
+      code: legacyCourse.code,
+      credits: legacyCourse.credits,
+      departmentId: legacyCourse.departmentId,
+      isActive: legacyCourse.isActive
+    };
+  }
+
+  // Try CanonicalCourse + published CourseVersion
+  const canonical = await CanonicalCourse.findById(courseId);
+  if (canonical) {
+    let name = canonical.code; // Default to code if no version found
+    let credits = 0;
+
+    // Get name from published version, or latest draft
+    const versionId = canonical.currentPublishedVersionId || canonical.latestDraftVersionId;
+    if (versionId) {
+      const version = await CourseVersion.findById(versionId);
+      if (version) {
+        name = version.title || canonical.code;
+        credits = version.credits || 0;
+      }
+    }
+
+    return {
+      _id: canonical._id as mongoose.Types.ObjectId,
+      name,
+      code: canonical.code,
+      credits,
+      departmentId: canonical.departmentId,
+      isActive: true
+    };
+  }
+
+  return null;
+}
 
 /**
  * Progress Tracking Service
@@ -296,8 +352,8 @@ export class ProgressService {
       throw ApiError.badRequest('Invalid learner ID');
     }
 
-    // Get course
-    const course = await Course.findById(courseId);
+    // Get course (supports both legacy Course and CanonicalCourse models)
+    const course = await resolveCourse(courseId);
     if (!course) {
       throw ApiError.notFound('Course not found');
     }
@@ -309,18 +365,35 @@ export class ProgressService {
       throw ApiError.notFound('Learner not found');
     }
 
-    // Find enrollment via class
+    // Find enrollment — try ClassEnrollment (via Class) first, then Enrollment
     const classes = await Class.find({ courseId });
     const classIds = classes.map(c => c._id);
 
-    const classEnrollment = await ClassEnrollment.findOne({
+    let enrollmentDate: Date | null = null;
+    let completionDate: Date | null = null;
+
+    const classEnrollment = classIds.length > 0 ? await ClassEnrollment.findOne({
       learnerId,
       classId: { $in: classIds },
       status: { $in: ['enrolled', 'active', 'completed'] }
-    });
+    }) : null;
 
-    if (!classEnrollment) {
-      throw ApiError.notFound('Learner not enrolled in this course');
+    if (classEnrollment) {
+      enrollmentDate = classEnrollment.enrollmentDate;
+      completionDate = classEnrollment.completionDate || null;
+    } else {
+      // Fall back to Enrollment model (used by new enrollment system)
+      const enrollment = await Enrollment.findOne({
+        learnerId,
+        targetId: new mongoose.Types.ObjectId(courseId),
+        type: 'course',
+        status: { $in: ['active', 'completed'] }
+      });
+      if (!enrollment) {
+        throw ApiError.notFound('Learner not enrolled in this course');
+      }
+      enrollmentDate = enrollment.enrollmentDate;
+      completionDate = enrollment.completionDate || null;
     }
 
     // Get course content
@@ -506,9 +579,9 @@ export class ProgressService {
       courseCode: course.code,
       learnerId: learner._id.toString(),
       learnerName: `${learner.person.firstName} ${learner.person.lastName}`,
-      enrolledAt: classEnrollment.enrollmentDate,
+      enrolledAt: enrollmentDate,
       startedAt: scormAttempts.length > 0 ? scormAttempts[0].startedAt : null,
-      completedAt: status === 'completed' ? classEnrollment.completionDate : null,
+      completedAt: status === 'completed' ? completionDate : null,
       status,
       overallProgress: {
         completionPercent,
@@ -546,8 +619,8 @@ export class ProgressService {
       throw ApiError.notFound('Class not found');
     }
 
-    // Get course
-    const course = await Course.findById(classDoc.courseId);
+    // Get course (supports both legacy Course and CanonicalCourse models)
+    const course = await resolveCourse(classDoc.courseId.toString());
     if (!course) {
       throw ApiError.notFound('Course not found');
     }
@@ -822,7 +895,7 @@ export class ProgressService {
     // Build course progress
     const courseProgress = await Promise.all(
       classes.map(async (classDoc) => {
-        const course = await Course.findById(classDoc.courseId);
+        const course = await resolveCourse(classDoc.courseId.toString());
         if (!course) return null;
 
         const enrollment = classEnrollments.find(e =>
@@ -867,8 +940,8 @@ export class ProgressService {
         }
 
         // Find program
-        const program = course.metadata?.programId
-          ? await Program.findById(course.metadata.programId)
+        const program = (course as any).metadata?.programId
+          ? await Program.findById((course as any).metadata.programId)
           : null;
 
         const lastCourseActivity = courseAttempts.reduce((latest, attempt) => {
@@ -1011,7 +1084,7 @@ export class ProgressService {
         const classDoc = await Class.findById(enrollment.classId);
         if (!classDoc) return null;
 
-        const course = await Course.findById(classDoc.courseId);
+        const course = await resolveCourse(classDoc.courseId.toString());
         if (!course) return null;
 
         // Get progress
@@ -1151,7 +1224,7 @@ export class ProgressService {
         const classDoc = await Class.findById(enrollment.classId);
         if (!classDoc) return null;
 
-        const course = await Course.findById(classDoc.courseId);
+        const course = await resolveCourse(classDoc.courseId.toString());
         if (!course) return null;
 
         // Get course contents

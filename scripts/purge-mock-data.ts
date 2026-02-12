@@ -42,6 +42,12 @@ import ReportJob from '../src/models/reports/ReportJob.model';
 import ReportTemplate from '../src/models/reports/ReportTemplate.model';
 import ReportSchedule from '../src/models/reports/ReportSchedule.model';
 import GradeChangeLog from '../src/models/audit/GradeChangeLog.model';
+import CanonicalCourse from '../src/models/academic/CanonicalCourse.model';
+import CourseVersion from '../src/models/academic/CourseVersion.model';
+import CourseVersionModule from '../src/models/academic/CourseVersionModule.model';
+import Module from '../src/models/academic/Module.model';
+import LearningUnit from '../src/models/content/LearningUnit.model';
+import LearningUnitQuestion from '../src/models/content/LearningUnitQuestion.model';
 
 loadEnv();
 
@@ -73,6 +79,12 @@ const collections = [
   { name: 'Enrollments', model: Enrollment },
   { name: 'Questions', model: Question },
   { name: 'Question Banks', model: QuestionBank },
+  { name: 'Learning Unit Questions', model: LearningUnitQuestion },
+  { name: 'Learning Units', model: LearningUnit },
+  { name: 'Course Version Modules', model: CourseVersionModule },
+  { name: 'Course Versions', model: CourseVersion },
+  { name: 'Canonical Courses', model: CanonicalCourse },
+  { name: 'Modules', model: Module },
   { name: 'Course Content', model: CourseContent },
   { name: 'Content', model: Content },
   { name: 'Classes', model: Class },

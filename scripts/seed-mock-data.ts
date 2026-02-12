@@ -26,7 +26,7 @@ import { Staff } from '../src/models/auth/Staff.model';
 import { Learner } from '../src/models/auth/Learner.model';
 import Department from '../src/models/organization/Department.model';
 import AcademicYear from '../src/models/academic/AcademicYear.model';
-import Course from '../src/models/academic/Course.model';
+// Course model removed — all courses now use CanonicalCourse + CourseVersion
 import Program from '../src/models/academic/Program.model';
 import Class from '../src/models/academic/Class.model';
 import Content from '../src/models/content/Content.model';
@@ -305,41 +305,112 @@ async function ensureAcademicYear(): Promise<any> {
   });
 }
 
-async function ensureCourse(data: {
+async function ensureCanonicalCourse(data: {
   name: string;
   code: string;
   departmentId: mongoose.Types.ObjectId;
   credits: number;
-  prerequisites?: mongoose.Types.ObjectId[];
-  status?: 'draft' | 'published' | 'archived';
   createdBy?: mongoose.Types.ObjectId;
 }): Promise<any> {
-  const existing = await Course.findOne({
+  // Use admin user as default creator
+  const adminUser = await User.findOne({ email: process.env.ADMIN_EMAIL || 'admin@lms.edu' });
+  const creatorId = data.createdBy || adminUser?._id || new mongoose.Types.ObjectId();
+
+  const existing = await CanonicalCourse.findOne({
     departmentId: data.departmentId,
     code: data.code
   });
 
   if (existing) {
-    existing.name = data.name;
-    existing.credits = data.credits;
-    existing.prerequisites = data.prerequisites || [];
-    existing.status = data.status || 'published';
-    existing.createdBy = data.createdBy;
-    existing.isActive = true;
-    await existing.save();
+    // Ensure a published version exists
+    const existingVersion = await CourseVersion.findOne({
+      canonicalCourseId: existing._id,
+      status: 'published'
+    });
+    if (!existingVersion) {
+      const version = await CourseVersion.create({
+        canonicalCourseId: existing._id,
+        version: 1,
+        title: data.name,
+        description: `${data.name} — comprehensive course`,
+        credits: data.credits,
+        duration: 480,
+        settings: {
+          allowSelfEnrollment: true,
+          passingScore: 70,
+          maxAttempts: 3,
+          certificateEnabled: true,
+          enforcePrerequisites: true,
+          showProgressBar: true,
+          allowModuleSkipping: false
+        },
+        instructorIds: [creatorId],
+        status: 'published',
+        isLocked: false,
+        isLatest: true,
+        parentVersionId: null,
+        createdBy: creatorId,
+        publishedAt: new Date(),
+        publishedBy: creatorId,
+        changeNotes: 'Initial published version'
+      });
+      existing.currentPublishedVersionId = version._id;
+      existing.latestDraftVersionId = version._id;
+      existing.totalVersions = 1;
+      await existing.save();
+    }
+    // Attach name/credits for downstream code that reads these
+    (existing as any).name = data.name;
+    (existing as any).credits = data.credits;
     return existing;
   }
 
-  return Course.create({
-    name: data.name,
+  const canonical = await CanonicalCourse.create({
     code: data.code,
     departmentId: data.departmentId,
-    credits: data.credits,
-    prerequisites: data.prerequisites || [],
-    status: data.status || 'published',
-    createdBy: data.createdBy,
-    isActive: true
+    programId: null,
+    currentPublishedVersionId: null,
+    latestDraftVersionId: null,
+    totalVersions: 0,
+    createdBy: creatorId
   });
+
+  const version = await CourseVersion.create({
+    canonicalCourseId: canonical._id,
+    version: 1,
+    title: data.name,
+    description: `${data.name} — comprehensive course`,
+    credits: data.credits,
+    duration: 480,
+    settings: {
+      allowSelfEnrollment: true,
+      passingScore: 70,
+      maxAttempts: 3,
+      certificateEnabled: true,
+      enforcePrerequisites: true,
+      showProgressBar: true,
+      allowModuleSkipping: false
+    },
+    instructorIds: [creatorId],
+    status: 'published',
+    isLocked: false,
+    isLatest: true,
+    parentVersionId: null,
+    createdBy: creatorId,
+    publishedAt: new Date(),
+    publishedBy: creatorId,
+    changeNotes: 'Initial published version'
+  });
+
+  canonical.currentPublishedVersionId = version._id;
+  canonical.latestDraftVersionId = version._id;
+  canonical.totalVersions = 1;
+  await canonical.save();
+
+  // Attach name/credits for downstream code that reads these
+  (canonical as any).name = data.name;
+  (canonical as any).credits = data.credits;
+  return canonical;
 }
 
 async function ensureProgram(data: {
@@ -546,6 +617,39 @@ async function ensureEnrollment(data: {
     enrollmentDate: new Date(),
     startDate: new Date(),
     totalCreditsEarned: 0
+  });
+}
+
+async function ensureCourseEnrollment(data: {
+  learnerId: mongoose.Types.ObjectId;
+  courseId: mongoose.Types.ObjectId;
+  academicYearId: mongoose.Types.ObjectId;
+  status: 'active' | 'pending';
+}): Promise<any> {
+  const existing = await Enrollment.findOne({
+    learnerId: data.learnerId,
+    'metadata.courseId': data.courseId,
+    'metadata.enrollmentType': 'course'
+  });
+
+  if (existing) {
+    existing.status = data.status;
+    await existing.save();
+    return existing;
+  }
+
+  return Enrollment.create({
+    learnerId: data.learnerId,
+    programId: new mongoose.Types.ObjectId(), // Placeholder - course enrollments don't belong to a program
+    academicYearId: data.academicYearId,
+    status: data.status,
+    enrollmentDate: new Date(),
+    startDate: new Date(),
+    totalCreditsEarned: 0,
+    metadata: {
+      courseId: data.courseId,
+      enrollmentType: 'course'
+    }
   });
 }
 
@@ -1287,6 +1391,13 @@ async function seedCBTContent(departmentId: mongoose.Types.ObjectId, creatorId: 
     for (let i = 0; i < CBT_QUESTIONS.length; i++) {
       const q = CBT_QUESTIONS[i];
 
+      // Build shuffled options from correct + distractors
+      const allOptions = [...q.correctAnswers, ...q.distractors];
+      for (let j = allOptions.length - 1; j > 0; j--) {
+        const k = Math.floor(Math.random() * (j + 1));
+        [allOptions[j], allOptions[k]] = [allOptions[k], allOptions[j]];
+      }
+
       const question = await Question.create({
         questionText: q.questionText,
         questionTypes: ['multiple_choice', 'flashcard', 'matching'],
@@ -1294,6 +1405,7 @@ async function seedCBTContent(departmentId: mongoose.Types.ObjectId, creatorId: 
         points: 10,
         correctAnswers: q.correctAnswers,
         distractors: q.distractors,
+        options: allOptions,
         difficulty: q.difficulty,
         tags: ['cbt', 'cognitive-therapy', `difficulty-${q.difficulty}`],
         questionBankIds: [cbtBank._id.toString()],
@@ -1463,6 +1575,12 @@ async function seedCourseContentData(
   if (existingEmdrQCount < 15) {
     console.log('  Creating 15 EMDR questions...');
     for (const q of EMDR_QUESTIONS) {
+      // Build shuffled options from correct + distractors
+      const allOptions = [...q.correctAnswers, ...q.distractors];
+      for (let i = allOptions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [allOptions[i], allOptions[j]] = [allOptions[j], allOptions[i]];
+      }
       const question = await Question.create({
         questionText: q.questionText,
         questionTypes: ['multiple_choice', 'flashcard'],
@@ -1470,6 +1588,7 @@ async function seedCourseContentData(
         points: 10,
         correctAnswers: q.correctAnswers,
         distractors: q.distractors,
+        options: allOptions,
         difficulty: q.difficulty,
         tags: ['emdr', `difficulty-${q.difficulty}`],
         questionBankIds: [emdrBank._id.toString()],
@@ -1506,6 +1625,12 @@ async function seedCourseContentData(
   if (existingCogQCount < 15) {
     console.log('  Creating 15 Cognitive Therapy questions...');
     for (const q of COGNITIVE_THERAPY_QUESTIONS) {
+      // Build shuffled options from correct + distractors
+      const allOptions = [...q.correctAnswers, ...q.distractors];
+      for (let i = allOptions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [allOptions[i], allOptions[j]] = [allOptions[j], allOptions[i]];
+      }
       const question = await Question.create({
         questionText: q.questionText,
         questionTypes: ['multiple_choice', 'flashcard'],
@@ -1513,6 +1638,7 @@ async function seedCourseContentData(
         points: 10,
         correctAnswers: q.correctAnswers,
         distractors: q.distractors,
+        options: allOptions,
         difficulty: q.difficulty,
         tags: ['cognitive-therapy', `difficulty-${q.difficulty}`],
         questionBankIds: [cogBank._id.toString()],
@@ -1559,59 +1685,27 @@ async function seedCourseContentData(
       continue;
     }
 
-    // Check if canonical course already exists for this code
-    let canonical = await CanonicalCourse.findOne({ code: target.code, departmentId: target.departmentId });
-    if (canonical) {
-      console.log(`  CanonicalCourse for ${target.code} already exists, skipping...`);
+    // Find canonical course (already created by ensureCanonicalCourse)
+    const canonical = await CanonicalCourse.findOne({ code: target.code, departmentId: target.departmentId });
+    if (!canonical) {
+      console.log(`  CanonicalCourse for ${target.code} not found, skipping...`);
+      continue;
+    }
+
+    // Check if modules already exist for this course version (idempotent)
+    const version = await CourseVersion.findOne({ canonicalCourseId: canonical._id, status: 'published' });
+    if (!version) {
+      console.log(`  No published version for ${target.code}, skipping...`);
+      continue;
+    }
+
+    const existingModuleLinks = await CourseVersionModule.countDocuments({ courseVersionId: version._id });
+    if (existingModuleLinks > 0) {
+      console.log(`  Content for ${target.code} already exists (${existingModuleLinks} modules), skipping...`);
       continue;
     }
 
     console.log(`  Creating content chain for ${target.code}...`);
-
-    // Create canonical course
-    canonical = await CanonicalCourse.create({
-      code: target.code,
-      departmentId: target.departmentId,
-      programId: null,
-      currentPublishedVersionId: null,
-      latestDraftVersionId: null,
-      totalVersions: 0,
-      createdBy: creatorId
-    });
-
-    // Create course version (published)
-    const version = await CourseVersion.create({
-      canonicalCourseId: canonical._id,
-      version: 1,
-      title: target.course.name,
-      description: `${target.course.name} — comprehensive course content`,
-      credits: target.course.credits,
-      duration: 480,
-      settings: {
-        allowSelfEnrollment: true,
-        passingScore: 70,
-        maxAttempts: 3,
-        certificateEnabled: true,
-        enforcePrerequisites: true,
-        showProgressBar: true,
-        allowModuleSkipping: false
-      },
-      instructorIds: [creatorId],
-      status: 'published',
-      isLocked: false,
-      isLatest: true,
-      parentVersionId: null,
-      createdBy: creatorId,
-      publishedAt: new Date(),
-      publishedBy: creatorId,
-      changeNotes: 'Initial published version with learning units'
-    });
-
-    // Update canonical with version references
-    canonical.currentPublishedVersionId = version._id;
-    canonical.latestDraftVersionId = version._id;
-    canonical.totalVersions = 1;
-    await canonical.save();
 
     // Track question index for distributing questions across LUs
     let questionIndex = 0;
@@ -2026,53 +2120,50 @@ async function main() {
     const academicYear = await ensureAcademicYear();
 
     console.log('Creating courses...');
-    const courseBH101 = await ensureCourse({
+    const courseBH101 = await ensureCanonicalCourse({
       name: 'Behavioral Health Basics',
       code: 'BH101',
       departmentId: behavioral._id,
       credits: 3
     });
 
-    const courseBH201 = await ensureCourse({
+    const courseBH201 = await ensureCanonicalCourse({
       name: 'Behavioral Health Applied Practice',
       code: 'BH201',
       departmentId: behavioral._id,
-      credits: 3,
-      prerequisites: [courseBH101._id]
+      credits: 3
     });
 
-    const courseCBT101 = await ensureCourse({
+    const courseCBT101 = await ensureCanonicalCourse({
       name: 'CBT Foundations',
       code: 'CBT101',
       departmentId: cbtFundamentals._id,
       credits: 2
     });
 
-    const courseCBT201 = await ensureCourse({
+    const courseCBT201 = await ensureCanonicalCourse({
       name: 'CBT Advanced Skills',
       code: 'CBT201',
       departmentId: cognitive._id,
-      credits: 3,
-      prerequisites: [courseCBT101._id]
+      credits: 3
     });
 
-    const courseEMDR101 = await ensureCourse({
+    const courseEMDR101 = await ensureCanonicalCourse({
       name: 'EMDR Introduction',
       code: 'EMDR101',
       departmentId: emdr._id,
       credits: 3
     });
 
-    const courseEMDR201 = await ensureCourse({
+    const courseEMDR201 = await ensureCanonicalCourse({
       name: 'EMDR Practicum',
       code: 'EMDR201',
       departmentId: emdr._id,
-      credits: 4,
-      prerequisites: [courseEMDR101._id]
+      credits: 4
     });
 
     // Riley's courses - Cognitive Therapy department
-    const courseCOG101 = await ensureCourse({
+    const courseCOG101 = await ensureCanonicalCourse({
       name: 'Cognitive Assessment Fundamentals',
       code: 'COG101',
       departmentId: cognitive._id,
@@ -2080,21 +2171,19 @@ async function main() {
       createdBy: leadInstructorStaff._id
     });
 
-    const courseCOG201 = await ensureCourse({
+    const courseCOG201 = await ensureCanonicalCourse({
       name: 'Advanced Cognitive Interventions',
       code: 'COG201',
       departmentId: cognitive._id,
       credits: 4,
-      prerequisites: [courseCOG101._id],
       createdBy: leadInstructorStaff._id
     });
 
-    const courseCOG301 = await ensureCourse({
+    const courseCOG301 = await ensureCanonicalCourse({
       name: 'Cognitive Therapy Practicum',
       code: 'COG301',
       departmentId: cognitive._id,
       credits: 4,
-      prerequisites: [courseCOG201._id],
       createdBy: leadInstructorStaff._id
     });
 
@@ -2403,6 +2492,17 @@ async function main() {
           distractors = ['Wrong A', 'Wrong B', 'Wrong C'];
         }
 
+        // Build options array for multiple choice / matching types
+        let options: string[] | undefined;
+        if (distractors && distractors.length > 0) {
+          options = [...correctAnswers, ...distractors];
+          // Fisher-Yates shuffle
+          for (let i = options.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [options[i], options[j]] = [options[j], options[i]];
+          }
+        }
+
         const question = await Question.create({
           questionText: `Module ${moduleNumber} question ${index + 1} for ${course.code}`,
           questionTypes,
@@ -2410,6 +2510,7 @@ async function main() {
           points: 10,
           correctAnswers,
           distractors,
+          options,
           trueFalseData,
           shortAnswerData,
           difficulty: 'medium',
@@ -2464,6 +2565,32 @@ async function main() {
     await ensureEnrollment({
       learnerId: learnerFour._id,
       programId: programCBT._id,
+      academicYearId: academicYear._id,
+      status: 'active'
+    });
+
+    console.log('Creating course enrollments for casey.learner...');
+    await ensureCourseEnrollment({
+      learnerId: learnerThree._id,
+      courseId: courseEMDR101._id,
+      academicYearId: academicYear._id,
+      status: 'active'
+    });
+    await ensureCourseEnrollment({
+      learnerId: learnerThree._id,
+      courseId: courseEMDR201._id,
+      academicYearId: academicYear._id,
+      status: 'active'
+    });
+    await ensureCourseEnrollment({
+      learnerId: learnerThree._id,
+      courseId: courseCBT101._id,
+      academicYearId: academicYear._id,
+      status: 'active'
+    });
+    await ensureCourseEnrollment({
+      learnerId: learnerThree._id,
+      courseId: courseCOG101._id,
       academicYearId: academicYear._id,
       status: 'active'
     });

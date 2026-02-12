@@ -2,6 +2,8 @@ import Enrollment from '@/models/enrollment/Enrollment.model';
 import ClassEnrollment from '@/models/enrollment/ClassEnrollment.model';
 import Program from '@/models/academic/Program.model';
 import Course from '@/models/academic/Course.model';
+import CanonicalCourse from '@/models/academic/CanonicalCourse.model';
+import CourseVersion from '@/models/academic/CourseVersion.model';
 import Class from '@/models/academic/Class.model';
 // import Department from '@/models/organization/Department.model';
 import { User } from '@/models/auth/User.model';
@@ -162,8 +164,13 @@ export class EnrollmentsService {
     const sort: any = { [sortKey]: sortOrder };
 
     if (!filters.type || filters.type === 'program') {
-      // Query program enrollments
-      const programQuery: any = {};
+      // Query program enrollments (exclude course-type enrollments stored in same collection)
+      const programQuery: any = {
+        $or: [
+          { 'metadata.enrollmentType': { $exists: false } },
+          { 'metadata.enrollmentType': { $ne: 'course' } }
+        ]
+      };
       if (filters.learner) programQuery.learnerId = new mongoose.Types.ObjectId(filters.learner);
       if (filters.program) programQuery.programId = new mongoose.Types.ObjectId(filters.program);
       if (filters.status) {
@@ -1243,14 +1250,41 @@ export class EnrollmentsService {
           updatedAt: enrollment.updatedAt
         };
       } else if (enrollment.type === 'course') {
-        // Course enrollment
+        // Course enrollment — resolve via CanonicalCourse + CourseVersion
         const user = await User.findById(enrollment.learnerId);
         const learner = await Learner.findById(enrollment.learnerId);
-        const course = await Course.findById(enrollment.metadata?.courseId).populate('departmentId');
 
-        if (!user || !learner || !course) return null;
+        if (!user || !learner) return null;
 
-        const department = course.departmentId as any;
+        const courseId = enrollment.metadata?.courseId;
+        if (!courseId) return null;
+
+        // Try CanonicalCourse first (new model), fall back to legacy Course
+        let courseName: string | null = null;
+        let courseCode: string | null = null;
+        let department: any = null;
+        let resolvedCourseId: string = courseId.toString();
+
+        const canonical = await CanonicalCourse.findById(courseId).populate('departmentId');
+        if (canonical) {
+          courseCode = canonical.code;
+          department = canonical.departmentId as any;
+          resolvedCourseId = canonical._id.toString();
+
+          // Get title from published CourseVersion
+          const version = canonical.currentPublishedVersionId
+            ? await CourseVersion.findById(canonical.currentPublishedVersionId).select('title')
+            : await CourseVersion.findOne({ canonicalCourseId: canonical._id, status: 'published' }).select('title');
+          courseName = version?.title || courseCode;
+        } else {
+          // Fallback to legacy Course model
+          const legacyCourse = await Course.findById(courseId).populate('departmentId');
+          if (!legacyCourse) return null;
+          courseName = legacyCourse.name;
+          courseCode = legacyCourse.code;
+          department = legacyCourse.departmentId as any;
+          resolvedCourseId = legacyCourse._id.toString();
+        }
 
         return {
           id: enrollment._id.toString(),
@@ -1262,9 +1296,9 @@ export class EnrollmentsService {
             email: user.email
           },
           target: {
-            id: course._id.toString(),
-            name: course.name,
-            code: course.code,
+            id: resolvedCourseId,
+            name: courseName,
+            code: courseCode,
             type: 'course'
           },
           status: this.mapModelStatusToContractStatus(enrollment.status),

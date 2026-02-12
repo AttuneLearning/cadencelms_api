@@ -7,6 +7,8 @@ import Module, {
 import CourseVersionModule from '@/models/academic/CourseVersionModule.model';
 import CanonicalCourse from '@/models/academic/CanonicalCourse.model';
 import LearningUnit from '@/models/content/LearningUnit.model';
+import LearningUnitQuestion from '@/models/content/LearningUnitQuestion.model';
+import QuestionBank from '@/models/assessment/QuestionBank.model';
 import { ApiError } from '@/utils/ApiError';
 
 interface ListModulesFilters {
@@ -47,7 +49,35 @@ interface ModuleResponse {
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
-  learningUnits?: any[];
+  learningUnits?: LearningUnitResponse[];
+}
+
+interface LearningUnitResponse {
+  id: string;
+  title: string;
+  description?: string;
+  type: string;
+  category: string;
+  isRequired: boolean;
+  isReplayable: boolean;
+  weight: number;
+  sequence: number;
+  isActive: boolean;
+  estimatedDuration?: number;
+  linkedQuestionCount: number;
+  linkedQuestionIds: string[];
+  questionBankIds: string[];
+  questionBanks: Array<{
+    id: string;
+    name: string | null;
+  }>;
+  questionsEndpoint: string | null;
+  usesLinkedQuestions: boolean;
+}
+
+interface LearningUnitLinkMeta {
+  questionIds: string[];
+  bankIds: string[];
 }
 
 interface PaginationInfo {
@@ -152,11 +182,35 @@ export class ModulesService {
     // Apply pagination AFTER ordering
     const paginatedModules = orderedModules.slice(skip, skip + limit);
 
+    // Fetch learning units for all paginated modules in a single query
+    const paginatedModuleIds = paginatedModules.map(m => m._id);
+    const allLearningUnits = await LearningUnit.find({
+      moduleId: { $in: paginatedModuleIds }
+    }).sort({ sequence: 1 });
+
+    // Build question/bank metadata keyed by learningUnitId
+    const learningUnitMeta = await this.buildLearningUnitLinkMeta(allLearningUnits);
+
+    // Group learning units by module ID
+    const lusByModule = new Map<string, typeof allLearningUnits>();
+    for (const lu of allLearningUnits) {
+      const key = lu.moduleId.toString();
+      if (!lusByModule.has(key)) {
+        lusByModule.set(key, []);
+      }
+      lusByModule.get(key)!.push(lu);
+    }
+
     // Format response
     const modulesData: ModuleResponse[] = paginatedModules.map((module) => {
       const response = this.formatModuleResponse(module);
       // Use the CourseVersionModule order
       response.order = cvmOrderMap.get(module._id.toString()) || module.order;
+      // Attach learning units
+      const moduleLUs = lusByModule.get(module._id.toString()) || [];
+      response.learningUnits = moduleLUs.map((lu) =>
+        this.formatLearningUnitResponse(lu, learningUnitMeta)
+      );
       return response;
     });
 
@@ -194,21 +248,12 @@ export class ModulesService {
     const learningUnits = await LearningUnit.find({ moduleId }).sort({
       sequence: 1
     });
+    const learningUnitMeta = await this.buildLearningUnitLinkMeta(learningUnits);
 
     const response = this.formatModuleResponse(module);
-    response.learningUnits = learningUnits.map((lu) => ({
-      id: lu._id.toString(),
-      title: lu.title,
-      description: lu.description,
-      type: lu.type,
-      category: lu.category,
-      isRequired: lu.isRequired,
-      isReplayable: lu.isReplayable,
-      weight: lu.weight,
-      sequence: lu.sequence,
-      isActive: lu.isActive,
-      estimatedDuration: lu.estimatedDuration
-    }));
+    response.learningUnits = learningUnits.map((lu) =>
+      this.formatLearningUnitResponse(lu, learningUnitMeta)
+    );
 
     return response;
   }
@@ -598,6 +643,109 @@ export class ModulesService {
       createdBy: moduleObj.createdBy.toString(),
       createdAt: moduleObj.createdAt,
       updatedAt: moduleObj.updatedAt
+    };
+  }
+
+  /**
+   * Build question-link metadata for a set of learning units.
+   *
+   * The UI can use this to drive assessment/exercise experiences from canonical
+   * LearningUnitQuestion links (instead of legacy content.quizData assumptions).
+   */
+  private static async buildLearningUnitLinkMeta(
+    learningUnits: any[]
+  ): Promise<{
+    byLearningUnitId: Map<string, LearningUnitLinkMeta>;
+    bankNamesById: Map<string, string>;
+  }> {
+    const byLearningUnitId = new Map<string, LearningUnitLinkMeta>();
+    const bankNamesById = new Map<string, string>();
+
+    const learningUnitIds = learningUnits.map(lu => lu._id);
+    if (learningUnitIds.length === 0) {
+      return { byLearningUnitId, bankNamesById };
+    }
+
+    const links = await LearningUnitQuestion.find({
+      learningUnitId: { $in: learningUnitIds }
+    });
+
+    const linksSorted = [...links].sort((a: any, b: any) => {
+      const aSeq = typeof a.sequence === 'number' ? a.sequence : 0;
+      const bSeq = typeof b.sequence === 'number' ? b.sequence : 0;
+      return aSeq - bSeq;
+    });
+
+    const bankIdSet = new Set<string>();
+
+    for (const link of linksSorted as any[]) {
+      const luId = link.learningUnitId.toString();
+      if (!byLearningUnitId.has(luId)) {
+        byLearningUnitId.set(luId, { questionIds: [], bankIds: [] });
+      }
+
+      const meta = byLearningUnitId.get(luId)!;
+      const questionId = link.questionId?.toString();
+      if (questionId && !meta.questionIds.includes(questionId)) {
+        meta.questionIds.push(questionId);
+      }
+
+      const bankId = link.bankId?.toString();
+      if (bankId && !meta.bankIds.includes(bankId)) {
+        meta.bankIds.push(bankId);
+        bankIdSet.add(bankId);
+      }
+    }
+
+    if (bankIdSet.size > 0) {
+      const bankIds = Array.from(bankIdSet).map(id => new mongoose.Types.ObjectId(id));
+      const banks = await QuestionBank.find(
+        { _id: { $in: bankIds } },
+        { name: 1 }
+      );
+
+      for (const bank of banks as any[]) {
+        bankNamesById.set(bank._id.toString(), bank.name);
+      }
+    }
+
+    return { byLearningUnitId, bankNamesById };
+  }
+
+  private static formatLearningUnitResponse(
+    lu: any,
+    meta: {
+      byLearningUnitId: Map<string, LearningUnitLinkMeta>;
+      bankNamesById: Map<string, string>;
+    }
+  ): LearningUnitResponse {
+    const luId = lu._id.toString();
+    const luMeta = meta.byLearningUnitId.get(luId) || { questionIds: [], bankIds: [] };
+    const usesLinkedQuestions = lu.type === 'assessment' || lu.type === 'exercise';
+
+    return {
+      id: luId,
+      title: lu.title,
+      description: lu.description,
+      type: lu.type,
+      category: lu.category,
+      isRequired: lu.isRequired,
+      isReplayable: lu.isReplayable,
+      weight: lu.weight,
+      sequence: lu.sequence,
+      isActive: lu.isActive,
+      estimatedDuration: lu.estimatedDuration,
+      linkedQuestionCount: luMeta.questionIds.length,
+      linkedQuestionIds: luMeta.questionIds,
+      questionBankIds: luMeta.bankIds,
+      questionBanks: luMeta.bankIds.map(bankId => ({
+        id: bankId,
+        name: meta.bankNamesById.get(bankId) || null
+      })),
+      questionsEndpoint: usesLinkedQuestions
+        ? `/api/v2/learning-units/${luId}/questions`
+        : null,
+      usesLinkedQuestions
     };
   }
 }

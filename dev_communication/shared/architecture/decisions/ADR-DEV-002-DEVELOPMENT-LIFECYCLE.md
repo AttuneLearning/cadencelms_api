@@ -107,13 +107,13 @@ npm run test:integration
 
 ### Session State Preservation
 
-Before context compaction, store in `/memory/sessions/`:
+Before context compaction, store in `/ai_team_config/memory_store/sessions/`:
 - Current issue being worked
 - Implementation progress
 - Test results
 - Pending items
 
-Template: `memory/templates/session-template.md`
+Template: `ai_team_config/memory_store/templates/session-template.md`
 
 ### Enforcement Mechanism
 
@@ -151,4 +151,4 @@ The `/develop` skill MUST be used for all development work. It:
 - [[ADR-DEV-001-TESTING-STRATEGY]]
 - [[../decision-log]]
 - Skill: `/develop`
-- Team config: `memory/prompts/team-configs/development-lifecycle.md`
+- Team config: `ai_team_config/memory_store/prompts/team-configs/development-lifecycle.md`

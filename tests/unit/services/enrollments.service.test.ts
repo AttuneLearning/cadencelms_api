@@ -17,6 +17,8 @@ import Enrollment from '@/models/enrollment/Enrollment.model';
 import ClassEnrollment from '@/models/enrollment/ClassEnrollment.model';
 import Program from '@/models/academic/Program.model';
 import Course from '@/models/academic/Course.model';
+import CanonicalCourse from '@/models/academic/CanonicalCourse.model';
+import CourseVersion from '@/models/academic/CourseVersion.model';
 import Class from '@/models/academic/Class.model';
 import { User } from '@/models/auth/User.model';
 import { Learner } from '@/models/auth/Learner.model';
@@ -27,6 +29,8 @@ jest.mock('@/models/enrollment/Enrollment.model');
 jest.mock('@/models/enrollment/ClassEnrollment.model');
 jest.mock('@/models/academic/Program.model');
 jest.mock('@/models/academic/Course.model');
+jest.mock('@/models/academic/CanonicalCourse.model');
+jest.mock('@/models/academic/CourseVersion.model');
 jest.mock('@/models/academic/Class.model');
 jest.mock('@/models/auth/User.model');
 jest.mock('@/models/auth/Learner.model');
@@ -728,6 +732,151 @@ describe('EnrollmentsService', () => {
 
       expect(result.pagination.page).toBe(1);
       expect(result.pagination.limit).toBe(100);
+    });
+
+    it('should filter by type=course and only query course enrollments', async () => {
+      const courseFindChain = {
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue([])
+      };
+      (Enrollment.find as jest.Mock).mockReturnValue(courseFindChain);
+      (Enrollment.countDocuments as jest.Mock).mockResolvedValue(0);
+
+      const result = await EnrollmentsService.listEnrollments(
+        { type: 'course' },
+        mockUserId
+      );
+
+      expect(result.pagination.total).toBe(0);
+      expect(result.enrollments).toEqual([]);
+      // ClassEnrollment.find should NOT be called when type=course
+      expect(ClassEnrollment.find).not.toHaveBeenCalled();
+      // Enrollment.find should be called once (for course query only, not program)
+      expect(Enrollment.find).toHaveBeenCalledTimes(1);
+      // Verify the query includes the course metadata filter
+      expect(Enrollment.find).toHaveBeenCalledWith(
+        expect.objectContaining({ 'metadata.enrollmentType': 'course' })
+      );
+    });
+
+    it('should return enriched course enrollments using CanonicalCourse', async () => {
+      const canonicalId = new mongoose.Types.ObjectId();
+      const versionId = new mongoose.Types.ObjectId();
+      const mockCourseEnrollment = {
+        _id: new mongoose.Types.ObjectId(),
+        learnerId: new mongoose.Types.ObjectId(mockLearnerId),
+        programId: new mongoose.Types.ObjectId(),
+        status: 'active',
+        enrollmentDate: new Date(),
+        metadata: {
+          courseId: canonicalId,
+          enrollmentType: 'course'
+        },
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      // Mock: program query returns empty, course query returns one enrollment
+      const emptyFindChain = {
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue([])
+      };
+      const courseFindChain = {
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue([mockCourseEnrollment])
+      };
+      (Enrollment.find as jest.Mock)
+        .mockReturnValueOnce(emptyFindChain)   // program query
+        .mockReturnValueOnce(courseFindChain); // course query
+      (Enrollment.countDocuments as jest.Mock)
+        .mockResolvedValueOnce(0)  // program count
+        .mockResolvedValueOnce(1); // course count
+
+      // Mock class query returns empty
+      const classFindChain = {
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue([])
+      };
+      (ClassEnrollment.find as jest.Mock).mockReturnValue(classFindChain);
+      (ClassEnrollment.countDocuments as jest.Mock).mockResolvedValue(0);
+
+      // Mock enrichment: User and Learner
+      (User.findById as jest.Mock).mockResolvedValue(mockUser);
+      (Learner.findById as jest.Mock).mockResolvedValue(mockLearnerDetails);
+
+      // Mock CanonicalCourse.findById with populate chain
+      const mockCanonical = {
+        _id: canonicalId,
+        code: 'EMDR101',
+        currentPublishedVersionId: versionId,
+        departmentId: {
+          _id: new mongoose.Types.ObjectId(mockDeptId),
+          name: 'Test Department'
+        }
+      };
+      (CanonicalCourse.findById as jest.Mock).mockReturnValue({
+        populate: jest.fn().mockResolvedValue(mockCanonical)
+      });
+
+      // Mock CourseVersion.findById with select chain
+      (CourseVersion.findById as jest.Mock).mockReturnValue({
+        select: jest.fn().mockResolvedValue({ title: 'EMDR Introduction' })
+      });
+
+      const result = await EnrollmentsService.listEnrollments(
+        { page: 1, limit: 10 },
+        mockUserId
+      );
+
+      expect(result.pagination.total).toBe(1);
+      expect(result.enrollments).toHaveLength(1);
+      expect(result.enrollments[0].type).toBe('course');
+      expect(result.enrollments[0].target.name).toBe('EMDR Introduction');
+      expect(result.enrollments[0].target.code).toBe('EMDR101');
+      expect(result.enrollments[0].target.type).toBe('course');
+    });
+
+    it('should exclude course-type enrollments from program query', async () => {
+      // When no type filter is specified, program query should exclude course-type enrollments
+      const emptyFindChain = {
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue([])
+      };
+      (Enrollment.find as jest.Mock).mockReturnValue(emptyFindChain);
+      (Enrollment.countDocuments as jest.Mock).mockResolvedValue(0);
+
+      const classFindChain = {
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue([])
+      };
+      (ClassEnrollment.find as jest.Mock).mockReturnValue(classFindChain);
+      (ClassEnrollment.countDocuments as jest.Mock).mockResolvedValue(0);
+
+      await EnrollmentsService.listEnrollments({ page: 1, limit: 10 }, mockUserId);
+
+      // First call should be the program query with $or exclusion
+      const programQueryArg = (Enrollment.find as jest.Mock).mock.calls[0][0];
+      expect(programQueryArg).toHaveProperty('$or');
+      expect(programQueryArg.$or).toEqual([
+        { 'metadata.enrollmentType': { $exists: false } },
+        { 'metadata.enrollmentType': { $ne: 'course' } }
+      ]);
+
+      // Second call should be the course query
+      const courseQueryArg = (Enrollment.find as jest.Mock).mock.calls[1][0];
+      expect(courseQueryArg['metadata.enrollmentType']).toBe('course');
     });
   });
 

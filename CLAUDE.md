@@ -2,20 +2,34 @@
 
 ## MANDATORY: Before Any Implementation
 
-**STOP.** Before implementing any feature, endpoint, or issue:
+**STOP.** Every issue follows this end-to-end workflow. Do NOT skip steps.
 
-1. **Read the checklist:** `dev_communication/guidance/FEATURE_DEVELOPMENT_CHECKLIST.md`
-2. **Check comms:** `/comms` for inbox messages and blockers
-3. **Define endpoint contracts:** If the work involves new or changed API endpoints, define the contracts first and send to the UI team (`/comms send`). Getting cross-team agreement on contracts early prevents rework and is second in priority only to team configuration.
-4. **Check relevant ADRs:** Run `/adr` or read `dev_communication/architecture/decisions/`
-5. **Implementation workflow (per ADR-DEV-001):**
-   ```
-   1. Implement Feature/Fix
-   2. Write Tests for Implementation  ← DO NOT SKIP
-   3. Run Related Tests: npm test [path]
-   4. Verify: npx tsc --noEmit
-   ```
-6. **When spawning agents:** Include testing requirements. Agents must create tests and verify they pass.
+### Phase 1: Intake
+1. **Check comms:** `/comms` for inbox messages and blockers
+2. **Create issues:** Turn comms messages into tracked issue files (`/comms issue`)
+3. **Read the checklist:** `dev_communication/guidance/FEATURE_DEVELOPMENT_CHECKLIST.md`
+4. **Define endpoint contracts:** If the work involves new or changed API endpoints, define the contracts first and send to the UI team (`/comms send`). Getting cross-team agreement on contracts early prevents rework.
+5. **Check relevant ADRs:** Run `/adr` or read `dev_communication/shared/architecture/decisions/`
+
+### Phase 2: Implementation
+6. **Implement Feature/Fix** (per ADR-DEV-001)
+7. **Write Tests for Implementation** ← DO NOT SKIP
+8. **Run Related Tests:** `npm test [path]`
+9. **Verify:** `npx tsc --noEmit`
+10. **When spawning agents:** Include testing requirements. Agents must create tests and verify they pass.
+
+### Phase 3: QA Gate
+11. **Run completion gate checks** (see Completion Gate below)
+12. **Review against** `.claude/team-configs/code-reviewer-config.json` criteria
+
+### Phase 4: Completion
+13. **Create session file:** `ai_team_config/memory_store/sessions/{date}-{issue-slug}.md`
+14. **Update issue file** with commit hash and status COMPLETE
+15. **Move issue** to `completed/` folder (`/comms move`)
+
+### Phase 5: Comms Response
+16. **Send response to originating team** (`/comms send`) confirming what was fixed/built, what changed, and any action required on their side (e.g., `npm run reset:mock`)
+17. **This step is NOT optional.** Every inbound comms message that triggers work MUST get a response.
 
 ---
 
@@ -41,6 +55,23 @@ CadenceLMS is a Learning Management System API built with Node.js, Express, Type
 | `/memory` | Manage the extended memory vault |
 | `/refine` | Review patterns, promote to ADRs |
 | `/reflect` | Capture learnings after implementation |
+
+### Agent Team Configuration
+
+When spawning agent teams, read role definitions and review criteria from:
+- `.claude/team-configs/agent-team-roles.json` — API team role definitions, spawn prompts, presets
+- `.claude/team-configs/code-reviewer-config.json` — API code review gate criteria
+
+These are local overrides of the shared `.claude-workflow/team-configs/` defaults (which are frontend-focused).
+
+### Completion Gate (Blocking)
+
+No issue can be marked complete until ALL pass:
+- [ ] `npx tsc --noEmit` — 0 errors
+- [ ] `npm run test:unit` — all tests pass
+- [ ] New functionality has corresponding tests
+- [ ] Session file created: `ai_team_config/memory_store/sessions/{date}-{issue-slug}.md`
+- [ ] Issue file updated with commit hash and status COMPLETE
 
 ---
 
@@ -97,6 +128,6 @@ npm run test:integration   # Integration tests only
 ## File Paths
 
 - **Dev communication:** `dev_communication/` — issues, messaging, architecture, coordination
-- **Memory vault:** `memory/` — patterns, entities, context, sessions
+- **Memory vault:** `ai_team_config/memory_store/` — patterns, entities, context, sessions
 - **Inter-team inbox:** `dev_communication/messaging/ui-to-api/`
 - **Inter-team outbox:** `dev_communication/messaging/api-to-ui/`

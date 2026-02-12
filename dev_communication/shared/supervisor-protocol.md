@@ -125,7 +125,7 @@ During code review, check:
 At the start of each session:
 
 1. **Check status:** `/adr`
-2. **Review suggestions:** Check `dev_communication/architecture/suggestions/`
+2. **Review suggestions:** Check `dev_communication/shared/architecture/suggestions/`
 3. **Check gaps:** Review if current work addresses any gaps
 4. **Poll:** `/adr poll` for new architecture concerns
 
@@ -155,7 +155,7 @@ At the end of each session:
 
 ### With `/memory`
 - Architecture decisions may also warrant memory entries
-- Patterns can be documented in both ADRs and memory/patterns/
+- Patterns can be documented in both ADRs and ai_team_config/memory_store/patterns/
 
 ---
 

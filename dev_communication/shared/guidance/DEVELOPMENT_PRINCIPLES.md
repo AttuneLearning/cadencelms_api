@@ -166,5 +166,5 @@ If a spec is unclear:
 
 ## Related
 
-- ADR: [[../architecture/decisions/ADR-DEV-002-IDEAL-API-DESIGN]]
+- ADR: [[../architecture/decisions/ADR-DEV-003-IDEAL-API-DESIGN]]
 - Checklist: [[FEATURE_DEVELOPMENT_CHECKLIST]]

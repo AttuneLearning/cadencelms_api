@@ -112,4 +112,4 @@ Replace navigation-duplicate Quick Actions with:
 
 - API team confirmed: hierarchy endpoint exists and supports this design
 - No backend changes required
-- Full implementation plan available in memory vault: `memory/sessions/2026-02-05-navigation-dashboard-redesign.md`
+- Full implementation plan available in memory vault: `ai_team_config/memory_store/sessions/2026-02-05-navigation-dashboard-redesign.md`

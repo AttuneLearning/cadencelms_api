@@ -90,7 +90,7 @@ interface IQuestion {
 - Unified question bank management
 - Consistent authoring experience
 
-**Documentation:** `memory/entities/question-system.md`
+**Documentation:** `ai_team_config/memory_store/entities/question-system.md`
 
 ---
 
@@ -244,7 +244,7 @@ src/features/matching-player/
 
 **UI Team:**
 - [ ] Review contracts in `contracts/` directory
-- [ ] Review monolithic Question design in `memory/entities/question-system.md`
+- [ ] Review monolithic Question design in `ai_team_config/memory_store/entities/question-system.md`
 - [ ] Flag any contract changes needed before implementation begins
 - [ ] Respond to UI questions above (retention check UI, remediation UX, builder features)
 - [ ] Create/update UI issues for authoring pages based on Question structure
@@ -255,7 +255,7 @@ src/features/matching-player/
 
 ### New Files
 - `dev_communication/specs/learning/FLASHCARD_FLOW_SPEC.md` - v1.1.0 with Question integration
-- `memory/entities/question-system.md` - Monolithic Question design documentation
+- `ai_team_config/memory_store/entities/question-system.md` - Monolithic Question design documentation
 - `contracts/types/question-types.ts` - Question type definitions
 - `contracts/types/media-types.ts` - Media type definitions
 - `contracts/api/flashcards.contract.ts` - Flashcard API contract

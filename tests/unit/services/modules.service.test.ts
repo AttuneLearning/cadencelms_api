@@ -13,6 +13,8 @@ import mongoose from 'mongoose';
 import { ModulesService } from '@/services/academic/modules.service';
 import Module from '@/models/academic/Module.model';
 import LearningUnit from '@/models/content/LearningUnit.model';
+import LearningUnitQuestion from '@/models/content/LearningUnitQuestion.model';
+import QuestionBank from '@/models/assessment/QuestionBank.model';
 import CourseVersionModule from '@/models/academic/CourseVersionModule.model';
 import CanonicalCourse from '@/models/academic/CanonicalCourse.model';
 import { ApiError } from '@/utils/ApiError';
@@ -20,6 +22,8 @@ import { ApiError } from '@/utils/ApiError';
 // Mock the models
 jest.mock('@/models/academic/Module.model');
 jest.mock('@/models/content/LearningUnit.model');
+jest.mock('@/models/content/LearningUnitQuestion.model');
+jest.mock('@/models/assessment/QuestionBank.model');
 jest.mock('@/models/academic/CourseVersionModule.model');
 jest.mock('@/models/academic/CanonicalCourse.model');
 
@@ -96,6 +100,14 @@ describe('ModulesService', () => {
     (CourseVersionModule.create as jest.Mock).mockResolvedValue({});
     (CourseVersionModule.deleteMany as jest.Mock).mockResolvedValue({ deletedCount: 1 });
     (CourseVersionModule.bulkWrite as jest.Mock).mockResolvedValue({});
+
+    // Default mock for LearningUnit.find in listModules (returns empty array with sort chain)
+    const createLUFindMock = (result: any[] = []) => ({
+      sort: jest.fn().mockResolvedValue(result)
+    });
+    (LearningUnit.find as jest.Mock).mockReturnValue(createLUFindMock([]));
+    (LearningUnitQuestion.find as jest.Mock).mockResolvedValue([]);
+    (QuestionBank.find as jest.Mock).mockResolvedValue([]);
   });
 
   describe('listModules', () => {
@@ -119,14 +131,84 @@ describe('ModulesService', () => {
       (Module.find as jest.Mock).mockReturnValue(createModuleFindMock(mockModules));
       (Module.countDocuments as jest.Mock).mockResolvedValue(1);
 
+      // Mock LearningUnit.find for the module
+      const mockLUs = [
+        { _id: 'lu1', moduleId: mockModuleId, title: 'Unit 1', description: 'desc', type: 'document', category: 'exposition', isRequired: true, isReplayable: false, weight: 1, sequence: 0, isActive: true, estimatedDuration: 20 },
+        { _id: 'lu2', moduleId: mockModuleId, title: 'Unit 2', description: 'desc', type: 'assessment', category: 'assessment', isRequired: true, isReplayable: true, weight: 2, sequence: 1, isActive: true, estimatedDuration: 30 }
+      ];
+      (LearningUnit.find as jest.Mock).mockReturnValue({ sort: jest.fn().mockResolvedValue(mockLUs) });
+
       const result = await ModulesService.listModules(mockCourseId, {});
 
       expect(result.modules).toHaveLength(1);
+      expect(result.modules[0].learningUnits).toHaveLength(2);
+      expect(result.modules[0].learningUnits![0].title).toBe('Unit 1');
+      expect(result.modules[0].learningUnits![1].title).toBe('Unit 2');
       expect(result.pagination.page).toBe(1);
       expect(result.pagination.limit).toBe(10);
       expect(result.pagination.total).toBe(1);
       // Now queries by module IDs from CourseVersionModule, not courseId directly
       expect(Module.find).toHaveBeenCalled();
+      expect(LearningUnit.find).toHaveBeenCalled();
+    });
+
+    it('should include learning-unit question and bank link metadata', async () => {
+      const mockModules = [mockModule];
+      const learningUnitId = new mongoose.Types.ObjectId().toString();
+      const questionIdA = new mongoose.Types.ObjectId().toString();
+      const questionIdB = new mongoose.Types.ObjectId().toString();
+      const bankId = new mongoose.Types.ObjectId().toString();
+
+      const mockCVMs = [{ moduleId: mockModuleId, courseVersionId: mockCanonicalCourse.latestDraftVersionId, order: 1 }];
+      const cvmFindMock = {
+        sort: jest.fn().mockResolvedValue(mockCVMs),
+        then: (resolve: any) => resolve(mockCVMs),
+        catch: () => cvmFindMock
+      };
+      (CourseVersionModule.find as jest.Mock).mockReturnValue(cvmFindMock);
+      (Module.find as jest.Mock).mockReturnValue({
+        populate: jest.fn().mockResolvedValue(mockModules)
+      });
+      (Module.countDocuments as jest.Mock).mockResolvedValue(1);
+
+      const mockLUs = [
+        {
+          _id: learningUnitId,
+          moduleId: mockModuleId,
+          title: 'Assessment Unit',
+          description: 'desc',
+          type: 'assessment',
+          category: 'graded',
+          isRequired: true,
+          isReplayable: false,
+          weight: 10,
+          sequence: 1,
+          isActive: true,
+          estimatedDuration: 20
+        }
+      ];
+      (LearningUnit.find as jest.Mock).mockReturnValue({ sort: jest.fn().mockResolvedValue(mockLUs) });
+      (LearningUnitQuestion.find as jest.Mock).mockResolvedValue([
+        { learningUnitId, questionId: questionIdA, bankId, sequence: 0 },
+        { learningUnitId, questionId: questionIdB, bankId, sequence: 1 }
+      ]);
+      (QuestionBank.find as jest.Mock).mockResolvedValue([
+        { _id: bankId, name: 'CBT Assessment Bank' }
+      ]);
+
+      const result = await ModulesService.listModules(mockCourseId, {});
+
+      expect(result.modules).toHaveLength(1);
+      expect(result.modules[0].learningUnits).toHaveLength(1);
+      expect(result.modules[0].learningUnits![0].linkedQuestionCount).toBe(2);
+      expect(result.modules[0].learningUnits![0].questionBankIds).toEqual([bankId]);
+      expect(result.modules[0].learningUnits![0].questionBanks).toEqual([
+        { id: bankId, name: 'CBT Assessment Bank' }
+      ]);
+      expect(result.modules[0].learningUnits![0].questionsEndpoint).toBe(
+        `/api/v2/learning-units/${learningUnitId}/questions`
+      );
+      expect(result.modules[0].learningUnits![0].usesLinkedQuestions).toBe(true);
     });
 
     it('should filter modules by isPublished', async () => {

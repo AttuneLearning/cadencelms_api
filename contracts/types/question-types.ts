@@ -8,7 +8,7 @@
  *
  * Design Principle: One Row → Multiple Presentations
  *
- * See: memory/entities/question-system.md
+ * See: ai_team_config/memory_store/entities/question-system.md
  */
 
 import { MediaAttachment } from './media-types';

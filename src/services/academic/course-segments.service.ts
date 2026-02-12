@@ -1,8 +1,11 @@
 import mongoose from 'mongoose';
-import CourseContent from '@/models/content/CourseContent.model';
+import CanonicalCourse from '@/models/academic/CanonicalCourse.model';
+import CourseVersion from '@/models/academic/CourseVersion.model';
+import CourseVersionModule from '@/models/academic/CourseVersionModule.model';
+import Module from '@/models/academic/Module.model';
 import Content from '@/models/content/Content.model';
-import Course from '@/models/academic/Course.model';
 import ContentAttempt from '@/models/content/ContentAttempt.model';
+import LearningUnit from '@/models/content/LearningUnit.model';
 import { ApiError } from '@/utils/ApiError';
 
 interface ModuleSettings {
@@ -42,84 +45,99 @@ interface UpdateModuleData {
 }
 
 /**
+ * Helper: resolve CanonicalCourse + published CourseVersion from a courseId.
+ * Returns { canonical, version } or throws 404.
+ */
+async function resolveCourseAndVersion(courseId: string) {
+  if (!mongoose.Types.ObjectId.isValid(courseId)) {
+    throw ApiError.notFound('Course not found');
+  }
+
+  const canonical = await CanonicalCourse.findById(courseId);
+  if (!canonical) {
+    throw ApiError.notFound('Course not found');
+  }
+
+  const version = canonical.currentPublishedVersionId
+    ? await CourseVersion.findById(canonical.currentPublishedVersionId)
+    : await CourseVersion.findOne({ canonicalCourseId: canonical._id, status: 'published' });
+
+  if (!version) {
+    throw ApiError.notFound('Course not found');
+  }
+
+  return { canonical, version };
+}
+
+/**
  * Course Segments (Modules) Service
- * Manages course modules/segments using the CourseContent model
+ * Manages course modules/segments using CanonicalCourse + CourseVersion + Module models
  */
 export class CourseSegmentsService {
   /**
    * List all modules in a course, sorted by order
    */
   static async listCourseModules(courseId: string, filters: ListModulesFilters): Promise<any> {
-    // Validate course ID
-    if (!mongoose.Types.ObjectId.isValid(courseId)) {
-      throw ApiError.notFound('Course not found');
-    }
+    const { version } = await resolveCourseAndVersion(courseId);
 
-    // Check if course exists
-    const course = await Course.findById(courseId);
-    if (!course) {
-      throw ApiError.notFound('Course not found');
-    }
-
-    // Build query
-    const query: any = { courseId };
-
-    // Filter by published status
-    if (!filters.includeUnpublished) {
-      query['metadata.isPublished'] = true;
-    }
-
-    // Parse sort
-    const sortField = filters.sort || 'sequence';
-    let sortObj: any = {};
-
-    if (sortField === 'order') {
-      sortObj = { sequence: 1 };
-    } else if (sortField === 'title') {
-      sortObj = { 'metadata.title': 1 };
-    } else if (sortField === 'createdAt') {
-      sortObj = { createdAt: 1 };
-    } else {
-      sortObj = { sequence: 1 };
-    }
-
-    // Fetch modules
-    const modules = await CourseContent.find(query)
-      .populate('contentId')
-      .sort(sortObj)
+    // Get module links for this version
+    const moduleLinks = await CourseVersionModule.find({ courseVersionId: version._id })
+      .sort({ order: 1 })
       .lean();
 
-    // Format modules
-    const formattedModules = modules.map((module: any) => {
-      const metadata = module.metadata || {};
-      const settings = metadata.settings || {};
-      const content = module.contentId;
+    const moduleIds = moduleLinks.map((link: any) => link.moduleId);
 
-      return {
-        id: module._id.toString(),
-        title: metadata.title || 'Untitled Module',
-        description: metadata.description || null,
-        order: module.sequence,
-        type: metadata.type || 'document',
-        contentId: content ? content._id.toString() : null,
-        settings: {
-          allowMultipleAttempts: settings.allowMultipleAttempts !== undefined ? settings.allowMultipleAttempts : true,
-          maxAttempts: settings.maxAttempts || null,
-          timeLimit: settings.timeLimit || null,
-          showFeedback: settings.showFeedback !== undefined ? settings.showFeedback : true,
-          shuffleQuestions: settings.shuffleQuestions !== undefined ? settings.shuffleQuestions : false
-        },
-        isPublished: metadata.isPublished !== undefined ? metadata.isPublished : false,
-        passingScore: metadata.passingScore || null,
-        duration: metadata.duration || null,
-        createdAt: module.createdAt,
-        updatedAt: module.updatedAt
-      };
-    });
+    // Fetch the actual modules
+    const modules = await Module.find({ _id: { $in: moduleIds } }).lean();
+    const moduleMap = new Map(modules.map((m: any) => [m._id.toString(), m]));
+
+    // Build formatted result ordered by CourseVersionModule.order
+    const formattedModules = moduleLinks
+      .map((link: any) => {
+        const mod = moduleMap.get(link.moduleId.toString());
+        if (!mod) return null;
+
+        // Filter by published status
+        if (!filters.includeUnpublished && !(mod as any).isPublished) {
+          return null;
+        }
+
+        return {
+          id: (mod as any)._id.toString(),
+          title: (mod as any).title || 'Untitled Module',
+          description: (mod as any).description || null,
+          order: link.order,
+          type: 'document', // default type
+          contentId: null,
+          settings: {
+            allowMultipleAttempts: true,
+            maxAttempts: null,
+            timeLimit: null,
+            showFeedback: true,
+            shuffleQuestions: false
+          },
+          isPublished: (mod as any).isPublished || false,
+          passingScore: null,
+          duration: (mod as any).estimatedDuration || null,
+          createdAt: (mod as any).createdAt,
+          updatedAt: (mod as any).updatedAt
+        };
+      })
+      .filter(Boolean);
+
+    // Parse sort
+    if (filters.sort === 'title') {
+      formattedModules.sort((a: any, b: any) => a.title.localeCompare(b.title));
+    } else if (filters.sort === 'createdAt') {
+      formattedModules.sort((a: any, b: any) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
+    }
+    // default: order (already sorted by CourseVersionModule.order)
 
     return {
       courseId,
-      courseTitle: course.name,
+      courseTitle: version.title,
       modules: formattedModules,
       totalModules: formattedModules.length
     };
@@ -129,16 +147,7 @@ export class CourseSegmentsService {
    * Create a new course module
    */
   static async createCourseModule(courseId: string, moduleData: CreateModuleData): Promise<any> {
-    // Validate course ID
-    if (!mongoose.Types.ObjectId.isValid(courseId)) {
-      throw ApiError.notFound('Course not found');
-    }
-
-    // Check if course exists
-    const course = await Course.findById(courseId);
-    if (!course) {
-      throw ApiError.notFound('Course not found');
-    }
+    const { canonical, version } = await resolveCourseAndVersion(courseId);
 
     // Validate title length
     if (moduleData.title.length > 200) {
@@ -149,29 +158,27 @@ export class CourseSegmentsService {
       throw ApiError.badRequest('Description cannot exceed 2000 characters');
     }
 
-    // Check for duplicate title within course
-    const existingModule = await CourseContent.findOne({
-      courseId,
-      'metadata.title': moduleData.title
-    });
+    // Check for duplicate title within course version
+    const existingLinks = await CourseVersionModule.find({ courseVersionId: version._id }).lean();
+    const existingModuleIds = existingLinks.map((l: any) => l.moduleId);
+    const existingModules = await Module.find({ _id: { $in: existingModuleIds } }).lean();
 
-    if (existingModule) {
+    const duplicateTitle = existingModules.find((m: any) => m.title === moduleData.title);
+    if (duplicateTitle) {
       throw ApiError.conflict('Module title must be unique within course');
     }
 
     // Validate contentId if provided
-    let content = null;
     if (moduleData.contentId) {
       if (!mongoose.Types.ObjectId.isValid(moduleData.contentId)) {
         throw ApiError.badRequest('Referenced content does not exist');
       }
 
-      content = await Content.findById(moduleData.contentId);
+      const content = await Content.findById(moduleData.contentId);
       if (!content) {
         throw ApiError.badRequest('Referenced content does not exist');
       }
 
-      // Validate type matches if both provided
       const contentTypeMap: any = {
         'scorm': 'scorm',
         'custom': 'quiz',
@@ -186,8 +193,7 @@ export class CourseSegmentsService {
     }
 
     // Check if order is valid (must be sequential)
-    const existingModules = await CourseContent.find({ courseId }).sort({ sequence: 1 });
-    const maxOrder = existingModules.length;
+    const maxOrder = existingLinks.length;
 
     if (moduleData.order < 1 || moduleData.order > maxOrder + 1) {
       throw ApiError.badRequest('Module order must be sequential');
@@ -195,9 +201,9 @@ export class CourseSegmentsService {
 
     // If order already exists, shift modules
     if (moduleData.order <= maxOrder) {
-      await CourseContent.updateMany(
-        { courseId, sequence: { $gte: moduleData.order } },
-        { $inc: { sequence: 1 } }
+      await CourseVersionModule.updateMany(
+        { courseVersionId: version._id, order: { $gte: moduleData.order } },
+        { $inc: { order: 1 } }
       );
     }
 
@@ -213,7 +219,44 @@ export class CourseSegmentsService {
       throw ApiError.badRequest('Duration must be a positive number');
     }
 
-    // Create default settings
+    // Create Module record
+    const module = await Module.create({
+      ownerDepartmentId: canonical.departmentId,
+      isShared: false,
+      title: moduleData.title,
+      description: moduleData.description || undefined,
+      prerequisites: [],
+      completionCriteria: {
+        type: 'all_required'
+      },
+      presentationRules: {
+        presentationMode: 'prescribed',
+        repetitionMode: 'none',
+        repeatOn: {
+          failedAttempt: false,
+          belowMastery: false,
+          learnerRequest: false
+        },
+        repeatableCategories: [],
+        showAllAvailable: true,
+        allowSkip: false
+      },
+      isPublished: moduleData.isPublished !== undefined ? moduleData.isPublished : false,
+      estimatedDuration: moduleData.duration || 0,
+      order: moduleData.order,
+      createdBy: version.createdBy
+    });
+
+    // Link to course version
+    await CourseVersionModule.create({
+      courseVersionId: version._id,
+      moduleId: module._id,
+      order: moduleData.order,
+      isRequired: true,
+      availableFrom: null,
+      availableUntil: null
+    });
+
     const defaultSettings: ModuleSettings = {
       allowMultipleAttempts: true,
       maxAttempts: null,
@@ -224,38 +267,18 @@ export class CourseSegmentsService {
 
     const settings = { ...defaultSettings, ...(moduleData.settings || {}) };
 
-    // Create module
-    const module = await CourseContent.create({
-      courseId,
-      contentId: moduleData.contentId || null,
-      sequence: moduleData.order,
-      isRequired: true,
-      isActive: true,
-      metadata: {
-        title: moduleData.title,
-        description: moduleData.description || null,
-        type: moduleData.type,
-        settings,
-        isPublished: moduleData.isPublished !== undefined ? moduleData.isPublished : false,
-        passingScore: moduleData.passingScore || null,
-        duration: moduleData.duration || null
-      }
-    });
-
-    const metadata = module.metadata || {};
-
     return {
       id: module._id.toString(),
-      courseId: module.courseId.toString(),
-      title: metadata.title,
-      description: metadata.description || null,
-      order: module.sequence,
-      type: metadata.type,
-      contentId: module.contentId ? module.contentId.toString() : null,
-      settings: metadata.settings,
-      isPublished: metadata.isPublished,
-      passingScore: metadata.passingScore || null,
-      duration: metadata.duration || null,
+      courseId,
+      title: module.title,
+      description: module.description || null,
+      order: moduleData.order,
+      type: moduleData.type,
+      contentId: moduleData.contentId || null,
+      settings,
+      isPublished: module.isPublished,
+      passingScore: moduleData.passingScore || null,
+      duration: moduleData.duration || null,
       createdAt: module.createdAt,
       updatedAt: module.updatedAt
     };
@@ -265,47 +288,49 @@ export class CourseSegmentsService {
    * Get a specific course module by ID
    */
   static async getCourseModuleById(courseId: string, moduleId: string): Promise<any> {
-    // Validate IDs
-    if (!mongoose.Types.ObjectId.isValid(courseId)) {
-      throw ApiError.notFound('Course not found');
-    }
+    const { version } = await resolveCourseAndVersion(courseId);
 
     if (!mongoose.Types.ObjectId.isValid(moduleId)) {
       throw ApiError.notFound('Module not found in this course');
     }
 
-    // Check if course exists
-    const course = await Course.findById(courseId);
-    if (!course) {
-      throw ApiError.notFound('Course not found');
+    // Find the module link
+    const link = await CourseVersionModule.findOne({
+      courseVersionId: version._id,
+      moduleId
+    }).lean();
+
+    if (!link) {
+      throw ApiError.notFound('Module not found in this course');
     }
 
-    // Fetch module
-    const module = await CourseContent.findOne({
-      _id: moduleId,
-      courseId
-    }).populate('contentId').lean();
-
+    const module = await Module.findById(moduleId).lean();
     if (!module) {
       throw ApiError.notFound('Module not found in this course');
     }
 
-    const metadata = (module as any).metadata || {};
-    const settings = metadata.settings || {};
-    const content = (module as any).contentId;
+    // Get learning units for this module to find content
+    const learningUnits = await LearningUnit.find({ moduleId: module._id })
+      .populate('contentId')
+      .sort({ sequence: 1 })
+      .lean();
 
-    // Get completion stats
-    const completionCount = content
+    // Get completion stats from content attempts across all LU content
+    const contentIds = learningUnits
+      .filter((lu: any) => lu.contentId)
+      .map((lu: any) => typeof lu.contentId === 'object' ? lu.contentId._id : lu.contentId);
+
+    const completionCount = contentIds.length > 0
       ? await ContentAttempt.countDocuments({
-          contentId: content._id,
+          contentId: { $in: contentIds },
           status: 'completed'
         })
       : 0;
 
     // Calculate average score
-    const attempts = content
+    const attempts = contentIds.length > 0
       ? await ContentAttempt.find({
-          contentId: content._id,
+          contentId: { $in: contentIds },
           status: 'completed',
           score: { $exists: true }
         }).lean()
@@ -317,36 +342,31 @@ export class CourseSegmentsService {
 
     return {
       id: (module as any)._id.toString(),
-      courseId: (module as any).courseId.toString(),
-      courseTitle: course.name,
-      title: metadata.title || 'Untitled Module',
-      description: metadata.description || null,
-      order: (module as any).sequence,
-      type: metadata.type || 'document',
-      contentId: content ? content._id.toString() : null,
-      content: content ? {
-        id: content._id.toString(),
-        title: content.title,
-        type: content.type,
-        metadata: content.metadata || {}
-      } : null,
+      courseId,
+      courseTitle: version.title,
+      title: (module as any).title || 'Untitled Module',
+      description: (module as any).description || null,
+      order: (link as any).order,
+      type: 'document',
+      contentId: null,
+      content: null,
       settings: {
-        allowMultipleAttempts: settings.allowMultipleAttempts !== undefined ? settings.allowMultipleAttempts : true,
-        maxAttempts: settings.maxAttempts || null,
-        timeLimit: settings.timeLimit || null,
-        showFeedback: settings.showFeedback !== undefined ? settings.showFeedback : true,
-        shuffleQuestions: settings.shuffleQuestions !== undefined ? settings.shuffleQuestions : false
+        allowMultipleAttempts: true,
+        maxAttempts: null,
+        timeLimit: null,
+        showFeedback: true,
+        shuffleQuestions: false
       },
-      isPublished: metadata.isPublished !== undefined ? metadata.isPublished : false,
-      passingScore: metadata.passingScore || null,
-      duration: metadata.duration || null,
+      isPublished: (module as any).isPublished || false,
+      passingScore: null,
+      duration: (module as any).estimatedDuration || null,
       prerequisites: [],
       completionCount,
       averageScore,
       createdAt: (module as any).createdAt,
       updatedAt: (module as any).updatedAt,
-      createdBy: content?.createdBy ? {
-        id: content.createdBy.toString(),
+      createdBy: (module as any).createdBy ? {
+        id: (module as any).createdBy.toString(),
         firstName: 'Staff',
         lastName: 'User'
       } : null
@@ -361,28 +381,26 @@ export class CourseSegmentsService {
     moduleId: string,
     updateData: UpdateModuleData
   ): Promise<any> {
-    // Validate IDs
-    if (!mongoose.Types.ObjectId.isValid(courseId)) {
-      throw ApiError.notFound('Course not found');
-    }
+    const { version } = await resolveCourseAndVersion(courseId);
 
     if (!mongoose.Types.ObjectId.isValid(moduleId)) {
       throw ApiError.notFound('Module not found in this course');
     }
 
-    // Check if course exists
-    const course = await Course.findById(courseId);
-    if (!course) {
-      throw ApiError.notFound('Course not found');
-    }
+    // Find the module link
+    const link = await CourseVersionModule.findOne({
+      courseVersionId: version._id,
+      moduleId
+    });
 
-    // Find module
-    const module = await CourseContent.findOne({ _id: moduleId, courseId });
-    if (!module) {
+    if (!link) {
       throw ApiError.notFound('Module not found in this course');
     }
 
-    const metadata = module.metadata || {};
+    const module = await Module.findById(moduleId);
+    if (!module) {
+      throw ApiError.notFound('Module not found in this course');
+    }
 
     // Validate title if changing
     if (updateData.title) {
@@ -390,14 +408,14 @@ export class CourseSegmentsService {
         throw ApiError.badRequest('Title cannot exceed 200 characters');
       }
 
-      if (updateData.title !== metadata.title) {
-        const existingModule = await CourseContent.findOne({
-          courseId,
-          _id: { $ne: moduleId },
-          'metadata.title': updateData.title
-        });
-
-        if (existingModule) {
+      if (updateData.title !== module.title) {
+        const allLinks = await CourseVersionModule.find({ courseVersionId: version._id }).lean();
+        const otherModuleIds = allLinks
+          .filter((l: any) => l.moduleId.toString() !== moduleId)
+          .map((l: any) => l.moduleId);
+        const otherModules = await Module.find({ _id: { $in: otherModuleIds } }).lean();
+        const duplicate = otherModules.find((m: any) => m.title === updateData.title);
+        if (duplicate) {
           throw ApiError.conflict('Module title must be unique within course');
         }
       }
@@ -419,7 +437,6 @@ export class CourseSegmentsService {
         throw ApiError.badRequest('Referenced content does not exist');
       }
 
-      // Validate type matches
       const contentTypeMap: any = {
         'scorm': 'scorm',
         'custom': 'quiz',
@@ -428,7 +445,7 @@ export class CourseSegmentsService {
         'document': 'document'
       };
 
-      const typeToCheck = updateData.type || metadata.type;
+      const typeToCheck = updateData.type || 'document';
       if (contentTypeMap[typeToCheck] && content.type !== contentTypeMap[typeToCheck]) {
         throw ApiError.badRequest('Module type does not match content type');
       }
@@ -447,10 +464,15 @@ export class CourseSegmentsService {
     }
 
     // Check if module has active attempts before changing type
-    if (updateData.type && updateData.type !== metadata.type) {
-      if (module.contentId) {
+    if (updateData.type) {
+      const learningUnits = await LearningUnit.find({ moduleId: module._id }).lean();
+      const luContentIds = learningUnits
+        .filter((lu: any) => lu.contentId)
+        .map((lu: any) => lu.contentId);
+
+      if (luContentIds.length > 0) {
         const hasAttempts = await ContentAttempt.exists({
-          contentId: module.contentId,
+          contentId: { $in: luContentIds },
           status: { $in: ['in-progress', 'completed'] }
         });
 
@@ -460,44 +482,36 @@ export class CourseSegmentsService {
       }
     }
 
-    // Update metadata
-    const updatedMetadata: any = { ...metadata };
-
-    if (updateData.title !== undefined) updatedMetadata.title = updateData.title;
-    if (updateData.description !== undefined) updatedMetadata.description = updateData.description;
-    if (updateData.type !== undefined) updatedMetadata.type = updateData.type;
-    if (updateData.isPublished !== undefined) updatedMetadata.isPublished = updateData.isPublished;
-    if (updateData.passingScore !== undefined) updatedMetadata.passingScore = updateData.passingScore;
-    if (updateData.duration !== undefined) updatedMetadata.duration = updateData.duration;
-
-    // Merge settings
-    if (updateData.settings) {
-      updatedMetadata.settings = {
-        ...(metadata.settings || {}),
-        ...updateData.settings
-      };
-    }
-
-    // Update module
-    module.metadata = updatedMetadata;
-    if (updateData.contentId !== undefined) {
-      module.contentId = updateData.contentId ? new mongoose.Types.ObjectId(updateData.contentId) : undefined as any;
-    }
+    // Update module fields
+    if (updateData.title !== undefined) module.title = updateData.title;
+    if (updateData.description !== undefined) module.description = updateData.description;
+    if (updateData.isPublished !== undefined) module.isPublished = updateData.isPublished;
+    if (updateData.duration !== undefined) module.estimatedDuration = updateData.duration;
 
     await module.save();
 
+    const defaultSettings: ModuleSettings = {
+      allowMultipleAttempts: true,
+      maxAttempts: null,
+      timeLimit: null,
+      showFeedback: true,
+      shuffleQuestions: false
+    };
+
+    const settings = { ...defaultSettings, ...(updateData.settings || {}) };
+
     return {
       id: module._id.toString(),
-      courseId: module.courseId.toString(),
-      title: updatedMetadata.title,
-      description: updatedMetadata.description || null,
-      order: module.sequence,
-      type: updatedMetadata.type,
-      contentId: module.contentId ? module.contentId.toString() : null,
-      settings: updatedMetadata.settings,
-      isPublished: updatedMetadata.isPublished,
-      passingScore: updatedMetadata.passingScore || null,
-      duration: updatedMetadata.duration || null,
+      courseId,
+      title: module.title,
+      description: module.description || null,
+      order: link.order,
+      type: updateData.type || 'document',
+      contentId: null,
+      settings,
+      isPublished: module.isPublished,
+      passingScore: updateData.passingScore || null,
+      duration: module.estimatedDuration || null,
       createdAt: module.createdAt,
       updatedAt: module.updatedAt
     };
@@ -511,66 +525,72 @@ export class CourseSegmentsService {
     moduleId: string,
     force: boolean = false
   ): Promise<any> {
-    // Validate IDs
-    if (!mongoose.Types.ObjectId.isValid(courseId)) {
-      throw ApiError.notFound('Course not found');
-    }
+    const { version } = await resolveCourseAndVersion(courseId);
 
     if (!mongoose.Types.ObjectId.isValid(moduleId)) {
       throw ApiError.notFound('Module not found in this course');
     }
 
-    // Check if course exists
-    const course = await Course.findById(courseId);
-    if (!course) {
-      throw ApiError.notFound('Course not found');
+    // Find the module link
+    const link = await CourseVersionModule.findOne({
+      courseVersionId: version._id,
+      moduleId
+    });
+
+    if (!link) {
+      throw ApiError.notFound('Module not found in this course');
     }
 
-    // Find module
-    const module = await CourseContent.findOne({ _id: moduleId, courseId });
+    const module = await Module.findById(moduleId);
     if (!module) {
       throw ApiError.notFound('Module not found in this course');
     }
 
-    const metadata = module.metadata || {};
-    const moduleTitle = metadata.title || 'Untitled Module';
-    const moduleOrder = module.sequence;
+    const moduleTitle = module.title || 'Untitled Module';
+    const moduleOrder = link.order;
 
     // Check for existing attempts if not forcing
-    if (!force && module.contentId) {
-      const hasAttempts = await ContentAttempt.exists({
-        contentId: module.contentId,
-        status: { $in: ['in-progress', 'completed'] }
-      });
+    if (!force) {
+      const learningUnits = await LearningUnit.find({ moduleId: module._id }).lean();
+      const luContentIds = learningUnits
+        .filter((lu: any) => lu.contentId)
+        .map((lu: any) => lu.contentId);
 
-      if (hasAttempts) {
-        throw ApiError.conflict('Cannot delete module with existing attempts (use force=true)');
+      if (luContentIds.length > 0) {
+        const hasAttempts = await ContentAttempt.exists({
+          contentId: { $in: luContentIds },
+          status: { $in: ['in-progress', 'completed'] }
+        });
+
+        if (hasAttempts) {
+          throw ApiError.conflict('Cannot delete module with existing attempts (use force=true)');
+        }
       }
     }
 
     // Get modules that will be reordered
-    const modulesToReorder = await CourseContent.find({
-      courseId,
-      sequence: { $gt: moduleOrder }
-    }).sort({ sequence: 1 }).lean();
+    const modulesToReorder = await CourseVersionModule.find({
+      courseVersionId: version._id,
+      order: { $gt: moduleOrder }
+    }).sort({ order: 1 }).populate('moduleId').lean();
 
-    // Delete module
-    await CourseContent.findByIdAndDelete(moduleId);
+    // Delete module link
+    await CourseVersionModule.findByIdAndDelete(link._id);
 
     // Reorder subsequent modules
-    await CourseContent.updateMany(
-      { courseId, sequence: { $gt: moduleOrder } },
-      { $inc: { sequence: -1 } }
+    await CourseVersionModule.updateMany(
+      { courseVersionId: version._id, order: { $gt: moduleOrder } },
+      { $inc: { order: -1 } }
     );
 
     // Build reordered modules list
     const reorderedModules = modulesToReorder.map((m: any) => {
-      const mMetadata = m.metadata || {};
+      const mod = m.moduleId;
       return {
-        id: m._id.toString(),
-        title: mMetadata.title || 'Untitled Module',
-        oldOrder: m.sequence,
-        newOrder: m.sequence - 1
+        id: mod?._id?.toString() || m.moduleId.toString(),
+        title: mod?.title || 'Untitled Module',
+        oldOrder: m.order,
+        newOrder: m.order - 1
       };
     });
 
@@ -587,16 +607,7 @@ export class CourseSegmentsService {
    * Reorder course modules
    */
   static async reorderCourseModules(courseId: string, moduleIds: string[]): Promise<any> {
-    // Validate course ID
-    if (!mongoose.Types.ObjectId.isValid(courseId)) {
-      throw ApiError.notFound('Course not found');
-    }
-
-    // Check if course exists
-    const course = await Course.findById(courseId);
-    if (!course) {
-      throw ApiError.notFound('Course not found');
-    }
+    const { version } = await resolveCourseAndVersion(courseId);
 
     // Validate moduleIds array
     if (!Array.isArray(moduleIds) || moduleIds.length === 0) {
@@ -616,63 +627,62 @@ export class CourseSegmentsService {
       }
     }
 
-    // Get all modules in course
-    const allModules = await CourseContent.find({ courseId }).lean();
+    // Get all module links in this course version
+    const allLinks = await CourseVersionModule.find({ courseVersionId: version._id }).lean();
 
     // Check if all modules are included
-    if (allModules.length !== moduleIds.length) {
+    if (allLinks.length !== moduleIds.length) {
       throw ApiError.badRequest('Not all course modules included in reorder');
     }
 
     // Check if all provided IDs belong to this course
-    const courseModuleIds = new Set(allModules.map(m => (m as any)._id.toString()));
+    const courseModuleIds = new Set(allLinks.map((l: any) => l.moduleId.toString()));
     for (const id of moduleIds) {
       if (!courseModuleIds.has(id)) {
         throw ApiError.badRequest('One or more modules do not belong to this course');
       }
     }
 
+    // Fetch all modules for titles
+    const modules = await Module.find({
+      _id: { $in: moduleIds.map(id => new mongoose.Types.ObjectId(id)) }
+    }).lean();
+    const moduleMap = new Map(modules.map((m: any) => [m._id.toString(), m]));
+
     // Build update operations
     const updates: any[] = [];
     const reorderedModules: any[] = [];
 
     for (let i = 0; i < moduleIds.length; i++) {
-      const moduleId = moduleIds[i];
+      const modId = moduleIds[i];
       const newOrder = i + 1;
 
-      const module = allModules.find(m => (m as any)._id.toString() === moduleId);
-      if (module) {
-        const oldOrder = (module as any).sequence;
-        const metadata = (module as any).metadata || {};
+      const link = allLinks.find((l: any) => l.moduleId.toString() === modId);
+      if (link) {
+        const oldOrder = (link as any).order;
+        const mod = moduleMap.get(modId);
 
         if (oldOrder !== newOrder) {
           updates.push({
             updateOne: {
-              filter: { _id: moduleId },
-              update: { $set: { sequence: newOrder } }
+              filter: { _id: (link as any)._id },
+              update: { $set: { order: newOrder } }
             }
           });
-
-          reorderedModules.push({
-            id: moduleId,
-            title: metadata.title || 'Untitled Module',
-            oldOrder,
-            newOrder
-          });
-        } else {
-          reorderedModules.push({
-            id: moduleId,
-            title: metadata.title || 'Untitled Module',
-            oldOrder,
-            newOrder
-          });
         }
+
+        reorderedModules.push({
+          id: modId,
+          title: mod?.title || 'Untitled Module',
+          oldOrder,
+          newOrder
+        });
       }
     }
 
     // Execute bulk update
     if (updates.length > 0) {
-      await CourseContent.bulkWrite(updates);
+      await CourseVersionModule.bulkWrite(updates);
     }
 
     return {

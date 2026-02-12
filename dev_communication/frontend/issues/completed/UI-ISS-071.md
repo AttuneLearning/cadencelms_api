@@ -172,7 +172,7 @@ src/features/flashcard-player/
 
 **Reference Docs:**
 - `dev_communication/specs/learning/FLASHCARD_FLOW_SPEC.md`
-- `memory/entities/question-system.md`
+- `ai_team_config/memory_store/entities/question-system.md`
 - `contracts/api/flashcards.contract.ts`
 
 ### 2026-01-28: Moved to Active - API Complete

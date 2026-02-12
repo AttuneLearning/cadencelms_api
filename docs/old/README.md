@@ -68,7 +68,7 @@ Historical agent communication issues:
 For current documentation, see:
 - `docs/api/` - API reference documentation
 - `docs/guides/` - Developer guides and how-tos
-- `dev_communication/architecture/` - Current Architecture Decision Records (ADRs)
+- `dev_communication/shared/architecture/` - Current Architecture Decision Records (ADRs)
 
 ---
 

@@ -54,10 +54,16 @@ Use `/adr` skill for architecture management:
 - [[decisions/ADR-UI-001-FSD-ARCHITECTURE]]
 - [[decisions/ADR-UI-FORM-001-STANDARDIZED-FORM-PATTERN]]
 - [[decisions/ADR-UI-002-ERROR-HANDLING]]
+- [[decisions/ADR-UI-003-TASK-BASED-NAVIGATION-ARCHITECTURE]]
+- [[decisions/ADR-UI-004-ADAPTIVE-PLAYLIST-ENGINE]]
 
 ### Development Process
 - [[decisions/ADR-DEV-001-TESTING-STRATEGY]]
-- [[decisions/ADR-DEV-002-IDEAL-API-DESIGN]]
+- [[decisions/ADR-DEV-002-DEVELOPMENT-LIFECYCLE]]
+- [[decisions/ADR-DEV-003-IDEAL-API-DESIGN]]
+
+### Learning / Versioning
+- [[decisions/ADR-VERS-001-COURSE-VERSIONING-SYSTEM]]
 
 ### Billing / Registration System
 - [[decisions/ADR-001-REFUND-POLICY]]
@@ -77,14 +83,15 @@ Use `/adr` skill for architecture management:
 | Billing | 7 | Approved |
 | API | 3 | Accepted |
 | Auth | 1 | Accepted |
-| UI | 3 | Accepted |
+| UI | 5 | Accepted |
 | Data | 1 | Accepted |
 | Security | 1 | Accepted |
 | Content | 1 | Accepted |
 | SCORM | 1 | Accepted |
 | Infrastructure | 1 | Accepted |
-| Development | 2 | Accepted |
-| **Total** | **21** | |
+| Development | 3 | Accepted |
+| Learning / Versioning | 1 | Approved |
+| **Total** | **25** | |
 
 ---
 

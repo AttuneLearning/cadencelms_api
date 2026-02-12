@@ -4,7 +4,7 @@ Instructions for applying the development principles update to the API project.
 
 **Date:** 2026-01-29
 **Triggered by:** Question System Migration backward compatibility issue
-**ADR:** ADR-DEV-002-IDEAL-API-DESIGN
+**ADR:** ADR-DEV-003-IDEAL-API-DESIGN
 
 ---
 
@@ -12,7 +12,7 @@ Instructions for applying the development principles update to the API project.
 
 ### 1. Create ADR (if not exists)
 
-**File:** `dev_communication/architecture/decisions/ADR-DEV-002-IDEAL-API-DESIGN.md`
+**File:** `dev_communication/shared/architecture/decisions/ADR-DEV-003-IDEAL-API-DESIGN.md`
 
 Copy from UI project or create with same content. Key points:
 - "Unless otherwise specified, always design for ideal API structure"
@@ -55,7 +55,7 @@ From UI project (`/home/adam/github/cadencelms_ui/`):
 
 | Source | Destination |
 |--------|-------------|
-| `dev_communication/architecture/decisions/ADR-DEV-002-IDEAL-API-DESIGN.md` | Same path in API |
+| `dev_communication/shared/architecture/decisions/ADR-DEV-003-IDEAL-API-DESIGN.md` | Same path in API |
 | `dev_communication/guidance/DEVELOPMENT_PRINCIPLES.md` | Same path in API |
 
 ---
@@ -67,7 +67,7 @@ After applying, verify:
 1. `CLAUDE.md` references development principles
 2. ADR exists in architecture decisions
 3. Principles file exists in guidance folder
-4. Running `/adr` shows ADR-DEV-002 in the list
+4. Running `/adr` shows ADR-DEV-003 in the list
 
 ---
 
@@ -75,8 +75,8 @@ After applying, verify:
 
 ```bash
 # From cadencelms_ui directory
-cp dev_communication/architecture/decisions/ADR-DEV-002-IDEAL-API-DESIGN.md \
-   ../cadencelms_api/dev_communication/architecture/decisions/
+cp dev_communication/shared/architecture/decisions/ADR-DEV-003-IDEAL-API-DESIGN.md \
+   ../cadencelms_api/dev_communication/shared/architecture/decisions/
 
 cp dev_communication/guidance/DEVELOPMENT_PRINCIPLES.md \
    ../cadencelms_api/dev_communication/guidance/

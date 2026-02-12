@@ -136,6 +136,6 @@ Rejected: Loses sidebar context, requires more horizontal space
 
 ## Links
 
-- Session log: [[../../../memory/sessions/2026-02-05-navigation-dashboard-redesign]]
+- Session log: [[../../../ai_team_config/memory_store/sessions/2026-02-05-navigation-dashboard-redesign]]
 - ADR Suggestion: [[../suggestions/2026-02-05_ui_navigation-architecture-redesign]]
 - Related: [[ADR-UI-001-FSD-ARCHITECTURE]]
