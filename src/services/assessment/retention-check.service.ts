@@ -9,6 +9,10 @@ import CourseFlashcardConfig, {
 import Question, { IQuestion } from '@/models/assessment/Question.model';
 import { ApiError } from '@/utils/ApiError';
 import {
+  QuestionProvenance,
+  resolveFlashcardQuestionProvenance
+} from '@/services/assessment/lib/canonical-flashcard-selection';
+import {
   calculateNextReview,
   booleanToQuality,
   calculatePriority,
@@ -85,6 +89,9 @@ export interface RetentionCheckWithCards {
   cards: Array<{
     questionId: string;
     promptIndex: number;
+    learningUnitId?: string;
+    learningUnitQuestionId?: string;
+    sourceModuleId?: string;
     front: { text: string; media?: object };
     back: { text: string; media?: object };
   }>;
@@ -159,7 +166,7 @@ export class RetentionCheckService {
     }
 
     // Select cards for the check
-    const questionIds = await this.selectRetentionCheckCards(
+    const selectedCards = await this.selectRetentionCheckCards(
       courseId,
       sourceModuleId,
       learnerId,
@@ -167,7 +174,7 @@ export class RetentionCheckService {
       config.selectionMethod || DEFAULT_CONFIG.selectionMethod
     );
 
-    if (questionIds.length === 0) {
+    if (selectedCards.length === 0) {
       throw ApiError.badRequest('No flashcard questions available for retention check');
     }
 
@@ -178,9 +185,15 @@ export class RetentionCheckService {
       sourceModuleId: new mongoose.Types.ObjectId(sourceModuleId),
       triggeredAtModuleId: new mongoose.Types.ObjectId(triggeredAtModuleId),
       triggeredAt: new Date(),
-      cardCount: questionIds.length,
+      cardCount: selectedCards.length,
       failureThreshold: config.failureThreshold || DEFAULT_CONFIG.failureThreshold,
-      questionIds: questionIds.map(id => new mongoose.Types.ObjectId(id)),
+      questionIds: selectedCards.map((card) => new mongoose.Types.ObjectId(card.questionId)),
+      cardSources: selectedCards.map((card) => ({
+        questionId: new mongoose.Types.ObjectId(card.questionId),
+        learningUnitId: new mongoose.Types.ObjectId(card.learningUnitId),
+        learningUnitQuestionId: new mongoose.Types.ObjectId(card.learningUnitQuestionId),
+        sourceModuleId: new mongoose.Types.ObjectId(card.sourceModuleId)
+      })),
       status: 'pending',
       remediationRequired: false
     });
@@ -204,21 +217,31 @@ export class RetentionCheckService {
     learnerId: string,
     cardCount: number,
     selectionMethod: SelectionMethod
-  ): Promise<string[]> {
-    // Get questions from module with 'flashcard' type
-    // Note: Questions are linked to modules via metadata.moduleId or through exercises
+  ): Promise<QuestionProvenance[]> {
+    const provenance = await resolveFlashcardQuestionProvenance(courseId, moduleId);
+    if (provenance.length === 0) {
+      return [];
+    }
+
+    const candidateQuestionIds = provenance.map((item) => new mongoose.Types.ObjectId(item.questionId));
     const questions = await Question.find({
-      'metadata.moduleId': moduleId,
+      _id: { $in: candidateQuestionIds },
       questionTypes: 'flashcard',
       isActive: true
-    });
+    }).select('_id');
 
     if (questions.length === 0) {
       return [];
     }
 
+    const activeQuestionIdSet = new Set(questions.map((question) => question._id.toString()));
+    const candidateCards = provenance.filter((item) => activeQuestionIdSet.has(item.questionId));
+    if (candidateCards.length === 0) {
+      return [];
+    }
+
     // Get learner progress for these questions
-    const questionIds = questions.map(q => q._id);
+    const questionIds = candidateCards.map((item) => new mongoose.Types.ObjectId(item.questionId));
     const progressRecords = await FlashcardProgress.find({
       learnerId: new mongoose.Types.ObjectId(learnerId),
       courseId: new mongoose.Types.ObjectId(courseId),
@@ -233,15 +256,15 @@ export class RetentionCheckService {
 
     // Build cards with selection data
     interface CardSelection {
-      questionId: string;
+      source: QuestionProvenance;
       priority: number;
       easeFactor: number;
     }
 
-    const cards: CardSelection[] = questions.map(q => {
-      const progress = progressMap.get(q._id.toString());
+    const cards: CardSelection[] = candidateCards.map((card) => {
+      const progress = progressMap.get(card.questionId);
       return {
-        questionId: q._id.toString(),
+        source: card,
         priority: calculatePriority(
           progress?.nextReviewDate || null,
           progress?.interval || 0
@@ -275,7 +298,7 @@ export class RetentionCheckService {
         break;
     }
 
-    return selectedCards.map(c => c.questionId);
+    return selectedCards.map((card) => card.source);
   }
 
   /**
@@ -326,7 +349,20 @@ export class RetentionCheckService {
     });
 
     // Render cards
-    const cards = questions.map(q => this.renderFlashcard(q, 0));
+    const sourceByQuestionId = new Map<string, QuestionProvenance>();
+    (check.cardSources || []).forEach((source) => {
+      sourceByQuestionId.set(source.questionId.toString(), {
+        questionId: source.questionId.toString(),
+        learningUnitId: source.learningUnitId.toString(),
+        learningUnitQuestionId: source.learningUnitQuestionId.toString(),
+        sourceModuleId: source.sourceModuleId.toString()
+      });
+    });
+
+    const cards = questions.map((question) => {
+      const source = sourceByQuestionId.get(question._id.toString());
+      return this.renderFlashcard(question, 0, source);
+    });
 
     return {
       checkId: check._id.toString(),
@@ -720,10 +756,14 @@ export class RetentionCheckService {
    */
   private static renderFlashcard(
     question: IQuestion,
-    promptIndex: number
+    promptIndex: number,
+    source: QuestionProvenance | undefined
   ): {
     questionId: string;
     promptIndex: number;
+    learningUnitId?: string;
+    learningUnitQuestionId?: string;
+    sourceModuleId?: string;
     front: { text: string; media?: object };
     back: { text: string; media?: object };
   } {
@@ -777,6 +817,9 @@ export class RetentionCheckService {
     return {
       questionId: question._id.toString(),
       promptIndex,
+      learningUnitId: source?.learningUnitId,
+      learningUnitQuestionId: source?.learningUnitQuestionId,
+      sourceModuleId: source?.sourceModuleId,
       front,
       back
     };

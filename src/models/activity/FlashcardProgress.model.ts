@@ -92,7 +92,7 @@ const FlashcardProgressSchema = new Schema<IFlashcardProgress>(
     courseId: {
       type: Schema.Types.ObjectId,
       required: [true, 'courseId is required'],
-      ref: 'Course',
+      ref: 'CanonicalCourse',
       index: true
     },
     questionId: {

@@ -4,9 +4,12 @@ import ClassEnrollment from '@/models/enrollment/ClassEnrollment.model';
 import ScormAttempt from '@/models/activity/ScormAttempt.model';
 import ExamResult from '@/models/activity/ExamResult.model';
 import Program from '@/models/academic/Program.model';
-import Course from '@/models/academic/Course.model';
+import CanonicalCourse from '@/models/academic/CanonicalCourse.model';
+import CourseVersion from '@/models/academic/CourseVersion.model';
+import CourseVersionModule from '@/models/academic/CourseVersionModule.model';
+import Module from '@/models/academic/Module.model';
 import Class from '@/models/academic/Class.model';
-import CourseContent from '@/models/content/CourseContent.model';
+import LearningUnit from '@/models/content/LearningUnit.model';
 import { Learner } from '@/models/auth/Learner.model';
 import { User } from '@/models/auth/User.model';
 import { Staff } from '@/models/auth/Staff.model';
@@ -84,6 +87,179 @@ interface ExportReportFilters {
   includeDetails?: boolean;
 }
 
+async function resolveCourse(courseId: string): Promise<{
+  _id: mongoose.Types.ObjectId;
+  name: string;
+  code: string;
+  credits: number;
+  departmentId: mongoose.Types.ObjectId;
+  programId: mongoose.Types.ObjectId | null;
+  courseVersionId: mongoose.Types.ObjectId;
+  instructorIds: mongoose.Types.ObjectId[];
+} | null> {
+  const canonical = await CanonicalCourse.findById(courseId);
+  if (!canonical) {
+    return null;
+  }
+
+  let name = canonical.code;
+  let credits = 0;
+  let instructorIds: mongoose.Types.ObjectId[] = [];
+
+  const selectedVersionId = canonical.currentPublishedVersionId || canonical.latestDraftVersionId;
+  const version = selectedVersionId
+    ? await CourseVersion.findById(selectedVersionId)
+    : await CourseVersion.findOne({ canonicalCourseId: canonical._id, status: 'published' }).sort({ version: -1 });
+
+  if (!version) {
+    return null;
+  }
+
+  name = version.title || canonical.code;
+  credits = version.credits || 0;
+  instructorIds = version.instructorIds || [];
+
+  return {
+    _id: canonical._id as mongoose.Types.ObjectId,
+    name,
+    code: canonical.code,
+    credits,
+    departmentId: canonical.departmentId,
+    programId: canonical.programId,
+    courseVersionId: version._id as mongoose.Types.ObjectId,
+    instructorIds
+  };
+}
+
+interface CourseModuleReportContext {
+  moduleId: string;
+  moduleTitle: string;
+  moduleType: string;
+  order: number;
+  learningUnitIds: string[];
+  contentIds: string[];
+}
+
+interface CourseLearningContext {
+  course: {
+    _id: mongoose.Types.ObjectId;
+    name: string;
+    code: string;
+    credits: number;
+    departmentId: mongoose.Types.ObjectId;
+    programId: mongoose.Types.ObjectId | null;
+    courseVersionId: mongoose.Types.ObjectId;
+    instructorIds: mongoose.Types.ObjectId[];
+  };
+  modules: CourseModuleReportContext[];
+  contentIds: string[];
+}
+
+async function buildCourseLearningContext(courseId: string): Promise<CourseLearningContext | null> {
+  const course = await resolveCourse(courseId);
+  if (!course) {
+    return null;
+  }
+
+  const versionModules = (await CourseVersionModule.find({
+    courseVersionId: course.courseVersionId
+  })
+    .select('moduleId order')
+    .sort({ order: 1 })
+    .lean()) as Array<{ moduleId: mongoose.Types.ObjectId; order: number }>;
+
+  const moduleIds = versionModules.map((item) => item.moduleId);
+  const modules = moduleIds.length > 0
+    ? ((await Module.find({ _id: { $in: moduleIds } })
+        .select('_id title')
+        .lean()) as Array<{ _id: mongoose.Types.ObjectId; title: string }>)
+    : [];
+  const moduleTitleMap = new Map(modules.map((module) => [module._id.toString(), module.title]));
+
+  const learningUnits = moduleIds.length > 0
+    ? ((await LearningUnit.find({
+        moduleId: { $in: moduleIds },
+        isActive: true
+      })
+        .select('_id moduleId contentId sequence title type')
+        .sort({ sequence: 1 })
+        .lean()) as Array<{
+        _id: mongoose.Types.ObjectId;
+        moduleId: mongoose.Types.ObjectId;
+        contentId?: mongoose.Types.ObjectId;
+        sequence: number;
+        title: string;
+        type: string;
+      }>)
+    : [];
+
+  const unitMap = new Map<string, typeof learningUnits>();
+  for (const unit of learningUnits) {
+    const key = unit.moduleId.toString();
+    if (!unitMap.has(key)) {
+      unitMap.set(key, []);
+    }
+    unitMap.get(key)!.push(unit);
+  }
+
+  const seenContentIds = new Set<string>();
+  const moduleContexts: CourseModuleReportContext[] = versionModules.map((versionModule) => {
+    const moduleKey = versionModule.moduleId.toString();
+    const moduleUnits = unitMap.get(moduleKey) || [];
+    const contentIds = moduleUnits
+      .map((unit) => unit.contentId?.toString() || '')
+      .filter(Boolean)
+      .filter((contentId, index, all) => all.indexOf(contentId) === index);
+
+    contentIds.forEach((contentId) => seenContentIds.add(contentId));
+
+    return {
+      moduleId: moduleKey,
+      moduleTitle: moduleTitleMap.get(moduleKey) || moduleUnits[0]?.title || `Module ${versionModule.order}`,
+      moduleType: moduleUnits[0]?.type || 'custom',
+      order: versionModule.order,
+      learningUnitIds: moduleUnits.map((unit) => unit._id.toString()),
+      contentIds
+    };
+  });
+
+  return {
+    course: {
+      _id: course._id,
+      name: course.name,
+      code: course.code,
+      credits: course.credits,
+      departmentId: course.departmentId,
+      programId: course.programId,
+      courseVersionId: course.courseVersionId,
+      instructorIds: course.instructorIds
+    },
+    modules: moduleContexts,
+    contentIds: Array.from(seenContentIds)
+  };
+}
+
+function filterAttemptsByContentIds<T extends { contentId?: mongoose.Types.ObjectId | string; examId?: mongoose.Types.ObjectId | string }>(
+  items: T[],
+  contentIds: string[]
+): T[] {
+  const allowed = new Set(contentIds);
+  return items.filter((item) => {
+    const id = (item.contentId || item.examId)?.toString();
+    return !!id && allowed.has(id);
+  });
+}
+
+function countCompletedContentItems(attempts: Array<{ contentId: mongoose.Types.ObjectId; status: string }>): number {
+  const completed = new Set<string>();
+  for (const attempt of attempts) {
+    if (['completed', 'passed'].includes(attempt.status)) {
+      completed.add(attempt.contentId.toString());
+    }
+  }
+  return completed.size;
+}
+
 export class ReportsService {
   /**
    * Get Completion Report
@@ -121,7 +297,7 @@ export class ReportsService {
       const classes = await Class.find({ courseId: filters.courseId });
       classIds = classes.map(c => c._id);
     } else if (filters.programId) {
-      const courses = await Course.find({ 'metadata.programId': filters.programId });
+      const courses = await CanonicalCourse.find({ programId: filters.programId }).select('_id');
       const classes = await Class.find({ courseId: { $in: courses.map(c => c._id) } });
       classIds = classes.map(c => c._id);
     }
@@ -162,15 +338,15 @@ export class ReportsService {
       if (groupBy === 'course') {
         const classDoc = await Class.findById(enrollment.classId);
         if (!classDoc) continue;
-        const course = await Course.findById(classDoc.courseId);
-        if (!course) continue;
-        groupKey = course._id.toString();
+        const context = await buildCourseLearningContext(classDoc.courseId.toString());
+        if (!context) continue;
+        groupKey = context.course._id.toString();
       } else if (groupBy === 'program') {
         const classDoc = await Class.findById(enrollment.classId);
         if (!classDoc) continue;
-        const course = await Course.findById(classDoc.courseId);
-        if (!course || !course.metadata?.programId) continue;
-        const program = await Program.findById(course.metadata.programId);
+        const context = await buildCourseLearningContext(classDoc.courseId.toString());
+        if (!context || !context.course.programId) continue;
+        const program = await Program.findById(context.course.programId);
         if (!program) continue;
         groupKey = program._id.toString();
       } else if (groupBy === 'status') {
@@ -206,14 +382,24 @@ export class ReportsService {
       for (const enrollment of enrollments) {
         const classDoc = await Class.findById(enrollment.classId);
         if (!classDoc) continue;
-        const courseContents = await CourseContent.find({ courseId: classDoc.courseId });
-        const contentIds = courseContents.map(cc => cc.contentId);
-        const attempts = await ScormAttempt.find({
+        const context = await buildCourseLearningContext(classDoc.courseId.toString());
+        if (!context) continue;
+        const contentIds = context.contentIds.map((contentId) => new mongoose.Types.ObjectId(contentId));
+        const attempts = contentIds.length > 0 ? await ScormAttempt.find({
           learnerId: enrollment.learnerId,
           contentId: { $in: contentIds }
-        });
-        const completedModules = attempts.filter(a => ['completed', 'passed'].includes(a.status)).length;
-        const progress = courseContents.length > 0 ? (completedModules / courseContents.length) * 100 : 0;
+        }) : [];
+        const completedModules = context.modules.filter((moduleContext) => {
+          const moduleAttempts = filterAttemptsByContentIds(attempts, moduleContext.contentIds);
+          if (moduleContext.contentIds.length === 0) {
+            return false;
+          }
+          const completedItems = countCompletedContentItems(
+            moduleAttempts as Array<{ contentId: mongoose.Types.ObjectId; status: string }>
+          );
+          return completedItems >= moduleContext.contentIds.length;
+        }).length;
+        const progress = context.modules.length > 0 ? (completedModules / context.modules.length) * 100 : 0;
         totalProgress += progress;
       }
       const avgProgress = groupTotal > 0 ? totalProgress / groupTotal : 0;
@@ -239,11 +425,12 @@ export class ReportsService {
 
           const classDoc = await Class.findById(enrollment.classId);
           if (!classDoc) continue;
-          const course = await Course.findById(classDoc.courseId);
-          if (!course) continue;
+          const context = await buildCourseLearningContext(classDoc.courseId.toString());
+          if (!context) continue;
+          const course = context.course;
 
-          const program = course.metadata?.programId
-            ? await Program.findById(course.metadata.programId)
+          const program = course.programId
+            ? await Program.findById(course.programId)
             : null;
 
           const dept = (learner as any).departmentId
@@ -251,14 +438,22 @@ export class ReportsService {
             : null;
 
           // Calculate progress
-          const courseContents = await CourseContent.find({ courseId: course._id });
-          const contentIds = courseContents.map(cc => cc.contentId);
-          const attempts = await ScormAttempt.find({
+          const contentIds = context.contentIds.map((contentId) => new mongoose.Types.ObjectId(contentId));
+          const attempts = contentIds.length > 0 ? await ScormAttempt.find({
             learnerId: enrollment.learnerId,
             contentId: { $in: contentIds }
-          });
-          const completedModules = attempts.filter(a => ['completed', 'passed'].includes(a.status)).length;
-          const progress = courseContents.length > 0 ? (completedModules / courseContents.length) * 100 : 0;
+          }) : [];
+          const completedModules = context.modules.filter((moduleContext) => {
+            const moduleAttempts = filterAttemptsByContentIds(attempts, moduleContext.contentIds);
+            if (moduleContext.contentIds.length === 0) {
+              return false;
+            }
+            const completedItems = countCompletedContentItems(
+              moduleAttempts as Array<{ contentId: mongoose.Types.ObjectId; status: string }>
+            );
+            return completedItems >= moduleContext.contentIds.length;
+          }).length;
+          const progress = context.modules.length > 0 ? (completedModules / context.modules.length) * 100 : 0;
 
           // Find first started attempt
           const firstAttempt = attempts.length > 0
@@ -310,9 +505,9 @@ export class ReportsService {
       if (enrollments.length > 0 && groupBy === 'course') {
         const classDoc = await Class.findById(enrollments[0].classId);
         if (classDoc) {
-          const course = await Course.findById(classDoc.courseId);
-          if (course) {
-            finalGroupLabel = `${course.name} (${course.code})`;
+          const context = await buildCourseLearningContext(classDoc.courseId.toString());
+          if (context) {
+            finalGroupLabel = `${context.course.name} (${context.course.code})`;
           }
         }
       }
@@ -399,7 +594,7 @@ export class ReportsService {
       const classes = await Class.find({ courseId: filters.courseId });
       classIds = classes.map(c => c._id);
     } else if (filters.programId) {
-      const courses = await Course.find({ 'metadata.programId': filters.programId });
+      const courses = await CanonicalCourse.find({ programId: filters.programId }).select('_id');
       const classes = await Class.find({ courseId: { $in: courses.map(c => c._id) } });
       classIds = classes.map(c => c._id);
     }
@@ -443,27 +638,25 @@ export class ReportsService {
       for (const enrollment of enrollments) {
         const classDoc = await Class.findById(enrollment.classId);
         if (!classDoc) continue;
-        const course = await Course.findById(classDoc.courseId);
-        if (!course) continue;
+        const context = await buildCourseLearningContext(classDoc.courseId.toString());
+        if (!context) continue;
+        const course = context.course;
 
-        const program = course.metadata?.programId
-          ? await Program.findById(course.metadata.programId)
+        const program = course.programId
+          ? await Program.findById(course.programId)
           : null;
 
-        // Get course contents and attempts
-        const courseContents = await CourseContent.find({ courseId: course._id });
-        const contentIds = courseContents.map(cc => cc.contentId);
-
-        const scormAttempts = await ScormAttempt.find({
+        const contentIds = context.contentIds.map((contentId) => new mongoose.Types.ObjectId(contentId));
+        const scormAttempts = contentIds.length > 0 ? await ScormAttempt.find({
           learnerId,
           contentId: { $in: contentIds }
-        });
+        }) : [];
 
-        const examResults = await ExamResult.find({
+        const examResults = contentIds.length > 0 ? await ExamResult.find({
           learnerId,
           examId: { $in: contentIds },
           status: 'graded'
-        });
+        }) : [];
 
         // Calculate course score
         let courseScore: number | null = null;
@@ -742,10 +935,7 @@ export class ReportsService {
         : null;
 
       // Get courses for this program
-      const programCourses = await Course.find({
-        'metadata.programId': program._id,
-        isActive: true
-      });
+      const programCourses = await CanonicalCourse.find({ programId: program._id }).select('_id');
 
       // Get class enrollments for these courses
       const programClasses = await Class.find({
@@ -766,17 +956,17 @@ export class ReportsService {
       for (const classEnrollment of classEnrollments) {
         const classDoc = await Class.findById(classEnrollment.classId);
         if (!classDoc) continue;
-        const course = await Course.findById(classDoc.courseId);
-        if (!course) continue;
+        const context = await buildCourseLearningContext(classDoc.courseId.toString());
+        if (!context) continue;
+        const course = context.course;
 
         // Get exam results for score
-        const courseContents = await CourseContent.find({ courseId: course._id });
-        const contentIds = courseContents.map(cc => cc.contentId);
-        const examResults = await ExamResult.find({
+        const contentIds = context.contentIds.map((contentId) => new mongoose.Types.ObjectId(contentId));
+        const examResults = contentIds.length > 0 ? await ExamResult.find({
           learnerId,
           examId: { $in: contentIds },
           status: 'graded'
-        });
+        }) : [];
 
         let courseScore: number | null = null;
         if (classEnrollment.gradePercentage !== undefined && classEnrollment.gradePercentage !== null) {
@@ -815,10 +1005,10 @@ export class ReportsService {
         const term = `${classEnrollment.enrollmentDate.toLocaleString('default', { month: 'short' })} ${classEnrollment.enrollmentDate.getFullYear()}`;
 
         // Count attempts
-        const scormAttempts = await ScormAttempt.find({
+        const scormAttempts = contentIds.length > 0 ? await ScormAttempt.find({
           learnerId,
           contentId: { $in: contentIds }
-        });
+        }) : [];
         const attempts = new Set(scormAttempts.map(a => a.attemptNumber)).size;
 
         if (classEnrollment.status === 'completed') {
@@ -963,7 +1153,7 @@ export class ReportsService {
     // In a real implementation, this would generate a PDF using a library like pdfkit or puppeteer
     // For now, return metadata about the generated PDF
 
-    const fileName = `transcript-${transcriptData.transcript.learner.person.firstName.toLowerCase()}-${transcriptData.transcript.learner.person.lastName.toLowerCase()}-${new Date().toISOString().split('T')[0]}.pdf`;
+    const fileName = `transcript-${transcriptData.transcript.learner.firstName.toLowerCase()}-${transcriptData.transcript.learner.lastName.toLowerCase()}-${new Date().toISOString().split('T')[0]}.pdf`;
 
     return {
       transcriptId: transcriptData.transcript.transcriptId,
@@ -989,22 +1179,22 @@ export class ReportsService {
       throw ApiError.badRequest('Invalid course ID');
     }
 
-    const course = await Course.findById(courseId);
-    if (!course) {
+    const context = await buildCourseLearningContext(courseId);
+    if (!context) {
       throw ApiError.notFound('Course not found');
     }
+    const course = context.course;
 
     // Get program info
-    const program = course.metadata?.programId
-      ? await Program.findById(course.metadata.programId)
+    const program = course.programId
+      ? await Program.findById(course.programId)
       : null;
 
     const dept = course.departmentId
       ? await Department.findById(course.departmentId)
       : null;
 
-    // Get instructors (from metadata or staff assignments)
-    const instructors = course.metadata?.instructors || [];
+    const instructors = course.instructorIds.map((id) => id.toString());
 
     // Get classes for this course
     let classes = await Class.find({ courseId });
@@ -1031,8 +1221,7 @@ export class ReportsService {
     const completedEnrollments = enrollments.filter(e => e.status === 'completed').length;
     const completionRate = totalEnrollments > 0 ? (completedEnrollments / totalEnrollments) * 100 : 0;
 
-    // Get course contents for module analytics
-    const courseContents = await CourseContent.find({ courseId, isActive: true }).sort({ sequence: 1 });
+    const courseContentIds = context.contentIds.map((contentId) => new mongoose.Types.ObjectId(contentId));
 
     // Build learner data
     const learners: any[] = [];
@@ -1047,21 +1236,29 @@ export class ReportsService {
       if (!learner || !user) continue;
 
       // Get attempts
-      const contentIds = courseContents.map(cc => cc.contentId);
-      const scormAttempts = await ScormAttempt.find({
+      const scormAttempts = courseContentIds.length > 0 ? await ScormAttempt.find({
         learnerId: enrollment.learnerId,
-        contentId: { $in: contentIds }
-      });
+        contentId: { $in: courseContentIds }
+      }) : [];
 
-      const examResults = await ExamResult.find({
+      const examResults = courseContentIds.length > 0 ? await ExamResult.find({
         learnerId: enrollment.learnerId,
-        examId: { $in: contentIds },
+        examId: { $in: courseContentIds },
         status: 'graded'
-      });
+      }) : [];
 
       // Calculate progress
-      const completedModules = scormAttempts.filter(a => ['completed', 'passed'].includes(a.status)).length;
-      const progress = courseContents.length > 0 ? (completedModules / courseContents.length) * 100 : 0;
+      const completedModules = context.modules.filter((moduleContext) => {
+        const moduleAttempts = filterAttemptsByContentIds(scormAttempts, moduleContext.contentIds);
+        if (moduleContext.contentIds.length === 0) {
+          return false;
+        }
+        const completedItems = countCompletedContentItems(
+          moduleAttempts as Array<{ contentId: mongoose.Types.ObjectId; status: string }>
+        );
+        return completedItems >= moduleContext.contentIds.length;
+      }).length;
+      const progress = context.modules.length > 0 ? (completedModules / context.modules.length) * 100 : 0;
       totalProgress += progress;
 
       // Calculate score
@@ -1113,11 +1310,8 @@ export class ReportsService {
       // Build module progress
       const moduleProgress: any[] = [];
       if (includeModules) {
-        for (const content of courseContents) {
-          if (!content.contentId) continue;
-          const contentAttempts = scormAttempts.filter(a =>
-            a.contentId.toString() === content.contentId!.toString()
-          );
+        for (const moduleContext of context.modules) {
+          const contentAttempts = filterAttemptsByContentIds(scormAttempts, moduleContext.contentIds);
           const latestAttempt = contentAttempts[contentAttempts.length - 1];
 
           let moduleStatus: 'not_started' | 'in_progress' | 'completed' = 'not_started';
@@ -1125,7 +1319,11 @@ export class ReportsService {
           let moduleScore: number | null = null;
 
           if (latestAttempt) {
-            if (['completed', 'passed'].includes(latestAttempt.status)) {
+            const completedItems = countCompletedContentItems(
+              contentAttempts as Array<{ contentId: mongoose.Types.ObjectId; status: string }>
+            );
+
+            if (moduleContext.contentIds.length > 0 && completedItems >= moduleContext.contentIds.length) {
               moduleStatus = 'completed';
               moduleProgressPercent = 100;
             } else if (latestAttempt.progressMeasure !== undefined) {
@@ -1141,15 +1339,18 @@ export class ReportsService {
           const moduleTimeSpent = contentAttempts.reduce((sum, a) => sum + (a.totalTime || 0), 0);
 
           moduleProgress.push({
-            moduleId: content.contentId!.toString(),
-            moduleName: content.metadata?.title || `Module ${content.sequence}`,
-            moduleOrder: content.sequence,
+            moduleId: moduleContext.moduleId,
+            moduleName: moduleContext.moduleTitle,
+            moduleOrder: moduleContext.order,
+            moduleType: moduleContext.moduleType,
             status: moduleStatus,
             progress: moduleProgressPercent,
             score: moduleScore,
             timeSpent: moduleTimeSpent,
             attempts: contentAttempts.length,
-            completedAt: moduleStatus === 'completed' ? latestAttempt?.completedAt : null
+            completedAt: moduleStatus === 'completed' ? latestAttempt?.completedAt : null,
+            learningUnitIds: moduleContext.learningUnitIds,
+            learningUnitCount: moduleContext.learningUnitIds.length
           });
         }
       }
@@ -1203,11 +1404,12 @@ export class ReportsService {
     // Module analytics
     const moduleAnalytics: any[] = [];
     if (includeModules) {
-      for (const content of courseContents) {
-        const allAttempts = await ScormAttempt.find({
-          contentId: content.contentId,
+      for (const moduleContext of context.modules) {
+        const moduleContentIds = moduleContext.contentIds.map((contentId) => new mongoose.Types.ObjectId(contentId));
+        const allAttempts = moduleContentIds.length > 0 ? await ScormAttempt.find({
+          contentId: { $in: moduleContentIds },
           learnerId: { $in: enrollments.map(e => e.learnerId) }
-        });
+        }) : [];
 
         const completedCount = allAttempts.filter(a => ['completed', 'passed'].includes(a.status)).length;
         const moduleCompletionRate = allAttempts.length > 0 ? (completedCount / allAttempts.length) * 100 : 0;
@@ -1236,10 +1438,12 @@ export class ReportsService {
         }
 
         moduleAnalytics.push({
-          moduleId: content.contentId!.toString(),
-          moduleName: content.metadata?.title || `Module ${content.sequence}`,
-          moduleOrder: content.sequence,
-          moduleType: content.metadata?.type || 'custom',
+          moduleId: moduleContext.moduleId,
+          moduleName: moduleContext.moduleTitle,
+          moduleOrder: moduleContext.order,
+          moduleType: moduleContext.moduleType,
+          learningUnitIds: moduleContext.learningUnitIds,
+          learningUnitCount: moduleContext.learningUnitIds.length,
           completionRate: Math.round(moduleCompletionRate * 10) / 10,
           averageScore: avgScore,
           averageTimeSpent: avgTimeSpent,
@@ -1295,11 +1499,14 @@ export class ReportsService {
       ? await Department.findById(program.departmentId)
       : null;
 
-    // Get courses in program
-    const courses = await Course.find({
-      'metadata.programId': programId,
-      isActive: true
-    });
+    const programCourses = await CanonicalCourse.find({ programId }).select('_id');
+    const programCourseContexts = await Promise.all(
+      programCourses.map((course) => buildCourseLearningContext(course._id.toString()))
+    );
+    const courses = programCourseContexts.filter(
+      (context): context is CourseLearningContext => context !== null
+    );
+    const courseOrder = new Map(courses.map((context, index) => [context.course._id.toString(), index + 1]));
 
     // Get program enrollments
     const enrollmentQuery: any = { programId };
@@ -1322,8 +1529,8 @@ export class ReportsService {
 
     // Build course performance
     const coursePerformance: any[] = [];
-    for (const course of courses) {
-      const classes = await Class.find({ courseId: course._id });
+    for (const courseContext of courses) {
+      const classes = await Class.find({ courseId: courseContext.course._id });
       const classIds = classes.map(c => c._id);
 
       const courseEnrollments = await ClassEnrollment.find({
@@ -1350,10 +1557,10 @@ export class ReportsService {
         : 0;
 
       coursePerformance.push({
-        courseId: course._id.toString(),
-        courseName: course.name,
-        courseCode: course.code,
-        levelNumber: course.metadata?.levelNumber || 1,
+        courseId: courseContext.course._id.toString(),
+        courseName: courseContext.course.name,
+        courseCode: courseContext.course.code,
+        levelNumber: courseOrder.get(courseContext.course._id.toString()) || 1,
         totalEnrollments: courseEnrollments.length,
         completionRate: Math.round(courseCompletionRate * 10) / 10,
         averageScore: avgScore,
@@ -1370,16 +1577,17 @@ export class ReportsService {
     let totalGPA = 0;
     let gpaCount = 0;
 
+    const programClasses = await Class.find({ courseId: { $in: courses.map(c => c.course._id) } });
+
     for (const enrollment of programEnrollments) {
       const learner = await Learner.findById(enrollment.learnerId);
       const user = await User.findById(enrollment.learnerId);
       if (!learner || !user) continue;
 
       // Get class enrollments for this learner in program
-      const classes = await Class.find({ courseId: { $in: courses.map(c => c._id) } });
       const classEnrollments = await ClassEnrollment.find({
         learnerId: enrollment.learnerId,
-        classId: { $in: classes.map(c => c._id) }
+        classId: { $in: programClasses.map(c => c._id) }
       });
 
       const coursesCompleted = classEnrollments.filter(e => e.status === 'completed').length;
@@ -1413,10 +1621,9 @@ export class ReportsService {
       // Find current level
       const currentLevel = Math.max(
         ...classEnrollments.map(e => {
-          const classDoc = classes.find(c => c._id.toString() === e.classId.toString());
+          const classDoc = programClasses.find(c => c._id.toString() === e.classId.toString());
           if (!classDoc) return 0;
-          const course = courses.find(c => c._id.toString() === classDoc.courseId.toString());
-          return course?.metadata?.levelNumber || 1;
+          return courseOrder.get(classDoc.courseId.toString()) || 1;
         }),
         1
       );
@@ -1503,7 +1710,7 @@ export class ReportsService {
         departmentName: dept?.name || 'Unknown',
         totalCredits: program.requiredCredits || 0,
         totalCourses: courses.length,
-        levels: Math.max(...courses.map(c => c.metadata?.levelNumber || 1), 1)
+        levels: courses.length > 0 ? Math.max(...Array.from(courseOrder.values())) : 0
       },
       summary: {
         totalEnrollments,
@@ -1551,7 +1758,13 @@ export class ReportsService {
     const programs = await Program.find({ departmentId: { $in: departmentIds } });
 
     // Get courses in department
-    const courses = await Course.find({ departmentId: { $in: departmentIds }, isActive: true });
+    const departmentCourses = await CanonicalCourse.find({ departmentId: { $in: departmentIds } }).select('_id');
+    const courseContexts = await Promise.all(
+      departmentCourses.map((course) => buildCourseLearningContext(course._id.toString()))
+    );
+    const courses = courseContexts.filter(
+      (context): context is CourseLearningContext => context !== null
+    );
 
     // Get staff in department
     const staff = await Staff.find({ departmentId: { $in: departmentIds } });
@@ -1560,7 +1773,7 @@ export class ReportsService {
     const learners = await Learner.find({ departmentId: { $in: departmentIds } });
 
     // Get all class enrollments for department courses
-    const classes = await Class.find({ courseId: { $in: courses.map(c => c._id) } });
+    const classes = await Class.find({ courseId: { $in: courses.map(c => c.course._id) } });
 
     const enrollmentQuery: any = {
       classId: { $in: classes.map(c => c._id) }
@@ -1623,9 +1836,10 @@ export class ReportsService {
       let programGPA = 0;
       let programGPACount = 0;
 
+      const programCourses = await CanonicalCourse.find({ programId: program._id }).select('_id');
+      const programClasses = await Class.find({ courseId: { $in: programCourses.map(c => c._id) } });
+
       for (const enrollment of programEnrollments) {
-        const programCourses = await Course.find({ 'metadata.programId': program._id });
-        const programClasses = await Class.find({ courseId: { $in: programCourses.map(c => c._id) } });
         const learnerEnrollments = await ClassEnrollment.find({
           learnerId: enrollment.learnerId,
           classId: { $in: programClasses.map(c => c._id) },
@@ -1665,8 +1879,8 @@ export class ReportsService {
 
     // Course performance
     const coursePerformance: any[] = [];
-    for (const course of courses.slice(0, 50)) { // Limit to 50 courses
-      const courseclasses = await Class.find({ courseId: course._id });
+    for (const courseContext of courses.slice(0, 50)) { // Limit to 50 courses
+      const courseclasses = await Class.find({ courseId: courseContext.course._id });
       const courseEnrollments = await ClassEnrollment.find({
         classId: { $in: courseclasses.map(c => c._id) }
       });
@@ -1689,14 +1903,14 @@ export class ReportsService {
         ? (courseScores.filter(e => e.gradePercentage! >= 60).length / courseScores.length) * 100
         : 0;
 
-      const program = course.metadata?.programId
-        ? await Program.findById(course.metadata.programId)
+      const program = courseContext.course.programId
+        ? await Program.findById(courseContext.course.programId)
         : null;
 
       coursePerformance.push({
-        courseId: course._id.toString(),
-        courseName: course.name,
-        courseCode: course.code,
+        courseId: courseContext.course._id.toString(),
+        courseName: courseContext.course.name,
+        courseCode: courseContext.course.code,
         programName: program?.name || null,
         totalEnrollments: courseEnrollments.length,
         completionRate: Math.round(courseCompletionRate * 10) / 10,
@@ -1711,18 +1925,21 @@ export class ReportsService {
       const user = await User.findById(staffMember._id);
       if (!user) continue;
 
-      // Get courses managed (instructor or content manager)
-      const managedCourses = await Course.find({
-        departmentId: { $in: departmentIds },
-        $or: [
-          { 'metadata.instructorId': staffMember._id },
-          { 'metadata.instructors': staffMember._id.toString() }
-        ]
-      });
+      const instructorCourseIds = courses
+        .filter((context) =>
+          context.course.instructorIds.some((instructorId) => instructorId.toString() === staffMember._id.toString())
+        )
+        .map((context) => context.course._id.toString());
 
       const managedClasses = await Class.find({
-        courseId: { $in: managedCourses.map(c => c._id) }
+        courseId: { $in: courses.map((context) => context.course._id) },
+        'metadata.instructorId': staffMember._id
       });
+
+      const managedCourseIds = new Set<string>([
+        ...instructorCourseIds,
+        ...managedClasses.map((managedClass) => managedClass.courseId.toString())
+      ]);
 
       const staffEnrollments = await ClassEnrollment.find({
         classId: { $in: managedClasses.map(c => c._id) },
@@ -1733,7 +1950,7 @@ export class ReportsService {
         staffId: staffMember._id.toString(),
         staffName: `${staffMember.person.firstName} ${staffMember.person.lastName}`,
         role: (staffMember as any).role || 'Instructor' || 'Instructor',
-        coursesManaged: managedCourses.length,
+        coursesManaged: managedCourseIds.size,
         activeEnrollments: staffEnrollments.length,
         lastActivityAt: user.updatedAt
       });
@@ -1951,7 +2168,7 @@ export class ReportsService {
       const filteredPrograms = [];
       for (const program of transcript.programs) {
         // Get program's courses
-        const courses = await Course.find({
+        const courses = await CanonicalCourse.find({
           '_id': { $in: program.courses.map((c: any) => c.courseId) }
         });
 

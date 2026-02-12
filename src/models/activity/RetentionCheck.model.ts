@@ -36,6 +36,17 @@ export interface IRetentionCheckResult {
   timeSpent: number;
 }
 
+/**
+ * Provenance for selected retention-check cards.
+ * Preserves canonical learning-unit linkage for UI and analytics.
+ */
+export interface IRetentionCheckCardSource {
+  questionId: mongoose.Types.ObjectId;
+  learningUnitId: mongoose.Types.ObjectId;
+  learningUnitQuestionId: mongoose.Types.ObjectId;
+  sourceModuleId: mongoose.Types.ObjectId;
+}
+
 export interface IRetentionCheck extends Document {
   /** Reference to the learner (User document) */
   learnerId: mongoose.Types.ObjectId;
@@ -68,6 +79,8 @@ export interface IRetentionCheck extends Document {
 
   /** Question IDs selected for this check */
   questionIds: mongoose.Types.ObjectId[];
+  /** Source linkage for each selected question */
+  cardSources?: IRetentionCheckCardSource[];
 
   // ============================================
   // Status
@@ -145,6 +158,32 @@ const RetentionCheckResultSchema = new Schema<IRetentionCheckResult>(
   { _id: false }
 );
 
+const RetentionCheckCardSourceSchema = new Schema<IRetentionCheckCardSource>(
+  {
+    questionId: {
+      type: Schema.Types.ObjectId,
+      required: [true, 'questionId is required'],
+      ref: 'Question'
+    },
+    learningUnitId: {
+      type: Schema.Types.ObjectId,
+      required: [true, 'learningUnitId is required'],
+      ref: 'LearningUnit'
+    },
+    learningUnitQuestionId: {
+      type: Schema.Types.ObjectId,
+      required: [true, 'learningUnitQuestionId is required'],
+      ref: 'LearningUnitQuestion'
+    },
+    sourceModuleId: {
+      type: Schema.Types.ObjectId,
+      required: [true, 'sourceModuleId is required'],
+      ref: 'Module'
+    }
+  },
+  { _id: false }
+);
+
 const RetentionCheckSchema = new Schema<IRetentionCheck>(
   {
     learnerId: {
@@ -156,7 +195,7 @@ const RetentionCheckSchema = new Schema<IRetentionCheck>(
     courseId: {
       type: Schema.Types.ObjectId,
       required: [true, 'courseId is required'],
-      ref: 'Course',
+      ref: 'CanonicalCourse',
       index: true
     },
     sourceModuleId: {
@@ -201,6 +240,10 @@ const RetentionCheckSchema = new Schema<IRetentionCheck>(
         },
         message: 'questionIds must contain at least one question'
       }
+    },
+    cardSources: {
+      type: [RetentionCheckCardSourceSchema],
+      default: undefined
     },
 
     // Status

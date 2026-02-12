@@ -4,11 +4,12 @@ import ClassEnrollment from '@/models/enrollment/ClassEnrollment.model';
 import ScormAttempt from '@/models/activity/ScormAttempt.model';
 import ExamResult from '@/models/activity/ExamResult.model';
 import Program from '@/models/academic/Program.model';
-import Course from '@/models/academic/Course.model';
 import CanonicalCourse from '@/models/academic/CanonicalCourse.model';
 import CourseVersion from '@/models/academic/CourseVersion.model';
+import CourseVersionModule from '@/models/academic/CourseVersionModule.model';
+import Module from '@/models/academic/Module.model';
 import Class from '@/models/academic/Class.model';
-import CourseContent from '@/models/content/CourseContent.model';
+import LearningUnit from '@/models/content/LearningUnit.model';
 import { Learner } from '@/models/auth/Learner.model';
 import { User } from '@/models/auth/User.model';
 import { ApiError } from '@/utils/ApiError';
@@ -25,48 +26,178 @@ async function resolveCourse(courseId: string): Promise<{
   code: string;
   credits: number;
   departmentId: mongoose.Types.ObjectId;
+  programId: mongoose.Types.ObjectId | null;
   isActive: boolean;
+  courseVersionId: mongoose.Types.ObjectId;
 } | null> {
-  // Try legacy Course model first
-  const legacyCourse = await Course.findById(courseId);
-  if (legacyCourse) {
-    return {
-      _id: legacyCourse._id as mongoose.Types.ObjectId,
-      name: legacyCourse.name,
-      code: legacyCourse.code,
-      credits: legacyCourse.credits,
-      departmentId: legacyCourse.departmentId,
-      isActive: legacyCourse.isActive
-    };
-  }
-
-  // Try CanonicalCourse + published CourseVersion
   const canonical = await CanonicalCourse.findById(courseId);
   if (canonical) {
     let name = canonical.code; // Default to code if no version found
     let credits = 0;
 
     // Get name from published version, or latest draft
-    const versionId = canonical.currentPublishedVersionId || canonical.latestDraftVersionId;
-    if (versionId) {
-      const version = await CourseVersion.findById(versionId);
-      if (version) {
-        name = version.title || canonical.code;
-        credits = version.credits || 0;
-      }
-    }
+    const selectedVersionId = canonical.currentPublishedVersionId || canonical.latestDraftVersionId;
+    const version = selectedVersionId
+      ? await CourseVersion.findById(selectedVersionId)
+      : await CourseVersion.findOne({ canonicalCourseId: canonical._id, status: 'published' }).sort({ version: -1 });
 
-    return {
-      _id: canonical._id as mongoose.Types.ObjectId,
-      name,
-      code: canonical.code,
-      credits,
-      departmentId: canonical.departmentId,
-      isActive: true
-    };
+    if (version) {
+      name = version.title || canonical.code;
+      credits = version.credits || 0;
+
+      return {
+        _id: canonical._id as mongoose.Types.ObjectId,
+        name,
+        code: canonical.code,
+        credits,
+        departmentId: canonical.departmentId,
+        programId: canonical.programId,
+        isActive: true,
+        courseVersionId: version._id as mongoose.Types.ObjectId
+      };
+    }
   }
 
   return null;
+}
+
+interface CourseModuleProgressContext {
+  moduleId: string;
+  moduleTitle: string;
+  moduleType: string;
+  order: number;
+  learningUnitIds: string[];
+  contentIds: string[];
+  passingScore: number | null;
+  isRequired: boolean;
+}
+
+interface CourseLearningContext {
+  course: {
+    _id: mongoose.Types.ObjectId;
+    name: string;
+    code: string;
+    credits: number;
+    departmentId: mongoose.Types.ObjectId;
+    programId: mongoose.Types.ObjectId | null;
+    courseVersionId: mongoose.Types.ObjectId;
+  };
+  modules: CourseModuleProgressContext[];
+  contentIds: string[];
+}
+
+async function buildCourseLearningContext(courseId: string): Promise<CourseLearningContext | null> {
+  const course = await resolveCourse(courseId);
+  if (!course) {
+    return null;
+  }
+
+  const versionModules = (await CourseVersionModule.find({
+    courseVersionId: course.courseVersionId
+  })
+    .select('moduleId order isRequired')
+    .sort({ order: 1 })
+    .lean()) as Array<{
+    moduleId: mongoose.Types.ObjectId;
+    order: number;
+    isRequired: boolean;
+  }>;
+
+  const moduleIds = versionModules.map((item) => item.moduleId);
+  const modules = moduleIds.length > 0
+    ? ((await Module.find({ _id: { $in: moduleIds } })
+        .select('_id title')
+        .lean()) as Array<{ _id: mongoose.Types.ObjectId; title: string }>)
+    : [];
+  const moduleTitleMap = new Map(modules.map((module) => [module._id.toString(), module.title]));
+
+  const learningUnits = moduleIds.length > 0
+    ? ((await LearningUnit.find({
+        moduleId: { $in: moduleIds },
+        isActive: true
+      })
+        .select('_id moduleId contentId sequence title type settings')
+        .sort({ sequence: 1 })
+        .lean()) as Array<{
+        _id: mongoose.Types.ObjectId;
+        moduleId: mongoose.Types.ObjectId;
+        contentId?: mongoose.Types.ObjectId;
+        sequence: number;
+        title: string;
+        type: string;
+        settings?: { passingScore?: number };
+      }>)
+    : [];
+
+  const unitMap = new Map<string, typeof learningUnits>();
+  for (const unit of learningUnits) {
+    const key = unit.moduleId.toString();
+    if (!unitMap.has(key)) {
+      unitMap.set(key, []);
+    }
+    unitMap.get(key)!.push(unit);
+  }
+
+  const seenContentIds = new Set<string>();
+  const moduleContexts: CourseModuleProgressContext[] = versionModules.map((versionModule) => {
+    const moduleKey = versionModule.moduleId.toString();
+    const moduleUnits = unitMap.get(moduleKey) || [];
+
+    const contentIds = moduleUnits
+      .map((unit) => unit.contentId?.toString() || '')
+      .filter(Boolean)
+      .filter((contentId, index, all) => all.indexOf(contentId) === index);
+
+    contentIds.forEach((contentId) => seenContentIds.add(contentId));
+
+    const fallbackTitle = moduleUnits[0]?.title || `Module ${versionModule.order}`;
+
+    return {
+      moduleId: moduleKey,
+      moduleTitle: moduleTitleMap.get(moduleKey) || fallbackTitle,
+      moduleType: moduleUnits[0]?.type || 'custom',
+      order: versionModule.order,
+      learningUnitIds: moduleUnits.map((unit) => unit._id.toString()),
+      contentIds,
+      passingScore: moduleUnits.find((unit) => unit.settings?.passingScore !== undefined)?.settings?.passingScore || null,
+      isRequired: versionModule.isRequired
+    };
+  });
+
+  return {
+    course: {
+      _id: course._id,
+      name: course.name,
+      code: course.code,
+      credits: course.credits,
+      departmentId: course.departmentId,
+      programId: course.programId,
+      courseVersionId: course.courseVersionId
+    },
+    modules: moduleContexts,
+    contentIds: Array.from(seenContentIds)
+  };
+}
+
+function filterAttemptsByContentIds<T extends { contentId?: mongoose.Types.ObjectId | string; examId?: mongoose.Types.ObjectId | string }>(
+  items: T[],
+  contentIds: string[]
+): T[] {
+  const allowed = new Set(contentIds);
+  return items.filter((item) => {
+    const id = (item.contentId || item.examId)?.toString();
+    return !!id && allowed.has(id);
+  });
+}
+
+function countCompletedContentItems(attempts: Array<{ contentId: mongoose.Types.ObjectId; status: string }>): number {
+  const completed = new Set<string>();
+  for (const attempt of attempts) {
+    if (['completed', 'passed'].includes(attempt.status)) {
+      completed.add(attempt.contentId.toString());
+    }
+  }
+  return completed.size;
 }
 
 /**
@@ -152,11 +283,14 @@ export class ProgressService {
       throw ApiError.notFound('Learner not found');
     }
 
-    // Get all courses in program (stored in course metadata)
-    const programCourses = await Course.find({
-      'metadata.programId': programId,
-      isActive: true
-    });
+    // Get all canonical courses in program
+    const programCourses = await CanonicalCourse.find({ programId }).select('_id');
+    const programCourseContexts = await Promise.all(
+      programCourses.map((course) => buildCourseLearningContext(course._id.toString()))
+    );
+    const validProgramCourseContexts = programCourseContexts.filter(
+      (context): context is CourseLearningContext => context !== null
+    );
 
     // Get course enrollments for this learner (via classes)
     const courseProgress = [];
@@ -166,11 +300,11 @@ export class ProgressService {
     let totalTimeSpent = 0;
     let lastActivityAt: Date | null = null;
 
-    for (const course of programCourses) {
-      totalCreditsRequired += course.credits || 0;
+    for (const context of validProgramCourseContexts) {
+      totalCreditsRequired += context.course.credits || 0;
 
       // Find class enrollments for this course
-      const classes = await Class.find({ courseId: course._id });
+      const classes = await Class.find({ courseId: context.course._id });
       const classIds = classes.map(c => c._id);
 
       const classEnrollment = await ClassEnrollment.findOne({
@@ -180,26 +314,31 @@ export class ProgressService {
       });
 
       if (classEnrollment) {
-        // Get course content attempts
-        const courseContents = await CourseContent.find({ courseId: course._id });
-        const contentIds = courseContents.map(cc => cc.contentId);
+        const contentIds = context.contentIds.map((contentId) => new mongoose.Types.ObjectId(contentId));
 
         // Get all attempts for this course
-        const scormAttempts = await ScormAttempt.find({
+        const scormAttempts = contentIds.length > 0 ? await ScormAttempt.find({
           learnerId,
           contentId: { $in: contentIds }
-        });
+        }) : [];
 
-        const examResults = await ExamResult.find({
+        const examResults = contentIds.length > 0 ? await ExamResult.find({
           learnerId,
           examId: { $in: contentIds }
-        });
+        }) : [];
 
         // Calculate progress
-        const totalModules = courseContents.length;
-        const completedModules = scormAttempts.filter(a =>
-          ['completed', 'passed'].includes(a.status)
-        ).length;
+        const totalModules = context.modules.length;
+        const completedModules = context.modules.filter((moduleContext) => {
+          const attempts = filterAttemptsByContentIds(scormAttempts, moduleContext.contentIds);
+          if (moduleContext.contentIds.length === 0) {
+            return false;
+          }
+          const completedItems = countCompletedContentItems(
+            attempts as Array<{ contentId: mongoose.Types.ObjectId; status: string }>
+          );
+          return completedItems >= moduleContext.contentIds.length;
+        }).length;
 
         const completionPercent = totalModules > 0
           ? Math.round((completedModules / totalModules) * 100)
@@ -221,7 +360,7 @@ export class ProgressService {
         let status: 'not_started' | 'in_progress' | 'completed' = 'not_started';
         if (completionPercent === 100) {
           status = 'completed';
-          totalCreditsEarned += course.credits || 0;
+          totalCreditsEarned += context.course.credits || 0;
           coursesCompleted++;
         } else if (completionPercent > 0) {
           status = 'in_progress';
@@ -249,15 +388,15 @@ export class ProgressService {
         }
 
         courseProgress.push({
-          courseId: course._id.toString(),
-          courseTitle: course.name,
-          courseCode: course.code,
+          courseId: context.course._id.toString(),
+          courseTitle: context.course.name,
+          courseCode: context.course.code,
           levelId: null, // Would need ProgramLevel model
           levelNumber: 0,
           status,
           completionPercent,
           score: avgScore ? Math.round(avgScore) : null,
-          creditsEarned: status === 'completed' ? (course.credits || 0) : 0,
+          creditsEarned: status === 'completed' ? (context.course.credits || 0) : 0,
           timeSpent: courseTimeSpent,
           enrolledAt: classEnrollment.enrollmentDate,
           startedAt: scormAttempts.length > 0 ? scormAttempts[0].startedAt : null,
@@ -268,8 +407,8 @@ export class ProgressService {
     }
 
     // Calculate overall progress
-    const overallCompletionPercent = programCourses.length > 0
-      ? Math.round((coursesCompleted / programCourses.length) * 100)
+    const overallCompletionPercent = validProgramCourseContexts.length > 0
+      ? Math.round((coursesCompleted / validProgramCourseContexts.length) * 100)
       : 0;
 
     // Determine enrollment status
@@ -286,7 +425,7 @@ export class ProgressService {
       const daysSinceStart = Math.floor(
         (new Date().getTime() - enrollment.enrollmentDate.getTime()) / (1000 * 60 * 60 * 24)
       );
-      const coursesRemaining = programCourses.length - coursesCompleted;
+      const coursesRemaining = validProgramCourseContexts.length - coursesCompleted;
       if (daysSinceStart > 0 && coursesCompleted > 0) {
         const daysPerCourse = daysSinceStart / coursesCompleted;
         const estimatedDaysRemaining = daysPerCourse * coursesRemaining;
@@ -327,7 +466,7 @@ export class ProgressService {
         creditsEarned: totalCreditsEarned,
         creditsRequired: totalCreditsRequired,
         coursesCompleted,
-        coursesTotal: programCourses.length,
+        coursesTotal: validProgramCourseContexts.length,
         timeSpent: totalTimeSpent,
         lastActivityAt,
         estimatedCompletionDate
@@ -352,11 +491,11 @@ export class ProgressService {
       throw ApiError.badRequest('Invalid learner ID');
     }
 
-    // Get course (supports both legacy Course and CanonicalCourse models)
-    const course = await resolveCourse(courseId);
-    if (!course) {
+    const context = await buildCourseLearningContext(courseId);
+    if (!context) {
       throw ApiError.notFound('Course not found');
     }
+    const course = context.course;
 
     // Get learner info
     const learner = await Learner.findById(learnerId);
@@ -396,30 +535,23 @@ export class ProgressService {
       completionDate = enrollment.completionDate || null;
     }
 
-    // Get course content
-    const courseContents = await CourseContent.find({
-      courseId,
-      isActive: true
-    }).sort({ sequence: 1 });
-
-    const contentIds = courseContents.map(cc => cc.contentId);
+    const contentIds = context.contentIds.map((contentId) => new mongoose.Types.ObjectId(contentId));
 
     // Get all attempts
-    const scormAttempts = await ScormAttempt.find({
+    const scormAttempts = contentIds.length > 0 ? await ScormAttempt.find({
       learnerId,
       contentId: { $in: contentIds }
-    }).sort({ createdAt: 1 });
+    }).sort({ createdAt: 1 }) : [];
 
-    const examResults = await ExamResult.find({
+    const examResults = contentIds.length > 0 ? await ExamResult.find({
       learnerId,
       examId: { $in: contentIds }
-    }).sort({ createdAt: 1 });
+    }).sort({ createdAt: 1 }) : [];
 
     // Build module progress
-    const moduleProgress = courseContents.map(content => {
-      const attempts = scormAttempts.filter(a =>
-        content.contentId && a.contentId.toString() === content.contentId.toString()
-      );
+    const moduleProgress = context.modules.map((moduleContext) => {
+      const attempts = filterAttemptsByContentIds(scormAttempts, moduleContext.contentIds);
+      const moduleExamResults = filterAttemptsByContentIds(examResults, moduleContext.contentIds);
 
       const latestAttempt = attempts[attempts.length - 1];
 
@@ -431,7 +563,11 @@ export class ProgressService {
       let lastAttemptScore: number | null = null;
 
       if (attempts.length > 0) {
-        if (['completed', 'passed'].includes(latestAttempt.status)) {
+        const completedItems = countCompletedContentItems(
+          attempts as Array<{ contentId: mongoose.Types.ObjectId; status: string }>
+        );
+
+        if (moduleContext.contentIds.length > 0 && completedItems >= moduleContext.contentIds.length) {
           status = 'completed';
           completionPercent = 100;
         } else if (latestAttempt.progressMeasure !== undefined) {
@@ -452,11 +588,23 @@ export class ProgressService {
         }
       }
 
+      if (score === null && moduleExamResults.length > 0) {
+        const gradedResults = moduleExamResults.filter(
+          (result) => result.status === 'graded' && result.percentage !== undefined
+        );
+        if (gradedResults.length > 0) {
+          score = Math.round(
+            gradedResults.reduce((sum, result) => sum + (result.percentage || 0), 0) /
+              gradedResults.length
+          );
+        }
+      }
+
       return {
-        moduleId: content.contentId?.toString() || '',
-        moduleTitle: content.metadata?.title || `Module ${content.moduleNumber || content.sequence}`,
-        moduleType: content.metadata?.type || 'custom',
-        order: content.sequence,
+        moduleId: moduleContext.moduleId,
+        moduleTitle: moduleContext.moduleTitle,
+        moduleType: moduleContext.moduleType,
+        order: moduleContext.order,
         status,
         completionPercent,
         score,
@@ -467,10 +615,12 @@ export class ProgressService {
         startedAt: attempts.length > 0 ? attempts[0].startedAt : null,
         completedAt: status === 'completed' ? latestAttempt?.completedAt : null,
         lastAccessedAt: latestAttempt?.lastAccessedAt || null,
-        isRequired: content.isRequired,
-        passingScore: content.metadata?.passingScore || null,
-        passed: score !== null && content.metadata?.passingScore
-          ? score >= content.metadata.passingScore
+        isRequired: moduleContext.isRequired,
+        passingScore: moduleContext.passingScore,
+        learningUnitIds: moduleContext.learningUnitIds,
+        learningUnitCount: moduleContext.learningUnitIds.length,
+        passed: score !== null && moduleContext.passingScore
+          ? score >= moduleContext.passingScore
           : null
       };
     });
@@ -619,11 +769,11 @@ export class ProgressService {
       throw ApiError.notFound('Class not found');
     }
 
-    // Get course (supports both legacy Course and CanonicalCourse models)
-    const course = await resolveCourse(classDoc.courseId.toString());
-    if (!course) {
+    const context = await buildCourseLearningContext(classDoc.courseId.toString());
+    if (!context) {
       throw ApiError.notFound('Course not found');
     }
+    const course = context.course;
 
     // Get learner info
     const learner = await Learner.findById(learnerId);
@@ -642,31 +792,33 @@ export class ProgressService {
       throw ApiError.notFound('Learner not enrolled in this class');
     }
 
-    // Get course progress (reuse course progress logic)
-    const courseContents = await CourseContent.find({
-      courseId: course._id,
-      isActive: true
-    });
+    // Get course progress (reuse canonical learning-unit logic)
+    const contentIds = context.contentIds.map((contentId) => new mongoose.Types.ObjectId(contentId));
 
-    const contentIds = courseContents.map(cc => cc.contentId);
-
-    const scormAttempts = await ScormAttempt.find({
+    const scormAttempts = contentIds.length > 0 ? await ScormAttempt.find({
       learnerId,
       contentId: { $in: contentIds }
-    });
+    }) : [];
 
-    const examResults = await ExamResult.find({
+    const examResults = contentIds.length > 0 ? await ExamResult.find({
       learnerId,
       examId: { $in: contentIds }
-    });
+    }) : [];
 
     // Calculate course progress
-    const completedModules = scormAttempts.filter(a =>
-      ['completed', 'passed'].includes(a.status)
-    ).length;
+    const completedModules = context.modules.filter((moduleContext) => {
+      const moduleAttempts = filterAttemptsByContentIds(scormAttempts, moduleContext.contentIds);
+      if (moduleContext.contentIds.length === 0) {
+        return false;
+      }
+      const completedItems = countCompletedContentItems(
+        moduleAttempts as Array<{ contentId: mongoose.Types.ObjectId; status: string }>
+      );
+      return completedItems >= moduleContext.contentIds.length;
+    }).length;
 
-    const completionPercent = courseContents.length > 0
-      ? Math.round((completedModules / courseContents.length) * 100)
+    const completionPercent = context.modules.length > 0
+      ? Math.round((completedModules / context.modules.length) * 100)
       : 0;
 
     const gradedExams = examResults.filter(e => e.status === 'graded' && e.percentage !== undefined);
@@ -724,7 +876,7 @@ export class ProgressService {
       courseProgress: {
         completionPercent,
         modulesCompleted: completedModules,
-        modulesTotal: courseContents.length,
+        modulesTotal: context.modules.length,
         score: avgScore,
         timeSpent: totalTimeSpent,
         lastAccessedAt
@@ -844,11 +996,10 @@ export class ProgressService {
         const program = await Program.findById(enrollment.programId);
         if (!program) return null;
 
-        // Get courses for this program
-        const programCourses = await Course.find({
-          'metadata.programId': enrollment.programId,
-          isActive: true
-        });
+        // Get canonical courses for this program
+        const programCourses = await CanonicalCourse.find({
+          programId: enrollment.programId
+        }).select('_id');
 
         const programClasses = await Class.find({
           courseId: { $in: programCourses.map(c => c._id) }
@@ -903,26 +1054,31 @@ export class ProgressService {
         );
         if (!enrollment) return null;
 
-        // Get course contents
-        const courseContents = await CourseContent.find({
-          courseId: course._id
-        });
-        const contentIds = courseContents.map(cc => cc.contentId);
+        const context = await buildCourseLearningContext(course._id.toString());
+        if (!context) return null;
+        const contentIds = context.contentIds;
 
         const courseAttempts = allScormAttempts.filter(a =>
-          contentIds.some(id => id && id.toString() === a.contentId.toString())
+          contentIds.some((id) => id === a.contentId.toString())
         );
 
-        const completedModules = courseAttempts.filter(a =>
-          ['completed', 'passed'].includes(a.status)
-        ).length;
+        const completedModules = context.modules.filter((moduleContext) => {
+          const attempts = filterAttemptsByContentIds(courseAttempts, moduleContext.contentIds);
+          if (moduleContext.contentIds.length === 0) {
+            return false;
+          }
+          const completedItems = countCompletedContentItems(
+            attempts as Array<{ contentId: mongoose.Types.ObjectId; status: string }>
+          );
+          return completedItems >= moduleContext.contentIds.length;
+        }).length;
 
-        const completionPercent = courseContents.length > 0
-          ? Math.round((completedModules / courseContents.length) * 100)
+        const completionPercent = context.modules.length > 0
+          ? Math.round((completedModules / context.modules.length) * 100)
           : 0;
 
-        const courseExams = allExamResults.filter(e =>
-          contentIds.some(id => id && id.toString() === e.examId.toString())
+        const courseExams = allExamResults.filter((examResult) =>
+          contentIds.some((contentId) => contentId === examResult.examId.toString())
         );
 
         const gradedCourseExams = courseExams.filter(e =>
@@ -940,8 +1096,8 @@ export class ProgressService {
         }
 
         // Find program
-        const program = (course as any).metadata?.programId
-          ? await Program.findById((course as any).metadata.programId)
+        const program = course.programId
+          ? await Program.findById(course.programId)
           : null;
 
         const lastCourseActivity = courseAttempts.reduce((latest, attempt) => {
@@ -1039,11 +1195,8 @@ export class ProgressService {
     const query: any = {};
 
     if (filters.programId) {
-      // Find courses in program
-      const courses = await Course.find({
-        'metadata.programId': filters.programId
-      });
-      const courseIds = courses.map(c => c._id);
+      const courses = await CanonicalCourse.find({ programId: filters.programId }).select('_id');
+      const courseIds = courses.map((course) => course._id);
       const classes = await Class.find({ courseId: { $in: courseIds } });
       query.classId = { $in: classes.map(c => c._id) };
     }
@@ -1084,24 +1237,28 @@ export class ProgressService {
         const classDoc = await Class.findById(enrollment.classId);
         if (!classDoc) return null;
 
-        const course = await resolveCourse(classDoc.courseId.toString());
-        if (!course) return null;
+        const context = await buildCourseLearningContext(classDoc.courseId.toString());
+        if (!context) return null;
 
-        // Get progress
-        const courseContents = await CourseContent.find({ courseId: course._id });
-        const contentIds = courseContents.map(cc => cc.contentId);
-
-        const attempts = await ScormAttempt.find({
+        const contentIds = context.contentIds.map((contentId) => new mongoose.Types.ObjectId(contentId));
+        const attempts = contentIds.length > 0 ? await ScormAttempt.find({
           learnerId: enrollment.learnerId,
           contentId: { $in: contentIds }
-        });
+        }) : [];
 
-        const completedModules = attempts.filter(a =>
-          ['completed', 'passed'].includes(a.status)
-        ).length;
+        const completedModules = context.modules.filter((moduleContext) => {
+          const moduleAttempts = filterAttemptsByContentIds(attempts, moduleContext.contentIds);
+          if (moduleContext.contentIds.length === 0) {
+            return false;
+          }
+          const completedItems = countCompletedContentItems(
+            moduleAttempts as Array<{ contentId: mongoose.Types.ObjectId; status: string }>
+          );
+          return completedItems >= moduleContext.contentIds.length;
+        }).length;
 
-        const completionPercent = courseContents.length > 0
-          ? Math.round((completedModules / courseContents.length) * 100)
+        const completionPercent = context.modules.length > 0
+          ? Math.round((completedModules / context.modules.length) * 100)
           : 0;
 
         // Filter by progress if specified
@@ -1224,33 +1381,35 @@ export class ProgressService {
         const classDoc = await Class.findById(enrollment.classId);
         if (!classDoc) return null;
 
-        const course = await resolveCourse(classDoc.courseId.toString());
-        if (!course) return null;
-
-        // Get course contents
-        const courseContents = await CourseContent.find({
-          courseId: course._id
-        }).sort({ sequence: 1 });
-        const contentIds = courseContents.map(cc => cc.contentId);
+        const context = await buildCourseLearningContext(classDoc.courseId.toString());
+        if (!context) return null;
+        const contentIds = context.contentIds.map((contentId) => new mongoose.Types.ObjectId(contentId));
 
         // Get attempts
-        const attempts = await ScormAttempt.find({
+        const attempts = contentIds.length > 0 ? await ScormAttempt.find({
           learnerId: enrollment.learnerId,
           contentId: { $in: contentIds }
-        });
+        }) : [];
 
-        const examResults = await ExamResult.find({
+        const examResults = contentIds.length > 0 ? await ExamResult.find({
           learnerId: enrollment.learnerId,
           examId: { $in: contentIds }
-        });
+        }) : [];
 
         // Calculate progress
-        const completedModules = attempts.filter(a =>
-          ['completed', 'passed'].includes(a.status)
-        ).length;
+        const completedModules = context.modules.filter((moduleContext) => {
+          const moduleAttempts = filterAttemptsByContentIds(attempts, moduleContext.contentIds);
+          if (moduleContext.contentIds.length === 0) {
+            return false;
+          }
+          const completedItems = countCompletedContentItems(
+            moduleAttempts as Array<{ contentId: mongoose.Types.ObjectId; status: string }>
+          );
+          return completedItems >= moduleContext.contentIds.length;
+        }).length;
 
-        const completionPercent = courseContents.length > 0
-          ? Math.round((completedModules / courseContents.length) * 100)
+        const completionPercent = context.modules.length > 0
+          ? Math.round((completedModules / context.modules.length) * 100)
           : 0;
 
         const timeSpent = attempts.reduce((sum, a) => sum + (a.totalTime || 0), 0);
@@ -1264,17 +1423,19 @@ export class ProgressService {
 
         // Build module progress if requested
         const moduleProgress = filters.includeModules !== false
-          ? courseContents.map(content => {
-              const contentAttempts = attempts.filter(a =>
-                content.contentId && a.contentId.toString() === content.contentId.toString()
-              );
+          ? context.modules.map((moduleContext) => {
+              const contentAttempts = filterAttemptsByContentIds(attempts, moduleContext.contentIds);
               const latest = contentAttempts[contentAttempts.length - 1];
 
               let moduleStatus: 'not_started' | 'in_progress' | 'completed' = 'not_started';
               let moduleCompletion = 0;
 
               if (latest) {
-                if (['completed', 'passed'].includes(latest.status)) {
+                const completedItems = countCompletedContentItems(
+                  contentAttempts as Array<{ contentId: mongoose.Types.ObjectId; status: string }>
+                );
+
+                if (moduleContext.contentIds.length > 0 && completedItems >= moduleContext.contentIds.length) {
                   moduleStatus = 'completed';
                   moduleCompletion = 100;
                 } else if (latest.progressMeasure !== undefined) {
@@ -1284,10 +1445,10 @@ export class ProgressService {
               }
 
               return {
-                moduleId: content.contentId?.toString() || '',
-                moduleTitle: content.metadata?.title || `Module ${content.sequence}`,
-                moduleType: content.metadata?.type || 'custom',
-                order: content.sequence,
+                moduleId: moduleContext.moduleId,
+                moduleTitle: moduleContext.moduleTitle,
+                moduleType: moduleContext.moduleType,
+                order: moduleContext.order,
                 status: moduleStatus,
                 completionPercent: moduleCompletion,
                 score: latest?.scoreScaled ? Math.round(latest.scoreScaled * 100) : null,
@@ -1295,7 +1456,9 @@ export class ProgressService {
                 attempts: contentAttempts.length,
                 startedAt: contentAttempts.length > 0 ? contentAttempts[0].startedAt : null,
                 completedAt: moduleStatus === 'completed' ? latest?.completedAt : null,
-                lastAccessedAt: latest?.lastAccessedAt || null
+                lastAccessedAt: latest?.lastAccessedAt || null,
+                learningUnitIds: moduleContext.learningUnitIds,
+                learningUnitCount: moduleContext.learningUnitIds.length
               };
             })
           : [];
@@ -1444,7 +1607,7 @@ export class ProgressService {
       }
 
       // Get courses in these departments
-      const courses = await Course.find({
+      const courses = await CanonicalCourse.find({
         departmentId: { $in: expandedDeptIds }
       }).select('_id');
 

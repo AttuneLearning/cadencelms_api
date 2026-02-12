@@ -1,11 +1,11 @@
 # API-ISS-046: Reports Service CanonicalCourse + LearningUnit Migration
 
-## Status: PENDING
+## Status: COMPLETED
 ## Priority: High
 ## Created: 2026-02-11
-## Updated: 2026-02-11
+## Updated: 2026-02-12
 ## Requested By: UI Team (inbox message: 2026-02-11_reports-service-canonical-learningunit-migration-request.md)
-## Assigned To: Unassigned
+## Assigned To: Codex
 ## Related: UI-ISS-147, API-ISS-045
 
 ---
@@ -59,8 +59,25 @@ Current evidence:
 
 ## Acceptance Criteria
 
-- [ ] No runtime `CourseContent.find` usage remains in reports service.
-- [ ] Reports return canonical course IDs consistently.
-- [ ] Transcript/course/module report fields are documented and UI-safe.
-- [ ] Tests pass.
+- [x] No runtime `CourseContent.find` usage remains in reports service.
+- [x] Reports return canonical course IDs consistently.
+- [x] Transcript/course/module report fields are documented and UI-safe.
+- [x] Tests pass.
 
+## Completion Notes (2026-02-12)
+
+- Replaced legacy report internals with canonical/versioned context derivation in:
+  - `src/services/reporting/reports.service.ts`
+- Added canonical course + learning-unit context helpers to support:
+  - completion report
+  - performance report
+  - transcript generation
+  - course report
+  - program report
+  - department report
+  - transcript department filtering
+- Standardized module identity fields to canonical module + LU-based rows for course analytics.
+- Updated authorization integration fixture setup to include canonical course records:
+  - `tests/integration/authorization/service-layer-authorization.test.ts`
+- Added focused migration guard coverage:
+  - `tests/unit/services/progress-reports-canonical-migration.test.ts`

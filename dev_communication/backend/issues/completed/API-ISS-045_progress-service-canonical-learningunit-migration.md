@@ -1,11 +1,11 @@
 # API-ISS-045: Progress Service CanonicalCourse + LearningUnit Migration
 
-## Status: PENDING
+## Status: COMPLETED
 ## Priority: High
 ## Created: 2026-02-11
-## Updated: 2026-02-11
+## Updated: 2026-02-12
 ## Requested By: UI Team (inbox message: 2026-02-11_progress-service-canonical-learningunit-migration-request.md)
-## Assigned To: Unassigned
+## Assigned To: Codex
 ## Related: UI-ISS-146
 
 ---
@@ -59,8 +59,19 @@ Current evidence:
 
 ## Acceptance Criteria
 
-- [ ] No runtime `CourseContent.find` usage remains in progress service.
-- [ ] Progress endpoints operate correctly with canonical course identities.
-- [ ] Module/unit progress response fields are documented and stable.
-- [ ] Tests pass.
+- [x] No runtime `CourseContent.find` usage remains in progress service.
+- [x] Progress endpoints operate correctly with canonical course identities.
+- [x] Module/unit progress response fields are documented and stable.
+- [x] Tests pass.
 
+## Completion Notes (2026-02-12)
+
+- Removed remaining legacy `Course`/`CourseContent` report lookups in:
+  - `src/services/analytics/progress.service.ts`
+- Progress summary and detailed report paths now derive module/unit identity through canonical course version linkage (`CanonicalCourse` -> `CourseVersion` -> `CourseVersionModule` -> `LearningUnit`).
+- Department scoping now resolves course ownership from `CanonicalCourse`.
+- Module detail rows now include stable LU identity fields:
+  - `learningUnitIds`
+  - `learningUnitCount`
+- Added migration guard tests:
+  - `tests/unit/services/progress-reports-canonical-migration.test.ts`

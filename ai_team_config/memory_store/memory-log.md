@@ -19,6 +19,7 @@ Chronological record of memories added to the vault.
 | 2026-02-04 | pattern | Team Configuration | #pattern #workflow | [[patterns/team-configuration]] |
 | 2026-02-05 | session | Test Suite Completion | #testing #api #issues | [[sessions/2026-02-05-test-suite-completion]] |
 | 2026-02-12 | pattern | Canonical Template Usage Resolution | #pattern #api #canonical-course #templates | [[patterns/canonical-template-usage-resolution]] |
+| 2026-02-12 | pattern | Canonical Course Learning Context | #pattern #api #canonical-course #learning-unit #progress #reports | [[patterns/canonical-course-learning-context]] |
 
 ## Notes
 

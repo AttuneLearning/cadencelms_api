@@ -93,7 +93,7 @@ const RemediationSchema = new Schema<IRemediation>(
     courseId: {
       type: Schema.Types.ObjectId,
       required: [true, 'courseId is required'],
-      ref: 'Course',
+      ref: 'CanonicalCourse',
       index: true
     },
     moduleId: {

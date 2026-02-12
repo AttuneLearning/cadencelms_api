@@ -150,7 +150,7 @@ const CourseFlashcardConfigSchema = new Schema<ICourseFlashcardConfig>(
     courseId: {
       type: Schema.Types.ObjectId,
       required: [true, 'courseId is required'],
-      ref: 'Course',
+      ref: 'CanonicalCourse',
       unique: true,
       index: true
     },

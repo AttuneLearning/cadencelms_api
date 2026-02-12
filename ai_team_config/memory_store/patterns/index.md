@@ -23,6 +23,7 @@ Recurring solutions, conventions, and best practices in the CadenceLMS API.
 ## Service Patterns
 
 - [[canonical-template-usage-resolution]] - Resolve template usage via Program -> CanonicalCourse -> CourseVersion
+- [[canonical-course-learning-context]] - Derive progress/report module context via CanonicalCourse -> CourseVersion -> CourseVersionModule -> LearningUnit
 
 ---
 

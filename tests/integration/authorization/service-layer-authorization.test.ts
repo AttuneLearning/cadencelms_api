@@ -20,6 +20,7 @@ import { CoursesService } from '@/services/academic/courses.service';
 import { ProgressService } from '@/services/analytics/progress.service';
 import { ReportsService } from '@/services/reporting/reports.service';
 import Course from '@/models/academic/Course.model';
+import CanonicalCourse from '@/models/academic/CanonicalCourse.model';
 import Department from '@/models/organization/Department.model';
 import { User } from '@/models/auth/User.model';
 import { Staff } from '@/models/auth/Staff.model';
@@ -127,6 +128,32 @@ describeIfMongo('Service Layer Authorization Integration Tests', () => {
         archivedAt: new Date()
       }
     });
+
+    // Mirror legacy test fixtures in canonical model for scoped progress/report services
+    const canonicalCreatorId = new mongoose.Types.ObjectId();
+    await CanonicalCourse.create([
+      {
+        _id: draftCourse._id,
+        code: draftCourse.code,
+        departmentId: draftCourse.departmentId,
+        programId: null,
+        createdBy: canonicalCreatorId
+      },
+      {
+        _id: publishedCourse._id,
+        code: publishedCourse.code,
+        departmentId: publishedCourse.departmentId,
+        programId: null,
+        createdBy: canonicalCreatorId
+      },
+      {
+        _id: archivedCourse._id,
+        code: archivedCourse.code,
+        departmentId: archivedCourse.departmentId,
+        programId: null,
+        createdBy: canonicalCreatorId
+      }
+    ]);
 
     // Create test class
     const academicYearId = new mongoose.Types.ObjectId();

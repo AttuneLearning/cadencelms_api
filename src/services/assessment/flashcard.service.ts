@@ -8,6 +8,10 @@ import CourseFlashcardConfig, {
 import Question, { IQuestion, IMediaAttachmentRef } from '@/models/assessment/Question.model';
 import { ApiError } from '@/utils/ApiError';
 import {
+  QuestionProvenance,
+  resolveFlashcardQuestionProvenance
+} from '@/services/assessment/lib/canonical-flashcard-selection';
+import {
   calculateNextReview,
   booleanToQuality,
   calculatePriority,
@@ -39,6 +43,9 @@ import {
 export interface RenderedFlashcard {
   questionId: string;
   promptIndex: number;
+  learningUnitId?: string;
+  learningUnitQuestionId?: string;
+  sourceModuleId?: string;
   front: {
     text: string;
     media?: IMediaAttachmentRef;
@@ -175,26 +182,20 @@ export class FlashcardService {
       config.maxSessionSize || DEFAULT_CONFIG.maxSessionSize!
     );
 
-    // Build query for flashcard-type questions
-    const questionQuery: Record<string, unknown> = {
-      questionTypes: 'flashcard',
-      isActive: true
-    };
+    const questionProvenance = await resolveFlashcardQuestionProvenance(courseId, options.moduleId);
+    const questionIds = questionProvenance.map((source) => new mongoose.Types.ObjectId(source.questionId));
+    const provenanceByQuestionId = new Map<string, QuestionProvenance>(
+      questionProvenance.map((source) => [source.questionId, source])
+    );
 
-    // If moduleId provided, filter by module
-    // Note: Questions are linked to modules via Exercise or LearningUnit
-    // For now, we use metadata.moduleId if available
-    if (options.moduleId) {
-      if (!mongoose.Types.ObjectId.isValid(options.moduleId)) {
-        throw ApiError.badRequest('Invalid moduleId');
-      }
-      questionQuery['metadata.moduleId'] = options.moduleId;
-    }
-
-    // Get all flashcard questions for this course
-    // Note: Questions don't have direct courseId, so we need to filter differently
-    // For now, we'll use departmentId-based filtering via the course
-    const questions = await Question.find(questionQuery);
+    // Get all flashcard questions from canonical course linkage.
+    const questions = questionIds.length > 0
+      ? await Question.find({
+          _id: { $in: questionIds },
+          questionTypes: 'flashcard',
+          isActive: true
+        })
+      : [];
 
     if (questions.length === 0) {
       return {
@@ -211,13 +212,13 @@ export class FlashcardService {
       };
     }
 
-    const questionIds = questions.map(q => q._id);
+    const resolvedQuestionIds = questions.map(q => q._id);
 
     // Get existing progress for these questions
     const progressRecords = await FlashcardProgress.find({
       learnerId: new mongoose.Types.ObjectId(learnerId),
       courseId: new mongoose.Types.ObjectId(courseId),
-      questionId: { $in: questionIds }
+      questionId: { $in: resolvedQuestionIds }
     });
 
     // Create a map for quick progress lookup
@@ -315,9 +316,10 @@ export class FlashcardService {
     };
 
     // Render cards
-    const cards = selectedCards.map(({ question, promptIndex, progress }) =>
-      this.renderFlashcard(question, promptIndex, progress)
-    );
+    const cards = selectedCards.map(({ question, promptIndex, progress }) => {
+      const provenance = provenanceByQuestionId.get(question._id.toString()) || null;
+      return this.renderFlashcard(question, promptIndex, progress, provenance);
+    });
 
     return {
       courseId,
@@ -654,7 +656,8 @@ export class FlashcardService {
   private static renderFlashcard(
     question: IQuestion,
     promptIndex: number,
-    progress: IFlashcardProgress | null
+    progress: IFlashcardProgress | null,
+    provenance: QuestionProvenance | null
   ): RenderedFlashcard {
     let front: { text: string; media?: IMediaAttachmentRef };
     let back: { text: string; media?: IMediaAttachmentRef };
@@ -708,6 +711,9 @@ export class FlashcardService {
     const rendered: RenderedFlashcard = {
       questionId: question._id.toString(),
       promptIndex,
+      learningUnitId: provenance?.learningUnitId,
+      learningUnitQuestionId: provenance?.learningUnitQuestionId,
+      sourceModuleId: provenance?.sourceModuleId,
       front,
       back,
       explanation: question.explanation,

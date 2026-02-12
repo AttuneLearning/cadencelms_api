@@ -1,11 +1,11 @@
 # API-ISS-044: Flashcard/Retention LearningUnitQuestion Migration
 
-## Status: PENDING
+## Status: COMPLETED
 ## Priority: High
 ## Created: 2026-02-11
-## Updated: 2026-02-11
+## Updated: 2026-02-12
 ## Requested By: UI Team (inbox message: 2026-02-11_flashcard-retention-learning-unit-link-migration-request.md)
-## Assigned To: Unassigned
+## Assigned To: Codex
 ## Related: API-ISS-013, UI-ISS-145, UI-ISS-142
 
 ---
@@ -59,8 +59,22 @@ Current evidence:
 
 ## Acceptance Criteria
 
-- [ ] No selection logic depends on `Question.metadata.moduleId`.
-- [ ] Flashcard/retention/remediation payloads include stable source provenance for UI.
-- [ ] Course ID semantics are canonical and documented.
-- [ ] Tests pass.
+- [x] No selection logic depends on `Question.metadata.moduleId`.
+- [x] Flashcard/retention/remediation payloads include stable source provenance for UI.
+- [x] Course ID semantics are canonical and documented.
+- [x] Tests pass.
 
+## Completion Notes (2026-02-12)
+
+- Added canonical LUQ question selection helper: `src/services/assessment/lib/canonical-flashcard-selection.ts`.
+- Migrated flashcard + retention selection and payload provenance fields in:
+  - `src/services/assessment/flashcard.service.ts`
+  - `src/services/assessment/retention-check.service.ts`
+- Added persisted provenance source map for retention checks:
+  - `src/models/activity/RetentionCheck.model.ts`
+- Aligned assessment-related course refs to canonical course identity:
+  - `src/models/activity/FlashcardProgress.model.ts`
+  - `src/models/activity/Remediation.model.ts`
+  - `src/models/content/CourseFlashcardConfig.model.ts`
+- Added regression coverage:
+  - `tests/unit/services/flashcard-retention-canonical-selection.test.ts`
