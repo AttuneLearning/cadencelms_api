@@ -1,3 +1,3 @@
-[submodule ".claude-workflow"]
-	path = .claude-workflow
-	url = git@github.com:attunelearning/claude-dev-workflow.git
+[submodule "agent-workflow"]
+	path = agent-workflow
+	url = git@github.com:AttuneLearning/agent-workflow.git
