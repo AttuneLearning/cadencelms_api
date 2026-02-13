@@ -1,6 +1,6 @@
 # API-ISS-053: Assessment Attempt Batch Grading + Course Analytics Context
 
-## Status: IN PROGRESS
+## Status: COMPLETE
 ## Priority: High
 ## Created: 2026-02-13
 ## Updated: 2026-02-13
@@ -85,31 +85,36 @@ Implement ideal canonical grading + analytics structure directly (no legacy endp
   - `tests/integration/assessment-attempts/assessment-attempts.test.ts` (manual flow + canonical batch route)
 - 2026-02-13: Full assessment-attempt integration regression run with 30s timeout:
   - `tests/integration/assessment-attempts/assessment-attempts.test.ts` passed (36/36).
-- 2026-02-13: Remaining product clarification pending:
-  - projected grading policy details for `short_answer`/`long_answer` (including threshold/projection source)
+- 2026-02-13: Canonical grading identity key confirmed and locked:
+  - `questionGrades[].questionIndex` is required request key
+  - `questionGrades[].questionId` remains optional integrity check
+  - aligns with UI migration adoption (`UI-ISS-156`) and current contract/runtime
+- 2026-02-13: Projected grading policy was split into dedicated follow-up and completed under `API-ISS-054`.
 
 ---
 
 ## Acceptance Criteria
 
-- [ ] Canonical grading workflow documented and implemented for staff migration use.
-- [ ] Canonical aggregate rows support course-level analytics grouping without N+1 calls.
-- [ ] Contracts/tests updated and passing.
+- [x] Canonical grading workflow documented and implemented for staff migration use.
+- [x] Canonical aggregate rows support course-level analytics grouping without N+1 calls.
+- [x] Contracts/tests updated and passing.
 
 ---
 
 ## Completion
 
-**Completed Date:**
+**Completed Date:** 2026-02-13
 **Commits:**
 | Hash | Description |
 |------|-------------|
-| | |
+| a0bf7e1 | Canonical batch grading endpoint + aggregate course context enrichment |
+| 3b21635 | Learner feedback gating until grading completion |
+| 214f305 | Comms/decision closure updates for grading and analytics clarifications |
 
 **Verification:**
-- [ ] All acceptance criteria met
-- [ ] Tests passing
-- [ ] Response message sent (if cross-team)
+- [x] All acceptance criteria met
+- [x] Tests passing
+- [x] Response message sent (if cross-team)
 
 ---
 
