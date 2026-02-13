@@ -848,6 +848,160 @@ describeIfMongo('AssessmentAttemptsService - Unit Tests', () => {
       expect(result.showCorrectAnswers).toBe(false);
     });
 
+    it('should hide feedback until grading is complete', async () => {
+      const assessment = await Assessment.create({
+        departmentId,
+        title: 'Manual Grade Assessment',
+        style: 'quiz',
+        questionSelection: {
+          questionBankIds: ['bank1'],
+          questionCount: 1,
+          selectionMode: 'sequential'
+        },
+        timing: {
+          showTimer: true,
+          autoSubmitOnExpiry: false
+        },
+        attempts: {
+          maxAttempts: null,
+          retakePolicy: 'anytime'
+        },
+        scoring: {
+          passingScore: 70,
+          showScore: true,
+          showCorrectAnswers: 'after_submit',
+          partialCredit: false
+        },
+        feedback: {
+          showFeedback: true,
+          feedbackTiming: 'after_grading',
+          showExplanations: true
+        },
+        isPublished: true,
+        createdBy: new mongoose.Types.ObjectId()
+      });
+
+      const attempt = await AssessmentAttempt.create({
+        assessmentId: assessment._id,
+        learnerId,
+        enrollmentId,
+        attemptNumber: 1,
+        status: 'submitted',
+        questions: [{
+          questionId: new mongoose.Types.ObjectId(),
+          questionSnapshot: {
+            questionTypes: ['long_answer'],
+            questionText: 'Explain the concept.'
+          },
+          response: 'Learner response',
+          pointsEarned: 8,
+          pointsPossible: 10,
+          feedback: 'Staff private feedback',
+          gradedAt: new Date(),
+          gradedBy: new mongoose.Types.ObjectId()
+        }],
+        timing: {
+          startedAt: new Date(),
+          lastActivityAt: new Date(),
+          submittedAt: new Date(),
+          timeSpentSeconds: 100
+        },
+        scoring: {
+          rawScore: 8,
+          percentageScore: 80,
+          passed: true,
+          gradingComplete: false,
+          requiresManualGrading: true,
+          overallFeedback: 'Overall note before completion'
+        }
+      });
+
+      const result = await AssessmentAttemptsService.getAttemptResults(
+        attempt._id.toString(),
+        learnerId.toString()
+      );
+
+      expect(result.questions[0].feedback).toBeUndefined();
+      expect(result.scoring.overallFeedback).toBeUndefined();
+    });
+
+    it('should show feedback once grading is complete', async () => {
+      const assessment = await Assessment.create({
+        departmentId,
+        title: 'Complete Grade Assessment',
+        style: 'quiz',
+        questionSelection: {
+          questionBankIds: ['bank1'],
+          questionCount: 1,
+          selectionMode: 'sequential'
+        },
+        timing: {
+          showTimer: true,
+          autoSubmitOnExpiry: false
+        },
+        attempts: {
+          maxAttempts: null,
+          retakePolicy: 'anytime'
+        },
+        scoring: {
+          passingScore: 70,
+          showScore: true,
+          showCorrectAnswers: 'after_submit',
+          partialCredit: false
+        },
+        feedback: {
+          showFeedback: true,
+          feedbackTiming: 'after_grading',
+          showExplanations: true
+        },
+        isPublished: true,
+        createdBy: new mongoose.Types.ObjectId()
+      });
+
+      const attempt = await AssessmentAttempt.create({
+        assessmentId: assessment._id,
+        learnerId,
+        enrollmentId,
+        attemptNumber: 1,
+        status: 'graded',
+        questions: [{
+          questionId: new mongoose.Types.ObjectId(),
+          questionSnapshot: {
+            questionTypes: ['long_answer'],
+            questionText: 'Explain the concept.'
+          },
+          response: 'Learner response',
+          pointsEarned: 8,
+          pointsPossible: 10,
+          feedback: 'Visible feedback',
+          gradedAt: new Date(),
+          gradedBy: new mongoose.Types.ObjectId()
+        }],
+        timing: {
+          startedAt: new Date(),
+          lastActivityAt: new Date(),
+          submittedAt: new Date(),
+          timeSpentSeconds: 100
+        },
+        scoring: {
+          rawScore: 8,
+          percentageScore: 80,
+          passed: true,
+          gradingComplete: true,
+          requiresManualGrading: false,
+          overallFeedback: 'Visible overall feedback'
+        }
+      });
+
+      const result = await AssessmentAttemptsService.getAttemptResults(
+        attempt._id.toString(),
+        learnerId.toString()
+      );
+
+      expect(result.questions[0].feedback).toBe('Visible feedback');
+      expect(result.scoring.overallFeedback).toBe('Visible overall feedback');
+    });
+
     it('should throw error if learner does not own the attempt', async () => {
       const otherLearnerId = new mongoose.Types.ObjectId();
 

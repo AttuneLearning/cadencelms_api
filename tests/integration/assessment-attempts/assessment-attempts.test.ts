@@ -911,6 +911,64 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
       expect(attemptAfterFailure?.questions[0].gradedAt).toBeUndefined();
       expect(attemptAfterFailure?.questions[0].pointsEarned).toBeUndefined();
     });
+
+    it('should hide learner feedback until grading is complete', async () => {
+      const startResponse = await request(app)
+        .post(`/api/v2/assessments/${assessment._id}/attempts/start`)
+        .set('Authorization', `Bearer ${learner.token}`)
+        .send({ enrollmentId: enrollment._id.toString() });
+
+      const attemptId = startResponse.body.data._id;
+
+      await request(app)
+        .post(`/api/v2/assessments/${assessment._id}/attempts/${attemptId}/submit`)
+        .set('Authorization', `Bearer ${learner.token}`)
+        .send({
+          responses: [
+            { questionId: essayQuestions[0]._id.toString(), response: 'Essay response 1' },
+            { questionId: essayQuestions[1]._id.toString(), response: 'Essay response 2' }
+          ]
+        });
+
+      await request(app)
+        .post(`/api/v2/assessment-attempts/${attemptId}/grade`)
+        .set('Authorization', `Bearer ${staff.token}`)
+        .send({
+          questionGrades: [
+            { questionIndex: 0, scoreEarned: 18, feedback: 'Partial feedback should stay hidden' }
+          ],
+          overallFeedback: 'Overall feedback should stay hidden',
+          notifyLearner: true
+        });
+
+      const learnerResultsDuringGrading = await request(app)
+        .get(`/api/v2/assessments/${assessment._id}/attempts/${attemptId}`)
+        .set('Authorization', `Bearer ${learner.token}`);
+
+      expect(learnerResultsDuringGrading.status).toBe(200);
+      expect(learnerResultsDuringGrading.body.data.status).toBe('submitted');
+      expect(learnerResultsDuringGrading.body.data.questions[0].feedback).toBeUndefined();
+      expect(learnerResultsDuringGrading.body.data.scoring.overallFeedback).toBeUndefined();
+
+      await request(app)
+        .post(`/api/v2/assessment-attempts/${attemptId}/grade`)
+        .set('Authorization', `Bearer ${staff.token}`)
+        .send({
+          questionGrades: [
+            { questionIndex: 1, scoreEarned: 20, feedback: 'Final feedback visible after completion' }
+          ]
+        });
+
+      const learnerResultsAfterCompletion = await request(app)
+        .get(`/api/v2/assessments/${assessment._id}/attempts/${attemptId}`)
+        .set('Authorization', `Bearer ${learner.token}`);
+
+      expect(learnerResultsAfterCompletion.status).toBe(200);
+      expect(learnerResultsAfterCompletion.body.data.status).toBe('graded');
+      expect(learnerResultsAfterCompletion.body.data.questions[0].feedback).toBe('Partial feedback should stay hidden');
+      expect(learnerResultsAfterCompletion.body.data.questions[1].feedback).toBe('Final feedback visible after completion');
+      expect(learnerResultsAfterCompletion.body.data.scoring.overallFeedback).toBe('Overall feedback should stay hidden');
+    });
   });
 
   // ============ TIME LIMITS ============

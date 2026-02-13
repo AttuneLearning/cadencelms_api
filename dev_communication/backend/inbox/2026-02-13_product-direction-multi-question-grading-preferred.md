@@ -83,7 +83,9 @@ Progress update:
 
 Still pending:
 - projected grading detail for `short_answer` / `long_answer`
-- learner visibility timing for `overallFeedback` during grading-in-progress
+
+Implemented from latest product clarification:
+- learner-visible feedback is withheld until grading is complete
 
 ---
 

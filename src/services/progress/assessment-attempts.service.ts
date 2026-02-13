@@ -432,9 +432,30 @@ export class AssessmentAttemptsService {
       learnerId
     );
 
+    const feedbackVisible = attempt.scoring?.gradingComplete === true;
+    const sanitizedQuestions = (attempt.questions || []).map((question: any) => {
+      if (feedbackVisible) {
+        return question;
+      }
+
+      return {
+        ...question,
+        feedback: undefined
+      };
+    });
+
+    const sanitizedScoring = feedbackVisible
+      ? attempt.scoring
+      : {
+        ...attempt.scoring,
+        overallFeedback: undefined
+      };
+
     // Build response
     return {
       ...attempt,
+      questions: sanitizedQuestions,
+      scoring: sanitizedScoring,
       showCorrectAnswers,
       feedbackSettings: assessment.feedback
     };

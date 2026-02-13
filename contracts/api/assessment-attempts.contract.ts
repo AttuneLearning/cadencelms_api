@@ -181,6 +181,11 @@ export const AssessmentAttemptsContracts = {
       ]
     },
 
+    notes: `
+      - Learner-facing feedback fields remain hidden until grading completes.
+      - While scoring.gradingComplete=false, question.feedback and scoring.overallFeedback are withheld.
+    `,
+
     permissions: ['take:assessments', 'read:assessments']
   },
 
@@ -760,6 +765,11 @@ export const AssessmentAttemptsContracts = {
         { status: 409, code: 'ATTEMPT_NOT_SUBMITTED', message: 'Attempt must be submitted before grading' }
       ]
     },
+
+    notes: `
+      - notifyLearner is completion-gated; notifications are deferred while grading is still in progress.
+      - Learner-visible feedback is released when scoring.gradingComplete becomes true.
+    `,
 
     permissions: ['grade:assessments']
   }

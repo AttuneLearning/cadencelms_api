@@ -76,6 +76,9 @@ Implement ideal canonical grading + analytics structure directly (no legacy endp
   - replace-on-write `overallFeedback`
   - deferred `notifyLearner` until grading completes
   - grading completion transitions to `graded` only when all question grades are finalized
+- 2026-02-13: Enforced learner feedback visibility policy:
+  - while `scoring.gradingComplete=false`, learner result payload suppresses `questions[].feedback` and `scoring.overallFeedback`
+  - feedback becomes visible when grading is complete
 - 2026-02-13: Added/updated tests for canonical batch grading:
   - `tests/unit/services/assessment-attempts.service.test.ts` (`gradeAttemptBatch`)
   - `tests/unit/controllers/assessment-attempts.aggregate.controller.test.ts`
@@ -83,8 +86,7 @@ Implement ideal canonical grading + analytics structure directly (no legacy endp
 - 2026-02-13: Full assessment-attempt integration regression run with 30s timeout:
   - `tests/integration/assessment-attempts/assessment-attempts.test.ts` passed (36/36).
 - 2026-02-13: Remaining product clarification pending:
-  - projected grading policy details for `short_answer`/`long_answer`
-  - learner visibility semantics for `overallFeedback` during in-progress grading
+  - projected grading policy details for `short_answer`/`long_answer` (including threshold/projection source)
 
 ---
 

@@ -48,6 +48,9 @@ Response includes:
 - Attempt remains `submitted` until all pending question grades are finalized.
 - Attempt transitions to `graded` only when grading is complete.
 - `notifyLearner=true` is deferred until attempt reaches complete grading state.
+- Learner result payload suppresses feedback while grading is in progress:
+  - `questions[].feedback` hidden until completion
+  - `scoring.overallFeedback` hidden until completion
 
 ## Aggregate Context
 
@@ -59,4 +62,3 @@ Response includes:
 
 - projected grading behavior details for `short_answer` / `long_answer`
 - learner-facing visibility timing of `overallFeedback` while grading is in progress
-
