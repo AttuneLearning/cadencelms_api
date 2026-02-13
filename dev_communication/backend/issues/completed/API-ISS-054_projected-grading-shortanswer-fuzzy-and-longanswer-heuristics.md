@@ -99,7 +99,7 @@ Implement contract-first projected fields and runtime persistence, then phase-sp
 **Commits:**
 | Hash | Description |
 |------|-------------|
-| pending | Projected grading phases 1+2 implementation, contracts, tests, and frontend decision handoff |
+| ad42694 | Projected grading phases 1+2 implementation, contracts, tests, and frontend decision handoff |
 
 **Verification:**
 - [x] All acceptance criteria met
