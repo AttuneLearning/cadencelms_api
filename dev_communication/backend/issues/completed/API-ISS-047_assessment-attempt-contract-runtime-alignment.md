@@ -122,7 +122,7 @@ Contracts were updated to establish `assessmentId` as the authoritative attempt 
 **Commits:**
 | Hash | Description |
 |------|-------------|
-| pending | Runtime/validator/test/contract alignment for canonical assessment-attempt flow |
+| c74c307 | Runtime/validator/test/contract alignment for canonical assessment-attempt flow |
 
 **Verification:**
 - [x] All acceptance criteria met
