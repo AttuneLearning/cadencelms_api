@@ -97,7 +97,7 @@ Execute P1 actions to normalize contract file structure and tooling behavior: se
 **Commits:**
 | Hash | Description |
 |------|-------------|
-| pending | P1 contract structure normalization + tooling strictness |
+| ab79c57 | P1 contract structure normalization + tooling strictness |
 
 **Verification:**
 - [x] All acceptance criteria met
