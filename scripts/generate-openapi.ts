@@ -8,6 +8,13 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'yaml';
+import {
+  extractErrorResponses,
+  getContractEndpointEntries,
+  getContractExportName,
+  getNonEndpointEntryNames,
+  getSuccessStatus
+} from './contract-utils';
 
 const contractsDir = path.join(__dirname, '../contracts/api');
 const outputDir = path.join(__dirname, '../contracts/dist');
@@ -48,17 +55,7 @@ interface ContractEndpoint {
     body?: Record<string, FieldDef>;
     query?: Record<string, FieldDef>;
   };
-  response: {
-    success: {
-      status: number;
-      body: Record<string, unknown>;
-    };
-    errors?: Array<{
-      status: number;
-      code: string;
-      message?: string;
-    }>;
-  };
+  response: Record<string, unknown>;
   example?: {
     request?: unknown;
     response?: unknown;
@@ -146,30 +143,40 @@ function main(): void {
       const contractModule = require(filePath);
       
       // Find the main export
-      const exportNames = Object.keys(contractModule);
-      const contractExport = exportNames.find(name => 
-        name.endsWith('Contract') || name.endsWith('Contracts')
-      );
-      
-      if (contractExport) {
-        const contract = contractModule[contractExport];
-        
-        // Add tag for this contract group
-        spec.tags.push({
-          name: tagName,
-          description: `${tagName.charAt(0).toUpperCase() + tagName.slice(1)} endpoints`
-        });
-        
-        // Process each endpoint
-        for (const [endpointName, endpoint] of Object.entries(contract)) {
-          addEndpointToSpec(spec, tagName, endpointName, endpoint as ContractEndpoint);
-        }
-        
-        console.log(`✅ Processed: ${file}`);
-      } else {
-        skippedCount++;
-        console.log(`⚠️  Skipped: ${file} (no Contract export found)`);
+      const contractExport = getContractExportName(contractModule as Record<string, unknown>);
+
+      if (!contractExport) {
+        failedCount++;
+        console.log(`❌ Failed: ${file} - no Contract export found`);
+        continue;
       }
+
+      const contractObject = contractModule[contractExport] as Record<string, unknown>;
+      const endpointEntries = getContractEndpointEntries(contractObject);
+      const nonEndpointEntries = getNonEndpointEntryNames(contractObject);
+
+      if (endpointEntries.length === 0) {
+        failedCount++;
+        console.log(`❌ Failed: ${file} - export '${contractExport}' has no endpoint entries`);
+        continue;
+      }
+
+      // Add tag for this contract group
+      spec.tags.push({
+        name: tagName,
+        description: `${tagName.charAt(0).toUpperCase() + tagName.slice(1)} endpoints`
+      });
+
+      if (nonEndpointEntries.length > 0) {
+        console.log(`ℹ️  ${file}: ignored non-endpoint entries [${nonEndpointEntries.join(', ')}]`);
+      }
+
+      // Process each endpoint
+      for (const [endpointName, endpoint] of endpointEntries) {
+        addEndpointToSpec(spec, tagName, endpointName, endpoint as ContractEndpoint);
+      }
+
+      console.log(`✅ Processed: ${file}`);
     } catch (error) {
       failedCount++;
       console.log(`❌ Failed: ${file} - ${(error as Error).message}`);
@@ -261,43 +268,52 @@ function addEndpointToSpec(
   
   // Add success response
   const responses = operation.responses as Record<string, unknown>;
-  responses[endpoint.response.success.status.toString()] = {
+  const successStatus = getSuccessStatus(endpoint.response) ?? 200;
+  const success = (endpoint.response as Record<string, unknown>).success as Record<string, unknown>;
+  const successBody = success?.body;
+  const successSchema =
+    successBody && typeof successBody === 'object'
+      ? {
+          type: 'object',
+          properties: successBody as Record<string, unknown>
+        }
+      : {
+          type: 'string',
+          description: typeof successBody === 'string' ? successBody : 'Response payload'
+        };
+
+  responses[successStatus.toString()] = {
     description: 'Success',
     content: {
       'application/json': {
-        schema: {
-          type: 'object',
-          properties: endpoint.response.success.body
-        },
+        schema: successSchema,
         example: endpoint.example?.response
       }
     }
   };
   
   // Add error responses
-  if (endpoint.response.errors) {
-    for (const error of endpoint.response.errors) {
-      responses[error.status.toString()] = {
-        description: error.message || error.code,
-        content: {
-          'application/json': {
-            schema: {
-              type: 'object',
-              properties: {
-                success: { type: 'boolean', example: false },
-                error: {
-                  type: 'object',
-                  properties: {
-                    code: { type: 'string', example: error.code },
-                    message: { type: 'string', example: error.message }
-                  }
+  for (const error of extractErrorResponses(endpoint.response)) {
+    responses[error.status.toString()] = {
+      description: error.message || error.code,
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean', example: false },
+              error: {
+                type: 'object',
+                properties: {
+                  code: { type: 'string', example: error.code },
+                  message: { type: 'string', example: error.message }
                 }
               }
             }
           }
         }
-      };
-    }
+      }
+    };
   }
   
   (spec.paths[path] as Record<string, unknown>)[method] = operation;

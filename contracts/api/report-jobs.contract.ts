@@ -329,3 +329,207 @@ export type GetReportJobInput = z.infer<typeof getReportJobSchema>['params'];
 export type CancelReportJobInput = z.infer<typeof cancelReportJobSchema>;
 export type RetryReportJobInput = z.infer<typeof retryReportJobSchema>['params'];
 export type DownloadReportInput = z.infer<typeof downloadReportSchema>['params'];
+
+export const ReportJobsContract = {
+  create: {
+    endpoint: '/api/v2/reports/jobs',
+    method: 'POST' as const,
+    version: '1.0.0',
+    description: 'Create a new report generation job',
+    request: {
+      headers: {
+        Authorization: 'Bearer <token>',
+        'Content-Type': 'application/json'
+      },
+      body: {
+        reportType: { type: 'string', required: true },
+        name: { type: 'string', required: true },
+        parameters: { type: 'object', required: true },
+        output: { type: 'object', required: true }
+      }
+    },
+    response: {
+      success: {
+        status: 201,
+        body: {
+          success: 'boolean',
+          data: {
+            id: 'ObjectId',
+            status: 'queued | processing | completed | failed',
+            estimatedWaitTime: 'number | undefined',
+            queuePosition: 'number | undefined'
+          },
+          message: 'string'
+        }
+      },
+      errors: [
+        { status: 400, code: 'VALIDATION_ERROR', message: 'Invalid report job payload' },
+        { status: 401, code: 'UNAUTHORIZED', message: 'Authentication required' },
+        { status: 403, code: 'FORBIDDEN', message: 'Insufficient permissions to create report jobs' }
+      ]
+    }
+  },
+  list: {
+    endpoint: '/api/v2/reports/jobs',
+    method: 'GET' as const,
+    version: '1.0.0',
+    description: 'List report jobs with filtering and pagination',
+    request: {
+      headers: {
+        Authorization: 'Bearer <token>'
+      },
+      query: {
+        status: { type: 'string | string[]', required: false },
+        reportType: { type: 'string | string[]', required: false },
+        page: { type: 'number', required: false, default: 1 },
+        limit: { type: 'number', required: false, default: 20 }
+      }
+    },
+    response: {
+      success: {
+        status: 200,
+        body: {
+          success: 'boolean',
+          data: 'ReportJobSummary[]',
+          pagination: {
+            page: 'number',
+            limit: 'number',
+            total: 'number',
+            totalPages: 'number'
+          }
+        }
+      },
+      errors: [
+        { status: 401, code: 'UNAUTHORIZED', message: 'Authentication required' },
+        { status: 403, code: 'FORBIDDEN', message: 'Insufficient permissions to view report jobs' }
+      ]
+    }
+  },
+  getById: {
+    endpoint: '/api/v2/reports/jobs/:jobId',
+    method: 'GET' as const,
+    version: '1.0.0',
+    description: 'Get report job details',
+    request: {
+      headers: {
+        Authorization: 'Bearer <token>'
+      },
+      params: {
+        jobId: { type: 'ObjectId', required: true }
+      }
+    },
+    response: {
+      success: {
+        status: 200,
+        body: {
+          success: 'boolean',
+          data: 'ReportJobDetail'
+        }
+      },
+      errors: [
+        { status: 401, code: 'UNAUTHORIZED', message: 'Authentication required' },
+        { status: 404, code: 'NOT_FOUND', message: 'Report job not found' }
+      ]
+    }
+  },
+  cancel: {
+    endpoint: '/api/v2/reports/jobs/:jobId/cancel',
+    method: 'POST' as const,
+    version: '1.0.0',
+    description: 'Cancel a queued or running report job',
+    request: {
+      headers: {
+        Authorization: 'Bearer <token>',
+        'Content-Type': 'application/json'
+      },
+      params: {
+        jobId: { type: 'ObjectId', required: true }
+      },
+      body: {
+        reason: { type: 'string', required: false }
+      }
+    },
+    response: {
+      success: {
+        status: 200,
+        body: {
+          success: 'boolean',
+          data: {
+            id: 'ObjectId',
+            status: 'cancelled',
+            cancelledAt: 'Date'
+          },
+          message: 'string'
+        }
+      },
+      errors: [
+        { status: 401, code: 'UNAUTHORIZED', message: 'Authentication required' },
+        { status: 404, code: 'NOT_FOUND', message: 'Report job not found' },
+        { status: 409, code: 'INVALID_STATE', message: 'Report job cannot be cancelled in current state' }
+      ]
+    }
+  },
+  retry: {
+    endpoint: '/api/v2/reports/jobs/:jobId/retry',
+    method: 'POST' as const,
+    version: '1.0.0',
+    description: 'Retry a failed report job',
+    request: {
+      headers: {
+        Authorization: 'Bearer <token>'
+      },
+      params: {
+        jobId: { type: 'ObjectId', required: true }
+      }
+    },
+    response: {
+      success: {
+        status: 200,
+        body: {
+          success: 'boolean',
+          data: {
+            id: 'ObjectId',
+            status: 'queued',
+            retryCount: 'number'
+          },
+          message: 'string'
+        }
+      },
+      errors: [
+        { status: 401, code: 'UNAUTHORIZED', message: 'Authentication required' },
+        { status: 404, code: 'NOT_FOUND', message: 'Report job not found' },
+        { status: 409, code: 'INVALID_STATE', message: 'Only failed jobs can be retried' }
+      ]
+    }
+  },
+  download: {
+    endpoint: '/api/v2/reports/jobs/:jobId/download',
+    method: 'GET' as const,
+    version: '1.0.0',
+    description: 'Download completed report output',
+    request: {
+      headers: {
+        Authorization: 'Bearer <token>'
+      },
+      params: {
+        jobId: { type: 'ObjectId', required: true }
+      }
+    },
+    response: {
+      success: {
+        status: 200,
+        body: {
+          success: 'boolean',
+          data: {
+            downloadUrl: 'string',
+            expiresAt: 'Date'
+          }
+        }
+      },
+      errors: [
+        { status: 401, code: 'UNAUTHORIZED', message: 'Authentication required' },
+        { status: 404, code: 'NOT_FOUND', message: 'Report output not available' }
+      ]
+    }
+  }
+} as const;

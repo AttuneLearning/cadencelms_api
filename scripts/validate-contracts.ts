@@ -7,6 +7,13 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import {
+  extractErrorResponses,
+  getContractEndpointEntries,
+  getContractExportName,
+  getNonEndpointEntryNames,
+  getSuccessStatus
+} from './contract-utils';
 
 const contractsDir = path.join(__dirname, '../contracts/api');
 const errors: string[] = [];
@@ -21,17 +28,7 @@ interface ContractEndpoint {
     body?: Record<string, unknown>;
     query?: Record<string, unknown>;
   };
-  response: {
-    success: {
-      status: number;
-      body: Record<string, unknown>;
-    };
-    errors?: Array<{
-      status: number;
-      code: string;
-      message?: string;
-    }>;
-  };
+  response: Record<string, unknown>;
   example?: {
     request?: unknown;
     response?: unknown;
@@ -48,20 +45,30 @@ function validateContractFile(filePath: string): void {
     const contractModule = require(filePath);
     
     // Find the main export (usually named *Contract or *Contracts)
-    const exportNames = Object.keys(contractModule);
-    const contractExport = exportNames.find(name => 
-      name.endsWith('Contract') || name.endsWith('Contracts')
-    );
+    const contractExport = getContractExportName(contractModule as Record<string, unknown>);
     
     if (!contractExport) {
       errors.push(`${fileName}: No *Contract or *Contracts export found`);
       return;
     }
     
-    const contract = contractModule[contractExport];
-    
+    const contract = contractModule[contractExport] as Record<string, unknown>;
+    const endpointEntries = getContractEndpointEntries(contract);
+    const nonEndpointEntries = getNonEndpointEntryNames(contract);
+
+    if (endpointEntries.length === 0) {
+      errors.push(`${fileName}: Contract export '${contractExport}' has no endpoint entries`);
+      return;
+    }
+
+    if (nonEndpointEntries.length > 0) {
+      warnings.push(
+        `${fileName}: Ignoring non-endpoint entries [${nonEndpointEntries.join(', ')}]`
+      );
+    }
+
     // Validate each endpoint in the contract
-    for (const [endpointName, endpoint] of Object.entries(contract)) {
+    for (const [endpointName, endpoint] of endpointEntries) {
       validateEndpoint(fileName, endpointName, endpoint as ContractEndpoint);
     }
     
@@ -97,27 +104,33 @@ function validateEndpoint(
   }
   
   // Response validation
-  if (!endpoint.response) {
+  if (!endpoint.response || typeof endpoint.response !== 'object') {
     errors.push(`${prefix}: Missing 'response' field`);
   } else {
-    if (!endpoint.response.success) {
+    const successStatus = getSuccessStatus(endpoint.response);
+    const successObject = (endpoint.response as Record<string, unknown>).success;
+
+    if (!successObject || typeof successObject !== 'object') {
       errors.push(`${prefix}: Missing 'response.success' field`);
     } else {
-      if (!endpoint.response.success.status) {
+      if (!successStatus) {
         errors.push(`${prefix}: Missing 'response.success.status' field`);
       }
-      if (!endpoint.response.success.body) {
+
+      if (!(successObject as Record<string, unknown>).body) {
         errors.push(`${prefix}: Missing 'response.success.body' field`);
       }
     }
     
-    if (!endpoint.response.errors || endpoint.response.errors.length === 0) {
+    const normalizedErrors = extractErrorResponses(endpoint.response);
+    if (normalizedErrors.length === 0) {
       warnings.push(`${prefix}: No error responses defined`);
     }
   }
   
   // Example validation
-  if (!endpoint.example) {
+  const maybeEndpoint = endpoint as unknown as Record<string, unknown>;
+  if (!maybeEndpoint.example && !maybeEndpoint.examples) {
     warnings.push(`${prefix}: No example provided (helpful for mocking)`);
   }
   

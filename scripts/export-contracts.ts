@@ -7,6 +7,11 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import {
+  getContractEndpointEntries,
+  getContractExportName,
+  getNonEndpointEntryNames
+} from './contract-utils';
 
 const contractsDir = path.join(__dirname, '../contracts/api');
 const outputDir = path.join(__dirname, '../contracts/dist');
@@ -67,18 +72,30 @@ function main(): void {
       const contractModule = require(filePath);
       
       // Find the main export
-      const exportNames = Object.keys(contractModule);
-      const contractExport = exportNames.find(name => 
-        name.endsWith('Contract') || name.endsWith('Contracts')
-      );
-      
-      if (contractExport) {
-        exported.contracts[contractName] = contractModule[contractExport];
-        console.log(`✅ Exported: ${file}`);
-      } else {
-        skippedCount++;
-        console.log(`⚠️  Skipped: ${file} (no Contract export found)`);
+      const contractExport = getContractExportName(contractModule as Record<string, unknown>);
+
+      if (!contractExport) {
+        failedCount++;
+        console.log(`❌ Failed: ${file} - no Contract export found`);
+        continue;
       }
+
+      const contractObject = contractModule[contractExport] as Record<string, unknown>;
+      const endpointEntries = getContractEndpointEntries(contractObject);
+      const nonEndpointEntries = getNonEndpointEntryNames(contractObject);
+
+      if (endpointEntries.length === 0) {
+        failedCount++;
+        console.log(`❌ Failed: ${file} - export '${contractExport}' has no endpoint entries`);
+        continue;
+      }
+
+      if (nonEndpointEntries.length > 0) {
+        console.log(`ℹ️  ${file}: ignored non-endpoint entries [${nonEndpointEntries.join(', ')}]`);
+      }
+
+      exported.contracts[contractName] = Object.fromEntries(endpointEntries);
+      console.log(`✅ Exported: ${file}`);
     } catch (error) {
       failedCount++;
       console.log(`❌ Failed: ${file} - ${(error as Error).message}`);

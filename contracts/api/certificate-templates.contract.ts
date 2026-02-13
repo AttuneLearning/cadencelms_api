@@ -94,6 +94,73 @@ export interface ListCertificateTemplatesQuery {
   departmentId?: string;
 }
 
+export const CertificateTemplatesContract = {
+  list: {
+    endpoint: '/api/v2/certificate-templates',
+    method: 'GET' as const,
+    version: '1.0.0',
+    description: 'List certificate templates available for program configuration',
+    request: {
+      headers: {
+        Authorization: 'Bearer <token>'
+      },
+      query: {
+        scope: {
+          type: 'string',
+          required: false,
+          enum: ['system', 'organization', 'department'],
+          description: 'Filter by template scope'
+        },
+        departmentId: {
+          type: 'ObjectId',
+          required: false,
+          description: 'Filter by department-scoped templates'
+        }
+      }
+    },
+    response: {
+      success: {
+        status: 200,
+        body: {
+          success: 'boolean',
+          data: {
+            templates: [
+              {
+                id: 'ObjectId',
+                name: 'string',
+                description: 'string | null',
+                thumbnailUrl: 'string | null',
+                scope: 'system | department',
+                isDefault: 'boolean',
+                departmentId: 'ObjectId | undefined',
+                departmentName: 'string | undefined'
+              }
+            ]
+          }
+        }
+      },
+      errors: [
+        {
+          status: 400,
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid scope or departmentId'
+        },
+        {
+          status: 401,
+          code: 'UNAUTHORIZED',
+          message: 'Authentication required'
+        },
+        {
+          status: 403,
+          code: 'FORBIDDEN',
+          message: 'Insufficient permissions. Required access right(s): content:programs:manage'
+        }
+      ]
+    },
+    permissions: ['content:programs:manage']
+  }
+} as const;
+
 /**
  * Implementation Notes:
  *

@@ -548,4 +548,3 @@ export const MatchingExerciseContracts = {
 // ============================================================================
 
 export type MatchingExerciseContractType = typeof MatchingExerciseContracts;
-export type { MatchingPair, MatchingExerciseConfig, MatchingAttemptResult };

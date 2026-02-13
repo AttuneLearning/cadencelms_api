@@ -11,8 +11,6 @@
  * See: dev_communication/specs/learning/FLASHCARD_FLOW_SPEC.md
  */
 
-import { MediaContent } from '../types/media-types';
-
 // ============================================================================
 // Type Definitions
 // ============================================================================

@@ -132,7 +132,7 @@ export const DemographicsContract = {
           countryOfBirth: 'US',
           visaType: null,
           visaExpirationDate: null,
-          alienRegistrationNumber: null // or 'A012345678' for non-citizens
+          alienRegistrationNumber: null, // or 'A012345678' for non-citizens
 
           // Personal Status
           maritalStatus: 'single',

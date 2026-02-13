@@ -12,8 +12,6 @@
  * - Access right: system:*
  */
 
-import { Types } from 'mongoose';
-
 // ============================================================================
 // USER ROLE ASSIGNMENT
 // ============================================================================
@@ -481,3 +479,309 @@ export interface AdminRoleErrorResponse {
 // - CANNOT_REMOVE_LAST_ADMIN: Cannot remove last system-admin
 // - INVALID_ROLE_FOR_USER_TYPE: Role not valid for this user type (e.g., learner roles on staff)
 // - ROLE_DEFINITION_IN_USE: Cannot modify role definition with active users
+
+export const AdminRolesContract = {
+  assignUserRole: {
+    endpoint: '/api/v2/admin/users/:userId/roles',
+    method: 'POST' as const,
+    version: '1.0.0',
+    description: 'Assign a role to a user in a specific department',
+    request: {
+      headers: {
+        Authorization: 'Bearer <token>',
+        'X-Admin-Token': '<admin-token>'
+      },
+      params: {
+        userId: { type: 'ObjectId', required: true }
+      },
+      body: {
+        departmentId: { type: 'ObjectId', required: true },
+        roleName: { type: 'string', required: true },
+        isPrimary: { type: 'boolean', required: false },
+        expiresAt: { type: 'Date', required: false }
+      }
+    },
+    response: {
+      success: {
+        status: 201,
+        body: {
+          success: 'boolean',
+          data: 'AssignUserRoleResponse[data]',
+          message: 'string'
+        }
+      },
+      errors: [
+        { status: 400, code: 'VALIDATION_ERROR', message: 'Invalid role assignment payload' },
+        { status: 401, code: 'UNAUTHORIZED', message: 'System-admin escalation required' },
+        { status: 404, code: 'USER_OR_DEPARTMENT_NOT_FOUND', message: 'User or department not found' }
+      ]
+    }
+  },
+  removeUserRole: {
+    endpoint: '/api/v2/admin/users/:userId/roles/:membershipId',
+    method: 'DELETE' as const,
+    version: '1.0.0',
+    description: 'Remove a role assignment from a user',
+    request: {
+      headers: {
+        Authorization: 'Bearer <token>',
+        'X-Admin-Token': '<admin-token>'
+      },
+      params: {
+        userId: { type: 'ObjectId', required: true },
+        membershipId: { type: 'ObjectId', required: true }
+      }
+    },
+    response: {
+      success: {
+        status: 200,
+        body: {
+          success: 'boolean',
+          data: 'RemoveUserRoleResponse[data]',
+          message: 'string'
+        }
+      },
+      errors: [
+        { status: 401, code: 'UNAUTHORIZED', message: 'System-admin escalation required' },
+        { status: 404, code: 'MEMBERSHIP_NOT_FOUND', message: 'Role membership not found' }
+      ]
+    }
+  },
+  getUserRoles: {
+    endpoint: '/api/v2/admin/users/:userId/roles',
+    method: 'GET' as const,
+    version: '1.0.0',
+    description: 'List all role assignments for a user',
+    request: {
+      headers: {
+        Authorization: 'Bearer <token>',
+        'X-Admin-Token': '<admin-token>'
+      },
+      params: {
+        userId: { type: 'ObjectId', required: true }
+      }
+    },
+    response: {
+      success: {
+        status: 200,
+        body: {
+          success: 'boolean',
+          data: 'GetUserRolesResponse[data]'
+        }
+      },
+      errors: [
+        { status: 401, code: 'UNAUTHORIZED', message: 'System-admin escalation required' },
+        { status: 404, code: 'USER_NOT_FOUND', message: 'User not found' }
+      ]
+    }
+  },
+  updateUserRole: {
+    endpoint: '/api/v2/admin/users/:userId/roles/:membershipId',
+    method: 'PUT' as const,
+    version: '1.0.0',
+    description: 'Update role membership details',
+    request: {
+      headers: {
+        Authorization: 'Bearer <token>',
+        'X-Admin-Token': '<admin-token>'
+      },
+      params: {
+        userId: { type: 'ObjectId', required: true },
+        membershipId: { type: 'ObjectId', required: true }
+      },
+      body: {
+        departmentId: { type: 'ObjectId', required: false },
+        roles: { type: 'string[]', required: false },
+        isPrimary: { type: 'boolean', required: false },
+        expiresAt: { type: 'Date | null', required: false },
+        isActive: { type: 'boolean', required: false }
+      }
+    },
+    response: {
+      success: {
+        status: 200,
+        body: {
+          success: 'boolean',
+          data: 'UpdateUserRoleResponse[data]',
+          message: 'string'
+        }
+      },
+      errors: [
+        { status: 400, code: 'VALIDATION_ERROR', message: 'Invalid role update payload' },
+        { status: 404, code: 'MEMBERSHIP_NOT_FOUND', message: 'Role membership not found' }
+      ]
+    }
+  },
+  createGlobalAdmin: {
+    endpoint: '/api/v2/admin/global-admins',
+    method: 'POST' as const,
+    version: '1.0.0',
+    description: 'Promote a user to global admin',
+    request: {
+      headers: {
+        Authorization: 'Bearer <token>',
+        'X-Admin-Token': '<admin-token>'
+      },
+      body: {
+        userId: { type: 'ObjectId', required: true },
+        roles: { type: 'string[]', required: true },
+        masterDepartmentId: { type: 'ObjectId', required: true },
+        isPrimary: { type: 'boolean', required: false }
+      }
+    },
+    response: {
+      success: {
+        status: 201,
+        body: {
+          success: 'boolean',
+          data: 'CreateGlobalAdminResponse[data]',
+          message: 'string'
+        }
+      },
+      errors: [
+        { status: 400, code: 'VALIDATION_ERROR', message: 'Invalid global admin payload' },
+        { status: 409, code: 'ALREADY_GLOBAL_ADMIN', message: 'User is already a global admin' }
+      ]
+    }
+  },
+  removeGlobalAdmin: {
+    endpoint: '/api/v2/admin/global-admins/:userId',
+    method: 'DELETE' as const,
+    version: '1.0.0',
+    description: 'Remove global admin status from a user',
+    request: {
+      headers: {
+        Authorization: 'Bearer <token>',
+        'X-Admin-Token': '<admin-token>'
+      },
+      params: {
+        userId: { type: 'ObjectId', required: true }
+      }
+    },
+    response: {
+      success: {
+        status: 200,
+        body: {
+          success: 'boolean',
+          data: 'RemoveGlobalAdminResponse[data]',
+          message: 'string'
+        }
+      },
+      errors: [
+        { status: 404, code: 'USER_NOT_FOUND', message: 'User not found' },
+        { status: 409, code: 'CANNOT_REMOVE_LAST_ADMIN', message: 'Cannot remove the last system-admin' }
+      ]
+    }
+  },
+  listGlobalAdmins: {
+    endpoint: '/api/v2/admin/global-admins',
+    method: 'GET' as const,
+    version: '1.0.0',
+    description: 'List global admins',
+    request: {
+      headers: {
+        Authorization: 'Bearer <token>',
+        'X-Admin-Token': '<admin-token>'
+      }
+    },
+    response: {
+      success: {
+        status: 200,
+        body: {
+          success: 'boolean',
+          data: 'GetGlobalAdminsResponse[data]'
+        }
+      },
+      errors: [
+        { status: 401, code: 'UNAUTHORIZED', message: 'System-admin escalation required' }
+      ]
+    }
+  },
+  updateGlobalAdminRoles: {
+    endpoint: '/api/v2/admin/global-admins/:userId/roles',
+    method: 'PUT' as const,
+    version: '1.0.0',
+    description: 'Update global admin role assignments',
+    request: {
+      headers: {
+        Authorization: 'Bearer <token>',
+        'X-Admin-Token': '<admin-token>'
+      },
+      params: {
+        userId: { type: 'ObjectId', required: true }
+      },
+      body: {
+        roles: { type: 'string[]', required: true },
+        departmentId: { type: 'ObjectId', required: false }
+      }
+    },
+    response: {
+      success: {
+        status: 200,
+        body: {
+          success: 'boolean',
+          data: 'UpdateGlobalAdminRolesResponse[data]',
+          message: 'string'
+        }
+      },
+      errors: [
+        { status: 404, code: 'USER_NOT_FOUND', message: 'User not found' }
+      ]
+    }
+  },
+  listRoleDefinitions: {
+    endpoint: '/api/v2/admin/role-definitions',
+    method: 'GET' as const,
+    version: '1.0.0',
+    description: 'List role definitions with access rights',
+    request: {
+      headers: {
+        Authorization: 'Bearer <token>',
+        'X-Admin-Token': '<admin-token>'
+      }
+    },
+    response: {
+      success: {
+        status: 200,
+        body: {
+          success: 'boolean',
+          data: 'GetRoleDefinitionsResponse[data]'
+        }
+      },
+      errors: [
+        { status: 401, code: 'UNAUTHORIZED', message: 'System-admin escalation required' }
+      ]
+    }
+  },
+  updateRoleAccessRights: {
+    endpoint: '/api/v2/admin/role-definitions/:roleName/access-rights',
+    method: 'PUT' as const,
+    version: '1.0.0',
+    description: 'Replace access rights for a role definition',
+    request: {
+      headers: {
+        Authorization: 'Bearer <token>',
+        'X-Admin-Token': '<admin-token>'
+      },
+      params: {
+        roleName: { type: 'string', required: true }
+      },
+      body: {
+        accessRightIds: { type: 'ObjectId[]', required: true }
+      }
+    },
+    response: {
+      success: {
+        status: 200,
+        body: {
+          success: 'boolean',
+          data: 'UpdateRoleAccessRightsResponse[data]',
+          message: 'string'
+        }
+      },
+      errors: [
+        { status: 404, code: 'ROLE_NOT_FOUND', message: 'Role definition not found' }
+      ]
+    }
+  }
+} as const;

@@ -526,7 +526,7 @@ export const LearningUnitQuestionsContracts = {
     },
 
     response: {
-      shell: {
+      success: {
         status: 501,
         body: {
           success: false,
@@ -534,18 +534,9 @@ export const LearningUnitQuestionsContracts = {
           message: 'AI Quiz feature is not yet implemented'
         }
       },
-      future: {
-        status: 201,
-        body: {
-          success: 'boolean',
-          data: {
-            sessionId: 'ObjectId',
-            status: 'active',
-            aiEnabled: 'boolean',
-            nextQuestion: '{ ...question object }'
-          }
-        }
-      }
+      errors: [
+        { status: 501, code: 'NOT_IMPLEMENTED', message: 'AI Quiz feature is not yet implemented' }
+      ]
     },
 
     permissions: ['take:assessments'],
@@ -582,14 +573,17 @@ export const LearningUnitQuestionsContracts = {
     },
 
     response: {
-      shell: {
+      success: {
         status: 501,
         body: {
           success: false,
           error: 'NOT_IMPLEMENTED',
           message: 'AI Quiz feature is not yet implemented'
         }
-      }
+      },
+      errors: [
+        { status: 501, code: 'NOT_IMPLEMENTED', message: 'AI Quiz feature is not yet implemented' }
+      ]
     },
 
     permissions: ['take:assessments']
@@ -612,14 +606,17 @@ export const LearningUnitQuestionsContracts = {
     },
 
     response: {
-      shell: {
+      success: {
         status: 501,
         body: {
           success: false,
           error: 'NOT_IMPLEMENTED',
           message: 'AI Quiz analytics not yet implemented'
         }
-      }
+      },
+      errors: [
+        { status: 501, code: 'NOT_IMPLEMENTED', message: 'AI Quiz analytics not yet implemented' }
+      ]
     },
 
     permissions: ['content:assessments:manage']

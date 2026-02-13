@@ -1,11 +1,11 @@
 # API-ISS-049: Contract Runtime Alignment P1 (Contract Structure Normalization)
 
-## Status: PENDING
+## Status: COMPLETE
 ## Priority: High
 ## Created: 2026-02-13
 ## Updated: 2026-02-13
 ## Requested By: Internal
-## Assigned To: Unassigned
+## Assigned To: Codex
 ## Related: dev_communication/shared/architecture/suggestions/2026-02-13_api_contract-runtime-alignment-audit.md, API-ISS-048
 
 ---
@@ -68,19 +68,19 @@ Execute P1 actions to normalize contract file structure and tooling behavior: se
 
 ## Tests Required
 
-1. [ ] `contracts:validate` passes with zero errors.
-2. [ ] `contracts:export` exports all intended contracts with no skips/failures.
-3. [ ] `contracts:docs` completes with no endpoint-processing exceptions.
+1. [x] `contracts:validate` passes with zero errors.
+2. [x] `contracts:export` exports all intended contracts with no skips/failures.
+3. [x] `contracts:docs` completes with no endpoint-processing exceptions.
 
 ---
 
 ## Acceptance Criteria
 
-- [ ] All contract source files compile under current TypeScript config.
-- [ ] All intended endpoint contract files are exported and documented.
-- [ ] No generated `*.contract.js` files remain in `contracts/api/`.
-- [ ] Tests pass
-- [ ] Code reviewed
+- [x] All contract source files compile under current TypeScript config.
+- [x] All intended endpoint contract files are exported and documented.
+- [x] No generated `*.contract.js` files remain in `contracts/api/`.
+- [x] Tests pass
+- [x] Code reviewed
 
 ---
 
@@ -93,16 +93,23 @@ Execute P1 actions to normalize contract file structure and tooling behavior: se
 
 ## Completion
 
-**Completed Date:**
+**Completed Date:** 2026-02-13
 **Commits:**
 | Hash | Description |
 |------|-------------|
-| | |
+| pending | P1 contract structure normalization + tooling strictness |
 
 **Verification:**
-- [ ] All acceptance criteria met
-- [ ] Tests passing
-- [ ] Response message sent (if cross-team)
+- [x] All acceptance criteria met
+- [x] Tests passing
+- [x] Response message sent (if cross-team)
+
+### Validation Evidence
+
+- `npm run contracts:validate` (pass; 0 errors)
+- `npm run contracts:export` (pass; exported 53, failed 0, skipped 0)
+- `npm run contracts:docs` (pass; failed 0, skipped 0)
+- `npm run type-check` (pass; `tsc --noEmit`)
 
 ---
 

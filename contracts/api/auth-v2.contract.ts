@@ -68,9 +68,6 @@ export interface AdminSession {
 // ============================================================================
 
 export const AuthContractsV2 = {
-  resource: 'auth',
-  version: '2.0.0',
-
   // =========================================================================
   // LOGIN
   // =========================================================================
@@ -605,6 +602,20 @@ export const AuthContractsV2 = {
     method: 'POST' as const,
     version: '2.0.0',
     description: 'Get new access token using refresh token',
+    response: {
+      success: {
+        status: 200,
+        body: {
+          success: 'boolean',
+          data: {
+            session: 'AuthSession'
+          }
+        }
+      },
+      errors: [
+        { status: 401, code: 'UNAUTHORIZED', message: 'Invalid refresh token' }
+      ]
+    },
     notes: 'Same as V1 - no changes'
   },
 
@@ -613,6 +624,18 @@ export const AuthContractsV2 = {
     method: 'POST' as const,
     version: '2.0.0',
     description: 'Invalidate user session and tokens',
+    response: {
+      success: {
+        status: 200,
+        body: {
+          success: 'boolean',
+          message: 'string'
+        }
+      },
+      errors: [
+        { status: 401, code: 'UNAUTHORIZED', message: 'Invalid or expired token' }
+      ]
+    },
     notes: `
       V2 CHANGE: Also invalidates admin token if active
     `
@@ -623,6 +646,18 @@ export const AuthContractsV2 = {
     method: 'POST' as const,
     version: '2.0.0',
     description: 'Request password reset email',
+    response: {
+      success: {
+        status: 200,
+        body: {
+          success: 'boolean',
+          message: 'string'
+        }
+      },
+      errors: [
+        { status: 400, code: 'VALIDATION_ERROR', message: 'Invalid email address' }
+      ]
+    },
     notes: 'Same as V1 - no changes'
   },
 
@@ -631,6 +666,18 @@ export const AuthContractsV2 = {
     method: 'PUT' as const,
     version: '2.0.0',
     description: 'Reset password using token from email',
+    response: {
+      success: {
+        status: 200,
+        body: {
+          success: 'boolean',
+          message: 'string'
+        }
+      },
+      errors: [
+        { status: 400, code: 'INVALID_OR_EXPIRED_TOKEN', message: 'Reset token is invalid or expired' }
+      ]
+    },
     notes: 'Same as V1 - no changes'
   },
 
@@ -639,6 +686,19 @@ export const AuthContractsV2 = {
     method: 'PUT' as const,
     version: '2.0.0',
     description: 'Change password for authenticated user',
+    response: {
+      success: {
+        status: 200,
+        body: {
+          success: 'boolean',
+          message: 'string'
+        }
+      },
+      errors: [
+        { status: 400, code: 'INVALID_CURRENT_PASSWORD', message: 'Current password is incorrect' },
+        { status: 401, code: 'UNAUTHORIZED', message: 'Invalid or expired token' }
+      ]
+    },
     notes: 'Same as V1 - no changes'
   }
 };

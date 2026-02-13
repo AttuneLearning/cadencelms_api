@@ -13,7 +13,7 @@
  */
 
 // Re-export from canonical source
-export { UserTypeObject, USER_TYPE_DISPLAY, toUserTypeObjects, toUserTypeStrings } from './lookup-values.contract';
+export { USER_TYPE_DISPLAY, toUserTypeObjects, toUserTypeStrings } from './lookup-values.contract';
 
 // ============================================================================
 // INTERFACES
@@ -270,6 +270,65 @@ export interface DepartmentRoleGroup {
  * The transformation to UserTypeObject[] happens at API response time only.
  * This maintains backward compatibility with existing data and internal logic.
  */
+
+export const UserTypeRevisionContract = {
+  login: {
+    endpoint: '/api/v2/auth/login',
+    method: 'POST' as const,
+    version: '1.1.0',
+    description: 'Canonical userType object response shape for login',
+    request: {
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: {
+        email: { type: 'string', required: true },
+        password: { type: 'string', required: true }
+      }
+    },
+    response: {
+      success: {
+        status: 200,
+        body: {
+          success: 'boolean',
+          user: {
+            _id: 'ObjectId',
+            userTypes: 'UserTypeObject[]'
+          }
+        }
+      },
+      errors: [
+        { status: 401, code: 'INVALID_CREDENTIALS', message: 'Invalid credentials' }
+      ]
+    }
+  },
+  me: {
+    endpoint: '/api/v2/auth/me',
+    method: 'GET' as const,
+    version: '1.1.0',
+    description: 'Canonical userType object response shape for auth me',
+    request: {
+      headers: {
+        Authorization: 'Bearer <token>'
+      }
+    },
+    response: {
+      success: {
+        status: 200,
+        body: {
+          success: 'boolean',
+          user: {
+            _id: 'ObjectId',
+            userTypes: 'UserTypeObject[]'
+          }
+        }
+      },
+      errors: [
+        { status: 401, code: 'UNAUTHORIZED', message: 'Authentication required' }
+      ]
+    }
+  }
+} as const;
 
 export default {
   USER_TYPE_DISPLAY_MAP

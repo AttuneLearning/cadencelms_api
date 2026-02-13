@@ -9,8 +9,6 @@
  * See: ADR-CONTENT-001-CONTENT-DELIVERY-ARCHITECTURE
  */
 
-import { MediaAttachment, MediaConstraints, StorageProvider } from '../types/media-types';
-
 // ============================================================================
 // Media Upload Contracts
 // ============================================================================

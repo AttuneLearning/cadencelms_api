@@ -56,7 +56,7 @@ export const AnalyticsContract = {
 
     response: {
       success: {
-        statusCode: 200,
+        status: 200,
         body: {
           data: {
             // Aggregate metrics across all filtered departments
@@ -157,32 +157,19 @@ export const AnalyticsContract = {
         },
       },
 
-      errors: {
-        unauthorized: {
-          statusCode: 401,
-          body: {
-            error: 'UNAUTHORIZED',
-            message: 'Authentication required',
-          },
+      errors: [
+        { status: 401, code: 'UNAUTHORIZED', message: 'Authentication required' },
+        {
+          status: 403,
+          code: 'FORBIDDEN',
+          message: 'User does not have department-admin or content-admin role in any department'
         },
-        forbidden: {
-          statusCode: 403,
-          body: {
-            error: 'FORBIDDEN',
-            message: 'User does not have department-admin or content-admin role in any department',
-          },
-        },
-        invalidDepartment: {
-          statusCode: 403,
-          body: {
-            error: 'DEPARTMENT_ACCESS_DENIED',
-            message: 'User does not have required role in one or more specified departments',
-            details: {
-              deniedDepartmentIds: { type: 'ObjectId[]' },
-            },
-          },
-        },
-      },
+        {
+          status: 403,
+          code: 'DEPARTMENT_ACCESS_DENIED',
+          message: 'User does not have required role in one or more specified departments'
+        }
+      ],
     },
 
     authorization: {
@@ -332,7 +319,7 @@ export const AnalyticsContract = {
 
     response: {
       success: {
-        statusCode: 200,
+        status: 200,
         headers: {
           'Content-Type': 'application/pdf | text/csv | application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
           'Content-Disposition': 'attachment; filename="course-summary-{timestamp}.{ext}"',
@@ -340,20 +327,11 @@ export const AnalyticsContract = {
         body: 'Binary file data',
       },
 
-      errors: {
-        unauthorized: {
-          statusCode: 401,
-          body: { error: 'UNAUTHORIZED', message: 'Authentication required' },
-        },
-        forbidden: {
-          statusCode: 403,
-          body: { error: 'FORBIDDEN', message: 'Insufficient permissions' },
-        },
-        invalidFormat: {
-          statusCode: 400,
-          body: { error: 'INVALID_FORMAT', message: 'Unsupported export format' },
-        },
-      },
+      errors: [
+        { status: 401, code: 'UNAUTHORIZED', message: 'Authentication required' },
+        { status: 403, code: 'FORBIDDEN', message: 'Insufficient permissions' },
+        { status: 400, code: 'INVALID_FORMAT', message: 'Unsupported export format' }
+      ],
     },
 
     authorization: {
