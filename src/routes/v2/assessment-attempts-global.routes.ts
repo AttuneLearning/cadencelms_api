@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { isAuthenticated } from '@/middlewares/isAuthenticated';
 import * as assessmentAttemptsController from '@/controllers/progress/assessment-attempts.controller';
-import { validateGradeQuestion } from '@/validators/assessment-attempt.validator';
+import { validateBatchGradeAttempt } from '@/validators/assessment-attempt.validator';
 
 const router = Router();
 
@@ -30,6 +30,6 @@ router.get('/:attemptId', assessmentAttemptsController.getAttemptById);
  * POST /api/v2/assessment-attempts/:attemptId/grade
  * Staff grading action by attemptId.
  */
-router.post('/:attemptId/grade', validateGradeQuestion, assessmentAttemptsController.gradeAttemptById);
+router.post('/:attemptId/grade', validateBatchGradeAttempt, assessmentAttemptsController.gradeAttemptById);
 
 export default router;

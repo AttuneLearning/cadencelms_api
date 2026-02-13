@@ -6,6 +6,10 @@ import AssessmentAttempt from '@/models/progress/AssessmentAttempt.model';
 import Assessment from '@/models/content/Assessment.model';
 import Question from '@/models/assessment/Question.model';
 import Department from '@/models/organization/Department.model';
+import CanonicalCourse from '@/models/academic/CanonicalCourse.model';
+import CourseVersion from '@/models/academic/CourseVersion.model';
+import CourseVersionModule from '@/models/academic/CourseVersionModule.model';
+import Enrollment from '@/models/enrollment/Enrollment.model';
 import { describeIfMongo } from '../../helpers/mongo-guard';
 
 describeIfMongo('AssessmentAttemptsService - Unit Tests', () => {
@@ -1169,6 +1173,467 @@ describeIfMongo('AssessmentAttemptsService - Unit Tests', () => {
       expect(result.pagination.totalPages).toBe(3);
       expect(result.pagination.hasNext).toBe(true);
       expect(result.pagination.hasPrev).toBe(false);
+    });
+  });
+
+  describe('listAttemptSummaries()', () => {
+    it('should include canonical course context when module linkage exists', async () => {
+      const createdBy = new mongoose.Types.ObjectId();
+      const moduleId = new mongoose.Types.ObjectId();
+
+      const canonicalCourse = await CanonicalCourse.create({
+        code: 'EMDR101',
+        departmentId,
+        totalVersions: 1,
+        createdBy
+      });
+
+      const courseVersion = await CourseVersion.create({
+        canonicalCourseId: canonicalCourse._id,
+        version: 1,
+        title: 'EMDR Foundations',
+        credits: 3,
+        duration: 90,
+        createdBy,
+        status: 'published',
+        isLatest: true
+      });
+
+      await CourseVersionModule.create({
+        courseVersionId: courseVersion._id,
+        moduleId,
+        order: 1
+      });
+
+      const assessment = await Assessment.create({
+        departmentId,
+        title: 'Contextualized Assessment',
+        style: 'quiz',
+        questionSelection: {
+          questionBankIds: ['bank1'],
+          questionCount: 1,
+          selectionMode: 'sequential'
+        },
+        timing: {
+          showTimer: true,
+          autoSubmitOnExpiry: false
+        },
+        attempts: {
+          maxAttempts: null,
+          retakePolicy: 'anytime'
+        },
+        scoring: {
+          passingScore: 70,
+          showScore: true,
+          showCorrectAnswers: 'after_submit',
+          partialCredit: false
+        },
+        feedback: {
+          showFeedback: true,
+          feedbackTiming: 'after_submit',
+          showExplanations: true
+        },
+        isPublished: true,
+        createdBy
+      });
+
+      const attempt = await AssessmentAttempt.create({
+        assessmentId: assessment._id,
+        learnerId,
+        enrollmentId,
+        moduleId,
+        attemptNumber: 1,
+        status: 'submitted',
+        questions: [],
+        timing: {
+          startedAt: new Date(),
+          lastActivityAt: new Date(),
+          submittedAt: new Date(),
+          timeSpentSeconds: 300
+        },
+        scoring: {
+          gradingComplete: false,
+          requiresManualGrading: true
+        }
+      });
+
+      const result = await AssessmentAttemptsService.listAttemptSummaries();
+      expect(result.attempts).toHaveLength(1);
+      expect(result.attempts[0].id).toBe(attempt._id.toString());
+      expect(result.attempts[0].courseId).toBe(canonicalCourse._id.toString());
+      expect(result.attempts[0].courseCode).toBe('EMDR101');
+      expect(result.attempts[0].courseName).toBe('EMDR Foundations');
+      expect(result.attempts[0].courseVersionId).toBe(courseVersion._id.toString());
+      expect(result.attempts[0].courseContexts).toEqual([
+        {
+          courseId: canonicalCourse._id.toString(),
+          courseCode: 'EMDR101',
+          courseName: 'EMDR Foundations',
+          courseVersionId: courseVersion._id.toString()
+        }
+      ]);
+    });
+
+    it('should prefer enrollment course when module maps to multiple course contexts', async () => {
+      const createdBy = new mongoose.Types.ObjectId();
+      const moduleId = new mongoose.Types.ObjectId();
+
+      const primaryCourse = await CanonicalCourse.create({
+        code: 'CBT201',
+        departmentId,
+        totalVersions: 1,
+        createdBy
+      });
+      const secondaryCourse = await CanonicalCourse.create({
+        code: 'EMDR301',
+        departmentId,
+        totalVersions: 1,
+        createdBy
+      });
+
+      const primaryVersion = await CourseVersion.create({
+        canonicalCourseId: primaryCourse._id,
+        version: 1,
+        title: 'CBT Advanced',
+        credits: 3,
+        duration: 90,
+        createdBy,
+        status: 'published',
+        isLatest: true
+      });
+      const secondaryVersion = await CourseVersion.create({
+        canonicalCourseId: secondaryCourse._id,
+        version: 1,
+        title: 'EMDR Advanced',
+        credits: 3,
+        duration: 90,
+        createdBy,
+        status: 'published',
+        isLatest: true
+      });
+
+      await CourseVersionModule.create({ courseVersionId: primaryVersion._id, moduleId, order: 1 });
+      await CourseVersionModule.create({ courseVersionId: secondaryVersion._id, moduleId, order: 1 });
+
+      const enrollment = await Enrollment.create({
+        learnerId,
+        programId: new mongoose.Types.ObjectId(),
+        academicYearId: new mongoose.Types.ObjectId(),
+        status: 'active',
+        enrollmentDate: new Date(),
+        metadata: {
+          courseId: secondaryCourse._id.toString()
+        }
+      });
+
+      const assessment = await Assessment.create({
+        departmentId,
+        title: 'Cross-mapped Assessment',
+        style: 'quiz',
+        questionSelection: {
+          questionBankIds: ['bank1'],
+          questionCount: 1,
+          selectionMode: 'sequential'
+        },
+        timing: {
+          showTimer: true,
+          autoSubmitOnExpiry: false
+        },
+        attempts: {
+          maxAttempts: null,
+          retakePolicy: 'anytime'
+        },
+        scoring: {
+          passingScore: 70,
+          showScore: true,
+          showCorrectAnswers: 'after_submit',
+          partialCredit: false
+        },
+        feedback: {
+          showFeedback: true,
+          feedbackTiming: 'after_submit',
+          showExplanations: true
+        },
+        isPublished: true,
+        createdBy
+      });
+
+      await AssessmentAttempt.create({
+        assessmentId: assessment._id,
+        learnerId,
+        enrollmentId: enrollment._id,
+        moduleId,
+        attemptNumber: 1,
+        status: 'submitted',
+        questions: [],
+        timing: {
+          startedAt: new Date(),
+          lastActivityAt: new Date(),
+          submittedAt: new Date(),
+          timeSpentSeconds: 120
+        },
+        scoring: {
+          gradingComplete: false,
+          requiresManualGrading: true
+        }
+      });
+
+      const result = await AssessmentAttemptsService.listAttemptSummaries();
+      expect(result.attempts).toHaveLength(1);
+      expect(result.attempts[0].courseId).toBe(secondaryCourse._id.toString());
+      expect(result.attempts[0].courseVersionId).toBe(secondaryVersion._id.toString());
+      expect(result.attempts[0].courseContexts).toHaveLength(2);
+    });
+
+    it('should omit canonical course context when no module linkage exists', async () => {
+      const assessment = await Assessment.create({
+        departmentId,
+        title: 'Unlinked Assessment',
+        style: 'quiz',
+        questionSelection: {
+          questionBankIds: ['bank1'],
+          questionCount: 1,
+          selectionMode: 'sequential'
+        },
+        timing: {
+          showTimer: true,
+          autoSubmitOnExpiry: false
+        },
+        attempts: {
+          maxAttempts: null,
+          retakePolicy: 'anytime'
+        },
+        scoring: {
+          passingScore: 70,
+          showScore: true,
+          showCorrectAnswers: 'after_submit',
+          partialCredit: false
+        },
+        feedback: {
+          showFeedback: true,
+          feedbackTiming: 'after_submit',
+          showExplanations: true
+        },
+        isPublished: true,
+        createdBy: new mongoose.Types.ObjectId()
+      });
+
+      await AssessmentAttempt.create({
+        assessmentId: assessment._id,
+        learnerId,
+        enrollmentId,
+        attemptNumber: 1,
+        status: 'submitted',
+        questions: [],
+        timing: {
+          startedAt: new Date(),
+          lastActivityAt: new Date(),
+          submittedAt: new Date(),
+          timeSpentSeconds: 120
+        },
+        scoring: {
+          gradingComplete: false,
+          requiresManualGrading: true
+        }
+      });
+
+      const result = await AssessmentAttemptsService.listAttemptSummaries();
+      expect(result.attempts).toHaveLength(1);
+      expect(result.attempts[0].courseId).toBeUndefined();
+      expect(result.attempts[0].courseCode).toBeUndefined();
+      expect(result.attempts[0].courseName).toBeUndefined();
+      expect(result.attempts[0].courseVersionId).toBeUndefined();
+    });
+  });
+
+  describe('gradeAttemptBatch()', () => {
+    it('should grade multiple questions atomically and finalize attempt when complete', async () => {
+      const graderId = new mongoose.Types.ObjectId();
+      const assessment = await Assessment.create({
+        departmentId,
+        title: 'Batch Grade Assessment',
+        style: 'quiz',
+        questionSelection: {
+          questionBankIds: ['bank1'],
+          questionCount: 2,
+          selectionMode: 'sequential'
+        },
+        timing: {
+          showTimer: true,
+          autoSubmitOnExpiry: false
+        },
+        attempts: {
+          maxAttempts: null,
+          retakePolicy: 'anytime'
+        },
+        scoring: {
+          passingScore: 60,
+          showScore: true,
+          showCorrectAnswers: 'after_submit',
+          partialCredit: false
+        },
+        feedback: {
+          showFeedback: true,
+          feedbackTiming: 'after_submit',
+          showExplanations: true
+        },
+        isPublished: true,
+        createdBy: new mongoose.Types.ObjectId()
+      });
+
+      const questionOneId = new mongoose.Types.ObjectId();
+      const questionTwoId = new mongoose.Types.ObjectId();
+      const attempt = await AssessmentAttempt.create({
+        assessmentId: assessment._id,
+        learnerId,
+        enrollmentId,
+        learningUnitId: new mongoose.Types.ObjectId(),
+        attemptNumber: 1,
+        status: 'submitted',
+        questions: [
+          {
+            questionId: questionOneId,
+            questionSnapshot: { questionType: 'long_answer', learningUnitQuestionId: new mongoose.Types.ObjectId() },
+            pointsPossible: 20
+          },
+          {
+            questionId: questionTwoId,
+            questionSnapshot: { questionType: 'long_answer' },
+            pointsPossible: 20
+          }
+        ],
+        timing: {
+          startedAt: new Date(),
+          lastActivityAt: new Date(),
+          submittedAt: new Date(),
+          timeSpentSeconds: 200
+        },
+        scoring: {
+          gradingComplete: false,
+          requiresManualGrading: true
+        }
+      });
+
+      const result = await AssessmentAttemptsService.gradeAttemptBatch(
+        attempt._id.toString(),
+        {
+          questionGrades: [
+            { questionIndex: 0, scoreEarned: 18, feedback: 'Strong response' },
+            { questionIndex: 1, scoreEarned: 16 }
+          ],
+          overallFeedback: 'Great work overall',
+          notifyLearner: true
+        },
+        graderId.toString()
+      );
+
+      expect(result.status).toBe('graded');
+      expect(result.scoring.gradingComplete).toBe(true);
+      expect(result.scoring.rawScore).toBe(34);
+      expect(result.scoring.overallFeedback).toBe('Great work overall');
+      expect(result.notification.deferred).toBe(false);
+      expect(result.notification.notifiedAt).toBeDefined();
+      expect(result.questionGrades).toHaveLength(2);
+      expect(result.questionGrades[0].questionIndex).toBe(0);
+      expect(result.questionGrades[0].learningUnitQuestionId).toBeDefined();
+    });
+
+    it('should enforce atomic behavior when any grade is invalid', async () => {
+      const graderId = new mongoose.Types.ObjectId();
+      const questionOneId = new mongoose.Types.ObjectId();
+      const questionTwoId = new mongoose.Types.ObjectId();
+
+      const attempt = await AssessmentAttempt.create({
+        assessmentId: new mongoose.Types.ObjectId(),
+        learnerId,
+        enrollmentId,
+        attemptNumber: 1,
+        status: 'submitted',
+        questions: [
+          { questionId: questionOneId, questionSnapshot: { questionType: 'long_answer' }, pointsPossible: 20 },
+          { questionId: questionTwoId, questionSnapshot: { questionType: 'long_answer' }, pointsPossible: 20 }
+        ],
+        timing: {
+          startedAt: new Date(),
+          lastActivityAt: new Date(),
+          submittedAt: new Date(),
+          timeSpentSeconds: 100
+        },
+        scoring: {
+          gradingComplete: false,
+          requiresManualGrading: true
+        }
+      });
+
+      await expect(
+        AssessmentAttemptsService.gradeAttemptBatch(
+          attempt._id.toString(),
+          {
+            questionGrades: [
+              { questionIndex: 0, scoreEarned: 10 },
+              { questionIndex: 1, scoreEarned: 100 }
+            ]
+          },
+          graderId.toString()
+        )
+      ).rejects.toThrow('cannot exceed points possible');
+
+      const unchangedAttempt = await AssessmentAttempt.findById(attempt._id);
+      expect(unchangedAttempt?.questions[0].gradedAt).toBeUndefined();
+      expect(unchangedAttempt?.questions[0].pointsEarned).toBeUndefined();
+      expect(unchangedAttempt?.scoring.overallFeedback).toBeUndefined();
+    });
+
+    it('should defer learner notification until grading is complete', async () => {
+      const graderId = new mongoose.Types.ObjectId();
+      const questionOneId = new mongoose.Types.ObjectId();
+      const questionTwoId = new mongoose.Types.ObjectId();
+
+      const attempt = await AssessmentAttempt.create({
+        assessmentId: new mongoose.Types.ObjectId(),
+        learnerId,
+        enrollmentId,
+        attemptNumber: 1,
+        status: 'submitted',
+        questions: [
+          { questionId: questionOneId, questionSnapshot: { questionType: 'long_answer' }, pointsPossible: 20 },
+          { questionId: questionTwoId, questionSnapshot: { questionType: 'long_answer' }, pointsPossible: 20 }
+        ],
+        timing: {
+          startedAt: new Date(),
+          lastActivityAt: new Date(),
+          submittedAt: new Date(),
+          timeSpentSeconds: 100
+        },
+        scoring: {
+          gradingComplete: false,
+          requiresManualGrading: true
+        }
+      });
+
+      const partialResult = await AssessmentAttemptsService.gradeAttemptBatch(
+        attempt._id.toString(),
+        {
+          questionGrades: [{ questionIndex: 0, scoreEarned: 12 }],
+          notifyLearner: true
+        },
+        graderId.toString()
+      );
+
+      expect(partialResult.status).toBe('submitted');
+      expect(partialResult.notification.deferred).toBe(true);
+
+      const finalResult = await AssessmentAttemptsService.gradeAttemptBatch(
+        attempt._id.toString(),
+        {
+          questionGrades: [{ questionIndex: 1, scoreEarned: 14 }]
+        },
+        graderId.toString()
+      );
+
+      expect(finalResult.status).toBe('graded');
+      expect(finalResult.notification.notifiedAt).toBeDefined();
+      expect(finalResult.notification.deferred).toBe(false);
     });
   });
 

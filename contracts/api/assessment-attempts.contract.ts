@@ -226,6 +226,18 @@ export const AssessmentAttemptsContracts = {
                 id: 'ObjectId',
                 assessmentId: 'ObjectId',
                 assessmentTitle: 'string | undefined',
+                courseId: 'ObjectId | undefined',
+                courseCode: 'string | undefined',
+                courseName: 'string | undefined',
+                courseVersionId: 'ObjectId | undefined',
+                courseContexts: [
+                  {
+                    courseId: 'ObjectId',
+                    courseCode: 'string | undefined',
+                    courseName: 'string | undefined',
+                    courseVersionId: 'ObjectId'
+                  }
+                ],
                 learnerId: 'ObjectId',
                 learnerName: 'string | undefined',
                 learnerEmail: 'string | undefined',
@@ -682,7 +694,7 @@ export const AssessmentAttemptsContracts = {
     endpoint: '/api/v2/assessment-attempts/:attemptId/grade',
     method: 'POST' as const,
     version: '2.0.0',
-    description: 'Manually grade a question using attemptId-only route',
+    description: 'Atomically grade multiple questions using attemptId-only route',
 
     request: {
       headers: {
@@ -693,9 +705,19 @@ export const AssessmentAttemptsContracts = {
         attemptId: { type: 'ObjectId', required: true, description: 'Attempt ID' }
       },
       body: {
-        questionIndex: { type: 'number', required: true },
-        score: { type: 'number', required: true, min: 0 },
-        feedback: { type: 'string', required: false, maxLength: 2000 }
+        questionGrades: {
+          type: 'array',
+          required: true,
+          minItems: 1,
+          items: {
+            questionIndex: { type: 'number', required: true, min: 0 },
+            questionId: { type: 'ObjectId', required: false, description: 'Optional integrity check for questionIndex mapping' },
+            scoreEarned: { type: 'number', required: true, min: 0 },
+            feedback: { type: 'string', required: false, maxLength: 2000 }
+          }
+        },
+        overallFeedback: { type: 'string', required: false, maxLength: 5000 },
+        notifyLearner: { type: 'boolean', required: false, default: false }
       }
     },
 
@@ -707,17 +729,31 @@ export const AssessmentAttemptsContracts = {
           message: 'string',
           data: {
             attemptId: 'ObjectId',
-            questionIndex: 'number',
-            pointsEarned: 'number',
-            pointsPossible: 'number',
-            gradedAt: 'Date',
-            gradedBy: 'ObjectId',
-            updatedScoring: 'object'
+            status: 'submitted | graded',
+            learningUnitId: 'ObjectId | undefined',
+            scoring: 'object',
+            notification: {
+              requested: 'boolean',
+              deferred: 'boolean',
+              notifiedAt: 'Date | undefined'
+            },
+            questionGrades: [
+              {
+                questionId: 'ObjectId',
+                questionIndex: 'number',
+                learningUnitQuestionId: 'ObjectId | undefined',
+                scoreEarned: 'number',
+                pointsPossible: 'number',
+                feedback: 'string | undefined',
+                gradedAt: 'Date',
+                gradedBy: 'ObjectId'
+              }
+            ]
           }
         }
       },
       errors: [
-        { status: 400, code: 'VALIDATION_ERROR', message: 'questionIndex and score are required; score must be >= 0' },
+        { status: 400, code: 'VALIDATION_ERROR', message: 'questionGrades is required; each item must include questionIndex and scoreEarned' },
         { status: 401, code: 'UNAUTHORIZED', message: 'Invalid or expired token' },
         { status: 403, code: 'FORBIDDEN', message: 'Only staff can grade attempts' },
         { status: 404, code: 'ATTEMPT_NOT_FOUND', message: 'Attempt not found' },

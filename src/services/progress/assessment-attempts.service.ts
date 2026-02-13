@@ -40,10 +40,22 @@ interface PaginationResult {
   hasPrev: boolean;
 }
 
+interface AttemptCourseContext {
+  courseId: string;
+  courseCode?: string;
+  courseName?: string;
+  courseVersionId: string;
+}
+
 interface AttemptSummaryRow {
   id: string;
   assessmentId: string;
   assessmentTitle?: string;
+  courseId?: string;
+  courseCode?: string;
+  courseName?: string;
+  courseVersionId?: string;
+  courseContexts?: AttemptCourseContext[];
   learnerId: string;
   learnerName?: string;
   learnerEmail?: string;
@@ -54,6 +66,41 @@ interface AttemptSummaryRow {
   timing: IAssessmentAttempt['timing'];
   createdAt: Date;
   updatedAt: Date;
+}
+
+interface BatchQuestionGradeInput {
+  questionIndex: number;
+  questionId?: string;
+  scoreEarned: number;
+  feedback?: string;
+}
+
+interface GradeAttemptBatchInput {
+  questionGrades: BatchQuestionGradeInput[];
+  overallFeedback?: string;
+  notifyLearner?: boolean;
+}
+
+interface GradeAttemptBatchResult {
+  attemptId: string;
+  status: IAssessmentAttempt['status'];
+  learningUnitId?: string;
+  scoring: IAssessmentAttempt['scoring'];
+  notification: {
+    requested: boolean;
+    deferred: boolean;
+    notifiedAt?: Date;
+  };
+  questionGrades: Array<{
+    questionId: string;
+    questionIndex: number;
+    learningUnitQuestionId?: string;
+    scoreEarned: number;
+    pointsPossible: number;
+    feedback?: string;
+    gradedAt: Date;
+    gradedBy: string;
+  }>;
 }
 
 /**
@@ -518,6 +565,130 @@ export class AssessmentAttemptsService {
           path: '$learner',
           preserveNullAndEmptyArrays: true
         }
+      },
+      {
+        $lookup: {
+          from: 'enrollments',
+          localField: 'enrollmentId',
+          foreignField: '_id',
+          as: 'enrollment'
+        }
+      },
+      {
+        $unwind: {
+          path: '$enrollment',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
+          from: 'courseversionmodules',
+          localField: 'moduleId',
+          foreignField: 'moduleId',
+          as: 'courseVersionLinks'
+        }
+      },
+      {
+        $lookup: {
+          from: 'courseversions',
+          let: { courseVersionIds: '$courseVersionLinks.courseVersionId' },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $in: ['$_id', '$$courseVersionIds'] }
+              }
+            },
+            {
+              $addFields: {
+                statusRank: {
+                  $switch: {
+                    branches: [
+                      { case: { $eq: ['$status', 'published'] }, then: 0 },
+                      { case: { $eq: ['$status', 'draft'] }, then: 1 }
+                    ],
+                    default: 2
+                  }
+                }
+              }
+            },
+            {
+              $lookup: {
+                from: 'canonicalcourses',
+                localField: 'canonicalCourseId',
+                foreignField: '_id',
+                as: 'canonicalCourse'
+              }
+            },
+            {
+              $unwind: {
+                path: '$canonicalCourse',
+                preserveNullAndEmptyArrays: true
+              }
+            },
+            {
+              $project: {
+                _id: 1,
+                canonicalCourseId: 1,
+                title: 1,
+                statusRank: 1,
+                isLatest: 1,
+                version: 1,
+                courseCode: '$canonicalCourse.code'
+              }
+            },
+            { $sort: { statusRank: 1, isLatest: -1, version: -1, _id: -1 } }
+          ],
+          as: 'courseContextsRaw'
+        }
+      },
+      {
+        $addFields: {
+          enrollmentContextCourseId: {
+            $convert: {
+              input: '$enrollment.metadata.courseId',
+              to: 'objectId',
+              onError: null,
+              onNull: null
+            }
+          },
+          courseContexts: {
+            $map: {
+              input: '$courseContextsRaw',
+              as: 'ctx',
+              in: {
+                courseId: '$$ctx.canonicalCourseId',
+                courseCode: '$$ctx.courseCode',
+                courseName: '$$ctx.title',
+                courseVersionId: '$$ctx._id'
+              }
+            }
+          }
+        }
+      },
+      {
+        $addFields: {
+          primaryCourseContext: {
+            $let: {
+              vars: {
+                enrollmentMatchedContexts: {
+                  $filter: {
+                    input: '$courseContexts',
+                    as: 'ctx',
+                    cond: {
+                      $eq: ['$$ctx.courseId', '$enrollmentContextCourseId']
+                    }
+                  }
+                }
+              },
+              in: {
+                $ifNull: [
+                  { $arrayElemAt: ['$$enrollmentMatchedContexts', 0] },
+                  { $arrayElemAt: ['$courseContexts', 0] }
+                ]
+              }
+            }
+          }
+        }
       }
     ];
 
@@ -567,6 +738,11 @@ export class AssessmentAttemptsService {
                 createdAt: 1,
                 updatedAt: 1,
                 assessmentTitle: '$assessment.title',
+                courseId: '$primaryCourseContext.courseId',
+                courseCode: '$primaryCourseContext.courseCode',
+                courseName: '$primaryCourseContext.courseName',
+                courseVersionId: '$primaryCourseContext.courseVersionId',
+                courseContexts: '$courseContexts',
                 learnerFirstName: '$learner.person.firstName',
                 learnerLastName: '$learner.person.lastName',
                 learnerEmail: {
@@ -611,6 +787,18 @@ export class AssessmentAttemptsService {
       id: attempt._id.toString(),
       assessmentId: attempt.assessmentId.toString(),
       assessmentTitle: attempt.assessmentTitle || undefined,
+      courseId: attempt.courseId ? attempt.courseId.toString() : undefined,
+      courseCode: attempt.courseCode || undefined,
+      courseName: attempt.courseName || undefined,
+      courseVersionId: attempt.courseVersionId ? attempt.courseVersionId.toString() : undefined,
+      courseContexts: (attempt.courseContexts || [])
+        .filter((context: any) => context?.courseId && context?.courseVersionId)
+        .map((context: any) => ({
+          courseId: context.courseId.toString(),
+          courseCode: context.courseCode || undefined,
+          courseName: context.courseName || undefined,
+          courseVersionId: context.courseVersionId.toString()
+        })),
       learnerId: attempt.learnerId.toString(),
       learnerName: [attempt.learnerFirstName, attempt.learnerLastName].filter(Boolean).join(' ') || undefined,
       learnerEmail: attempt.learnerEmail || undefined,
@@ -654,6 +842,185 @@ export class AssessmentAttemptsService {
     }
 
     return attempt;
+  }
+
+  /**
+   * Grade an attempt using batch question grades (canonical staff workflow).
+   */
+  static async gradeAttemptBatch(
+    attemptId: string,
+    data: GradeAttemptBatchInput,
+    gradedBy: string
+  ): Promise<GradeAttemptBatchResult> {
+    if (!mongoose.Types.ObjectId.isValid(attemptId)) {
+      throw ApiError.notFound('Attempt not found');
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(gradedBy)) {
+      throw ApiError.badRequest('Invalid grader ID');
+    }
+
+    const attempt = await AssessmentAttempt.findById(attemptId);
+    if (!attempt) {
+      throw ApiError.notFound('Attempt not found');
+    }
+
+    if (attempt.status !== 'submitted' && attempt.status !== 'graded') {
+      throw ApiError.conflict('Attempt must be submitted before grading');
+    }
+
+    if (!Array.isArray(data.questionGrades) || data.questionGrades.length === 0) {
+      throw ApiError.badRequest('questionGrades is required and must be a non-empty array');
+    }
+
+    const seenQuestionIndices = new Set<number>();
+    const validatedGrades: Array<{
+      questionIndex: number;
+      questionId: string;
+      scoreEarned: number;
+      feedback?: string;
+    }> = [];
+
+    // Validate all grades first (atomic behavior).
+    for (const grade of data.questionGrades) {
+      if (!grade || typeof grade !== 'object') {
+        throw ApiError.badRequest('Each question grade must be an object');
+      }
+
+      if (typeof grade.questionIndex !== 'number' || !Number.isInteger(grade.questionIndex)) {
+        throw ApiError.badRequest('Each question grade must include questionIndex as an integer');
+      }
+
+      if (grade.questionIndex < 0 || grade.questionIndex >= attempt.questions.length) {
+        throw ApiError.badRequest(`questionIndex out of range: ${grade.questionIndex}`);
+      }
+
+      if (seenQuestionIndices.has(grade.questionIndex)) {
+        throw ApiError.badRequest(`Duplicate questionIndex in questionGrades: ${grade.questionIndex}`);
+      }
+      seenQuestionIndices.add(grade.questionIndex);
+
+      if (typeof grade.scoreEarned !== 'number' || Number.isNaN(grade.scoreEarned) || grade.scoreEarned < 0) {
+        throw ApiError.badRequest('scoreEarned must be a non-negative number');
+      }
+
+      if (grade.feedback !== undefined && typeof grade.feedback !== 'string') {
+        throw ApiError.badRequest('feedback must be a string when provided');
+      }
+
+      if (typeof grade.feedback === 'string' && grade.feedback.length > 2000) {
+        throw ApiError.badRequest('feedback cannot exceed 2000 characters');
+      }
+
+      const question = attempt.questions[grade.questionIndex];
+      const expectedQuestionId = question.questionId.toString();
+
+      if (grade.questionId !== undefined) {
+        if (typeof grade.questionId !== 'string' || !mongoose.Types.ObjectId.isValid(grade.questionId)) {
+          throw ApiError.badRequest('questionId must be a valid ObjectId when provided');
+        }
+
+        if (grade.questionId !== expectedQuestionId) {
+          throw ApiError.badRequest(
+            `questionId does not match questionIndex ${grade.questionIndex}`
+          );
+        }
+      }
+
+      if (grade.scoreEarned > question.pointsPossible) {
+        throw ApiError.badRequest(
+          `scoreEarned for questionIndex ${grade.questionIndex} cannot exceed points possible (${question.pointsPossible})`
+        );
+      }
+
+      validatedGrades.push({
+        questionId: expectedQuestionId,
+        questionIndex: grade.questionIndex,
+        scoreEarned: grade.scoreEarned,
+        feedback: grade.feedback
+      });
+    }
+
+    const now = new Date();
+    const graderId = new mongoose.Types.ObjectId(gradedBy);
+
+    for (const grade of validatedGrades) {
+      const question = attempt.questions[grade.questionIndex];
+      question.pointsEarned = grade.scoreEarned;
+      question.feedback = grade.feedback;
+      question.gradedBy = graderId;
+      question.gradedAt = now;
+      question.isCorrect = grade.scoreEarned === question.pointsPossible;
+    }
+
+    if (data.overallFeedback !== undefined) {
+      attempt.scoring.overallFeedback = data.overallFeedback;
+    }
+
+    const allGraded = this.checkAllQuestionsGraded(attempt);
+    const notifyRequested = data.notifyLearner === true;
+    const pendingNotification = attempt.scoring.notifyLearnerOnCompletion === true;
+    const shouldNotifyWhenComplete = notifyRequested || pendingNotification;
+    let notificationDeferred = false;
+
+    if (allGraded) {
+      attempt.status = 'graded';
+      attempt.scoring.gradingComplete = true;
+      attempt.scoring.requiresManualGrading = false;
+
+      const { rawScore, percentageScore } = this.calculateTotalScore(attempt);
+      attempt.scoring.rawScore = rawScore;
+      attempt.scoring.percentageScore = percentageScore;
+
+      const assessment = await Assessment.findById(attempt.assessmentId).lean() as IAssessment | null;
+      if (assessment) {
+        attempt.scoring.passed = percentageScore >= assessment.scoring.passingScore;
+      }
+
+      if (shouldNotifyWhenComplete) {
+        attempt.scoring.notifyLearnerOnCompletion = false;
+        attempt.scoring.learnerNotificationSentAt = now;
+      }
+    } else {
+      attempt.status = 'submitted';
+      attempt.scoring.gradingComplete = false;
+      if (notifyRequested) {
+        attempt.scoring.notifyLearnerOnCompletion = true;
+        notificationDeferred = true;
+      } else if (data.notifyLearner === false) {
+        attempt.scoring.notifyLearnerOnCompletion = false;
+      }
+      if (attempt.scoring.notifyLearnerOnCompletion === true) {
+        notificationDeferred = true;
+      }
+    }
+
+    await attempt.save();
+
+    return {
+      attemptId: attempt._id.toString(),
+      status: attempt.status,
+      learningUnitId: attempt.learningUnitId?.toString(),
+      scoring: attempt.scoring,
+      notification: {
+        requested: notifyRequested,
+        deferred: notificationDeferred,
+        notifiedAt: attempt.scoring.learnerNotificationSentAt
+      },
+      questionGrades: validatedGrades.map((grade) => {
+        const question = attempt.questions[grade.questionIndex];
+        return {
+          questionId: grade.questionId,
+          questionIndex: grade.questionIndex,
+          learningUnitQuestionId: question.questionSnapshot?.learningUnitQuestionId || undefined,
+          scoreEarned: question.pointsEarned || 0,
+          pointsPossible: question.pointsPossible,
+          feedback: question.feedback || undefined,
+          gradedAt: question.gradedAt || now,
+          gradedBy: question.gradedBy?.toString() || gradedBy
+        };
+      })
+    };
   }
 
   /**

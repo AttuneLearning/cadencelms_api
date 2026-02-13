@@ -838,6 +838,79 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
 
       expect(gradeResponse.status).toBe(400);
     });
+
+    it('should batch-grade through canonical attemptId route', async () => {
+      const startResponse = await request(app)
+        .post(`/api/v2/assessments/${assessment._id}/attempts/start`)
+        .set('Authorization', `Bearer ${learner.token}`)
+        .send({ enrollmentId: enrollment._id.toString() });
+
+      const attemptId = startResponse.body.data._id;
+
+      await request(app)
+        .post(`/api/v2/assessments/${assessment._id}/attempts/${attemptId}/submit`)
+        .set('Authorization', `Bearer ${learner.token}`)
+        .send({
+          responses: [
+            { questionId: essayQuestions[0]._id.toString(), response: 'Essay response 1' },
+            { questionId: essayQuestions[1]._id.toString(), response: 'Essay response 2' }
+          ]
+        });
+
+      const batchGradeResponse = await request(app)
+        .post(`/api/v2/assessment-attempts/${attemptId}/grade`)
+        .set('Authorization', `Bearer ${staff.token}`)
+        .send({
+          questionGrades: [
+            { questionIndex: 0, scoreEarned: 20, feedback: 'Good effort, but missing key points.' },
+            { questionIndex: 1, scoreEarned: 25, feedback: 'Excellent response!' }
+          ],
+          overallFeedback: 'Strong completion overall.',
+          notifyLearner: true
+        });
+
+      expect(batchGradeResponse.status).toBe(200);
+      expect(batchGradeResponse.body.data.status).toBe('graded');
+      expect(batchGradeResponse.body.data.scoring.gradingComplete).toBe(true);
+      expect(batchGradeResponse.body.data.questionGrades).toHaveLength(2);
+      expect(batchGradeResponse.body.data.notification.requested).toBe(true);
+      expect(batchGradeResponse.body.data.notification.deferred).toBe(false);
+    });
+
+    it('should apply atomic validation for canonical batch grading', async () => {
+      const startResponse = await request(app)
+        .post(`/api/v2/assessments/${assessment._id}/attempts/start`)
+        .set('Authorization', `Bearer ${learner.token}`)
+        .send({ enrollmentId: enrollment._id.toString() });
+
+      const attemptId = startResponse.body.data._id;
+
+      await request(app)
+        .post(`/api/v2/assessments/${assessment._id}/attempts/${attemptId}/submit`)
+        .set('Authorization', `Bearer ${learner.token}`)
+        .send({
+          responses: [
+            { questionId: essayQuestions[0]._id.toString(), response: 'Essay response 1' },
+            { questionId: essayQuestions[1]._id.toString(), response: 'Essay response 2' }
+          ]
+        });
+
+      const batchGradeResponse = await request(app)
+        .post(`/api/v2/assessment-attempts/${attemptId}/grade`)
+        .set('Authorization', `Bearer ${staff.token}`)
+        .send({
+          questionGrades: [
+            { questionIndex: 0, scoreEarned: 20 },
+            { questionIndex: 999, scoreEarned: 10 }
+          ]
+        });
+
+      expect(batchGradeResponse.status).toBe(400);
+
+      const attemptAfterFailure = await AssessmentAttempt.findById(attemptId);
+      expect(attemptAfterFailure?.questions[0].gradedAt).toBeUndefined();
+      expect(attemptAfterFailure?.questions[0].pointsEarned).toBeUndefined();
+    });
   });
 
   // ============ TIME LIMITS ============

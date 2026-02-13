@@ -328,53 +328,23 @@ export const gradeAttemptById = asyncHandler(async (req: Request, res: Response)
   }
 
   const { attemptId } = req.params;
-  const { questionIndex, score, feedback } = req.body;
+  const { questionGrades, overallFeedback, notifyLearner } = req.body;
 
   if (!attemptId) {
     throw ApiError.badRequest('Attempt ID is required');
   }
 
-  if (questionIndex === undefined || typeof questionIndex !== 'number') {
-    throw ApiError.badRequest('questionIndex is required and must be a number');
-  }
-
-  if (score === undefined || typeof score !== 'number') {
-    throw ApiError.badRequest('score is required and must be a number');
-  }
-
-  if (score < 0) {
-    throw ApiError.badRequest('score must be at least 0');
-  }
-
-  if (feedback !== undefined && typeof feedback !== 'string') {
-    throw ApiError.badRequest('feedback must be a string');
-  }
-
-  if (feedback && feedback.length > 2000) {
-    throw ApiError.badRequest('feedback cannot exceed 2000 characters');
-  }
-
-  const attempt = await AssessmentAttemptsService.gradeQuestion(
+  const result = await AssessmentAttemptsService.gradeAttemptBatch(
     attemptId,
-    questionIndex,
-    score,
-    feedback || '',
+    {
+      questionGrades,
+      overallFeedback,
+      notifyLearner
+    },
     user.userId
   );
 
-  const question = attempt.questions[questionIndex];
   res.status(200).json(ApiResponse.success({
-    attemptId: attempt._id,
-    questionIndex,
-    pointsEarned: question.pointsEarned,
-    pointsPossible: question.pointsPossible,
-    gradedAt: question.gradedAt,
-    gradedBy: question.gradedBy,
-    updatedScoring: {
-      rawScore: attempt.scoring.rawScore,
-      percentageScore: attempt.scoring.percentageScore,
-      passed: attempt.scoring.passed,
-      gradingComplete: attempt.scoring.gradingComplete
-    }
-  }, 'Question graded successfully'));
+    ...result
+  }, 'Attempt graded successfully'));
 });

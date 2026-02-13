@@ -28,6 +28,9 @@ export interface IAttemptScoring {
   passed?: boolean;
   gradingComplete: boolean;
   requiresManualGrading: boolean;
+  overallFeedback?: string;
+  notifyLearnerOnCompletion?: boolean;
+  learnerNotificationSentAt?: Date;
 }
 
 export interface IAssessmentAttempt extends Document {
@@ -138,6 +141,17 @@ const attemptScoringSchema = new Schema<IAttemptScoring>(
     requiresManualGrading: {
       type: Boolean,
       required: [true, 'Requires manual grading is required']
+    },
+    overallFeedback: {
+      type: String,
+      maxlength: [5000, 'Overall feedback cannot exceed 5000 characters']
+    },
+    notifyLearnerOnCompletion: {
+      type: Boolean,
+      default: false
+    },
+    learnerNotificationSentAt: {
+      type: Date
     }
   },
   { _id: false }

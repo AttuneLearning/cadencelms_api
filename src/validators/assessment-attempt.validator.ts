@@ -127,6 +127,64 @@ const gradeQuestionSchema = Joi.object({
     })
 });
 
+const batchGradeQuestionSchema = Joi.object({
+  questionIndex: Joi.number()
+    .required()
+    .integer()
+    .min(0)
+    .messages({
+      'number.base': 'questionIndex must be a number',
+      'number.integer': 'questionIndex must be an integer',
+      'number.min': 'questionIndex must be at least 0',
+      'any.required': 'questionIndex is required'
+    }),
+  questionId: Joi.string()
+    .optional()
+    .custom(objectIdValidator, 'ObjectId validation')
+    .messages({
+      'string.objectId': 'questionId must be a valid MongoDB ObjectId'
+    }),
+  scoreEarned: Joi.number()
+    .required()
+    .min(0)
+    .messages({
+      'number.base': 'scoreEarned must be a number',
+      'number.min': 'scoreEarned must be at least 0',
+      'any.required': 'scoreEarned is required'
+    }),
+  feedback: Joi.string()
+    .optional()
+    .allow('')
+    .max(2000)
+    .messages({
+      'string.max': 'feedback cannot exceed 2000 characters'
+    })
+});
+
+const gradeAttemptBatchSchema = Joi.object({
+  questionGrades: Joi.array()
+    .items(batchGradeQuestionSchema)
+    .required()
+    .min(1)
+    .messages({
+      'array.base': 'questionGrades must be an array',
+      'array.min': 'questionGrades must contain at least one item',
+      'any.required': 'questionGrades is required'
+    }),
+  overallFeedback: Joi.string()
+    .optional()
+    .allow('')
+    .max(5000)
+    .messages({
+      'string.max': 'overallFeedback cannot exceed 5000 characters'
+    }),
+  notifyLearner: Joi.boolean()
+    .optional()
+    .messages({
+      'boolean.base': 'notifyLearner must be a boolean'
+    })
+});
+
 /**
  * Validate start attempt request
  *
@@ -193,6 +251,24 @@ export const validateGradeQuestion = (
   next: NextFunction
 ) => {
   const { error } = gradeQuestionSchema.validate(req.body, {
+    abortEarly: false,
+    stripUnknown: true
+  });
+
+  if (error) {
+    const errorMessage = error.details.map(detail => detail.message).join(', ');
+    return next(new ApiError(422, errorMessage));
+  }
+
+  next();
+};
+
+export const validateBatchGradeAttempt = (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+) => {
+  const { error } = gradeAttemptBatchSchema.validate(req.body, {
     abortEarly: false,
     stripUnknown: true
   });

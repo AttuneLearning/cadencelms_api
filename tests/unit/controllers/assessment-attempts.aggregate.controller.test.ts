@@ -92,7 +92,11 @@ describe('AssessmentAttempts Aggregate Controller', () => {
   it('grades attempt by attemptId for staff users', async () => {
     const req = {
       params: { attemptId: 'attempt-1' },
-      body: { questionIndex: 0, score: 8, feedback: 'Good work' },
+      body: {
+        questionGrades: [{ questionIndex: 0, scoreEarned: 8, feedback: 'Good work' }],
+        overallFeedback: 'Solid submission',
+        notifyLearner: true
+      },
       user: {
         userId: 'staff-1',
         userTypes: ['staff']
@@ -100,33 +104,62 @@ describe('AssessmentAttempts Aggregate Controller', () => {
     } as unknown as Request;
     const res = mockResponse();
 
-    (AssessmentAttemptsService.gradeQuestion as jest.Mock).mockResolvedValue({
-      _id: 'attempt-1',
-      questions: [
-        {
-          pointsEarned: 8,
-          pointsPossible: 10,
-          gradedAt: new Date('2026-02-13T00:00:00.000Z'),
-          gradedBy: 'staff-1'
-        }
-      ],
+    (AssessmentAttemptsService.gradeAttemptBatch as jest.Mock).mockResolvedValue({
+      attemptId: 'attempt-1',
+      status: 'graded',
       scoring: {
         rawScore: 88,
         percentageScore: 88,
         passed: true,
         gradingComplete: true
-      }
+      },
+      notification: {
+        requested: true,
+        deferred: false,
+        notifiedAt: new Date('2026-02-13T00:00:00.000Z')
+      },
+      questionGrades: [
+        {
+          questionId: '507f1f77bcf86cd799439011',
+          questionIndex: 0,
+          scoreEarned: 8,
+          pointsPossible: 10,
+          gradedAt: new Date('2026-02-13T00:00:00.000Z'),
+          gradedBy: 'staff-1'
+        }
+      ]
     });
 
     await gradeAttemptById(req, res, jest.fn());
 
-    expect(AssessmentAttemptsService.gradeQuestion).toHaveBeenCalledWith(
+    expect(AssessmentAttemptsService.gradeAttemptBatch).toHaveBeenCalledWith(
       'attempt-1',
-      0,
-      8,
-      'Good work',
+      {
+        questionGrades: [{ questionIndex: 0, scoreEarned: 8, feedback: 'Good work' }],
+        overallFeedback: 'Solid submission',
+        notifyLearner: true
+      },
       'staff-1'
     );
     expect(res.status).toHaveBeenCalledWith(200);
+  });
+
+  it('rejects batch grade for non-staff users', async () => {
+    const req = {
+      params: { attemptId: 'attempt-1' },
+      body: {
+        questionGrades: [{ questionIndex: 0, scoreEarned: 8 }]
+      },
+      user: {
+        userId: 'learner-1',
+        userTypes: ['learner']
+      }
+    } as unknown as Request;
+    const res = mockResponse();
+    const next = jest.fn();
+
+    await gradeAttemptById(req, res, next);
+
+    expect(next).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 403 }));
   });
 });
