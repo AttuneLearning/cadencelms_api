@@ -25,11 +25,13 @@
 ### Phase 4: Completion
 13. **Create session file:** `ai_team_config/memory_store/sessions/{date}-{issue-slug}.md`
 14. **Update issue file** with commit hash and status COMPLETE
-15. **Move issue** to `completed/` folder (`/comms move`)
+15. **Commit completion changes** (include issue/phase in commit message)
+16. **Push immediately** after each completed issue or completed phase milestone
+17. **Move issue** to `completed/` folder (`/comms move`)
 
 ### Phase 5: Comms Response
-16. **Send response to originating team** (`/comms send`) confirming what was fixed/built, what changed, and any action required on their side (e.g., `npm run reset:mock`)
-17. **This step is NOT optional.** Every inbound comms message that triggers work MUST get a response.
+18. **Send response to originating team** (`/comms send`) confirming what was fixed/built, what changed, and any action required on their side (e.g., `npm run reset:mock`)
+19. **This step is NOT optional.** Every inbound comms message that triggers work MUST get a response.
 
 ---
 
@@ -72,6 +74,7 @@ No issue can be marked complete until ALL pass:
 - [ ] New functionality has corresponding tests
 - [ ] Session file created: `ai_team_config/memory_store/sessions/{date}-{issue-slug}.md`
 - [ ] Issue file updated with commit hash and status COMPLETE
+- [ ] Completion commit has been pushed to remote
 
 ---
 

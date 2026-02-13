@@ -152,6 +152,10 @@ implementation:
     - action: update_types
       description: "Add/update TypeScript types"
       required: true
+
+    - action: checkpoint_commit_push
+      description: "When a phase milestone is complete and stable, commit and push immediately"
+      required: true
 ```
 
 ### Phase 3: Verification (MANDATORY)
@@ -217,6 +221,14 @@ completion:
   steps:
     - action: verify_acceptance
       description: "Check all acceptance criteria met"
+      required: true
+
+    - action: completion_commit
+      description: "Create completion commit with issue/phase identifier in message"
+      required: true
+
+    - action: push_remote
+      description: "Push completion commit immediately"
       required: true
 
     - action: move_issue

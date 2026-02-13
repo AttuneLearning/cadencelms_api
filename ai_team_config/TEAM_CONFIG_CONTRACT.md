@@ -72,3 +72,4 @@ Installer must:
 1. Messages cross team boundaries; issues remain team-local by default.
 2. Team-specific artifacts should remain inside that team's vault subtree.
 3. Shared architectural decisions can be linked across teams via wiki-links.
+4. Standard delivery practice: commit and push immediately after each completed issue or completed phase milestone.
