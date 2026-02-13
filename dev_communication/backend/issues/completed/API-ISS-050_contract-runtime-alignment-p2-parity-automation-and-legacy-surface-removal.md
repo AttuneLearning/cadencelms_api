@@ -94,7 +94,7 @@ Execute P2 stabilization work to prevent contract drift recurrence: add automate
 **Commits:**
 | Hash | Description |
 |------|-------------|
-| TBD | Contract/runtime parity automation + legacy surface cleanup |
+| 0eb43b3 | Contract/runtime parity automation + legacy surface cleanup |
 
 **Verification:**
 - [x] All acceptance criteria met
