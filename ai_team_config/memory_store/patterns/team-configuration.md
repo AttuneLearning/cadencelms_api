@@ -73,6 +73,10 @@ dev_communication/
 queue/ → active/ → completed/
 ```
 
+Completion rule:
+- When work is done, update the issue file `Status` to `COMPLETE` and move it to the team's `completed/` folder in the same step.
+- A completed issue is invalid if it remains in `queue/` or `active/`.
+
 Each issue file contains:
 - Status, Priority, Phase
 - Requirements and acceptance criteria

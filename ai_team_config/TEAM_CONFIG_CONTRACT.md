@@ -73,3 +73,4 @@ Installer must:
 2. Team-specific artifacts should remain inside that team's vault subtree.
 3. Shared architectural decisions can be linked across teams via wiki-links.
 4. Standard delivery practice: commit and push immediately after each completed issue or completed phase milestone.
+5. Issue lifecycle enforcement is mandatory: when work is completed, update the issue file `Status` to `COMPLETE` and move the file to the team's `issues/completed/` directory in the same operation.
