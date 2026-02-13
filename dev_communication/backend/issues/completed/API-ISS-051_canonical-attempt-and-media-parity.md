@@ -102,7 +102,7 @@ Implement canonical endpoints and type model directly (no compatibility shims), 
 **Commits:**
 | Hash | Description |
 |------|-------------|
-| | |
+| `4a7f12f` | feat(api): add canonical assessment-attempt and media parity endpoints |
 
 **Verification:**
 - [x] All acceptance criteria met
