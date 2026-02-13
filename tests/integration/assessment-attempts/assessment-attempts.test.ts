@@ -65,6 +65,7 @@ interface TestQuestionOptions {
   options?: string[];
   correctAnswer?: string;
   correctAnswers?: string[];
+  matchThreshold?: number;
   matchingPairs?: Record<string, string>;
 }
 
@@ -231,6 +232,9 @@ async function createTestQuestion(options: TestQuestionOptions): Promise<any> {
     questionData.trueFalseData = { correctValue: correct === 'true' };
   } else if (primaryType === 'short_answer') {
     questionData.correctAnswers = options.correctAnswers || ['correct answer'];
+    if (options.matchThreshold !== undefined) {
+      questionData.matchThreshold = options.matchThreshold;
+    }
   } else if (primaryType === 'long_answer') {
     questionData.correctAnswers = [];
     questionData.modelAnswer = 'This is a model answer for the essay question.';
@@ -651,6 +655,100 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
 
       expect(submitResponse.status).toBe(200);
       expect(submitResponse.body.data.scoring.percentageScore).toBe(100);
+    });
+
+    it('should create projected short-answer grading for near-threshold responses', async () => {
+      const question = await createTestQuestion({
+        questionText: 'What is the capital of France?',
+        questionTypes: ['short_answer'],
+        departmentId: department._id,
+        questionBankId,
+        points: 10,
+        correctAnswers: ['paris'],
+        matchThreshold: 90
+      });
+
+      const assessment = await createTestAssessment({
+        departmentId: department._id,
+        createdBy: staff.user._id,
+        questionBankId,
+        questionCount: 1
+      });
+      const enrollment = await createTestEnrollment(learner.profile._id);
+
+      const startResponse = await request(app)
+        .post(`/api/v2/assessments/${assessment._id}/attempts/start`)
+        .set('Authorization', `Bearer ${learner.token}`)
+        .send({ enrollmentId: enrollment._id.toString() });
+
+      const attemptId = startResponse.body.data._id;
+
+      const submitResponse = await request(app)
+        .post(`/api/v2/assessments/${assessment._id}/attempts/${attemptId}/submit`)
+        .set('Authorization', `Bearer ${learner.token}`)
+        .send({
+          responses: [{ questionId: question._id.toString(), response: 'pariss' }]
+        });
+
+      expect(submitResponse.status).toBe(200);
+      expect(submitResponse.body.data.status).toBe('submitted');
+      expect(submitResponse.body.data.scoring.requiresManualGrading).toBe(true);
+      expect(submitResponse.body.data.scoring.gradingComplete).toBe(false);
+
+      const attempt = await AssessmentAttempt.findById(attemptId).lean();
+      expect(attempt?.questions?.[0]?.projectedMethod).toBe('short_answer_fuzzy');
+      expect(attempt?.questions?.[0]?.projectedCorrect).toBe(true);
+      expect(attempt?.questions?.[0]?.requiresInstructorReview).toBe(true);
+    });
+
+    it('should finalize projected short-answer grading after instructor approval', async () => {
+      const question = await createTestQuestion({
+        questionText: 'What is the capital of France?',
+        questionTypes: ['short_answer'],
+        departmentId: department._id,
+        questionBankId,
+        points: 10,
+        correctAnswers: ['paris'],
+        matchThreshold: 90
+      });
+
+      const assessment = await createTestAssessment({
+        departmentId: department._id,
+        createdBy: staff.user._id,
+        questionBankId,
+        questionCount: 1
+      });
+      const enrollment = await createTestEnrollment(learner.profile._id);
+
+      const startResponse = await request(app)
+        .post(`/api/v2/assessments/${assessment._id}/attempts/start`)
+        .set('Authorization', `Bearer ${learner.token}`)
+        .send({ enrollmentId: enrollment._id.toString() });
+
+      const attemptId = startResponse.body.data._id;
+
+      await request(app)
+        .post(`/api/v2/assessments/${assessment._id}/attempts/${attemptId}/submit`)
+        .set('Authorization', `Bearer ${learner.token}`)
+        .send({
+          responses: [{ questionId: question._id.toString(), response: 'pariss' }]
+        });
+
+      const approveResponse = await request(app)
+        .post(`/api/v2/assessment-attempts/${attemptId}/grade`)
+        .set('Authorization', `Bearer ${staff.token}`)
+        .send({
+          questionGrades: [{ questionIndex: 0, scoreEarned: 10, feedback: 'Approved projected answer' }]
+        });
+
+      expect(approveResponse.status).toBe(200);
+      expect(approveResponse.body.data.status).toBe('graded');
+      expect(approveResponse.body.data.scoring.gradingComplete).toBe(true);
+
+      const gradedAttempt = await AssessmentAttempt.findById(attemptId).lean();
+      expect(gradedAttempt?.questions?.[0]?.requiresInstructorReview).toBe(false);
+      expect(gradedAttempt?.questions?.[0]?.reviewedAt).toBeDefined();
+      expect(gradedAttempt?.questions?.[0]?.gradedAt).toBeDefined();
     });
 
     it('should mark unanswered questions as incorrect', async () => {

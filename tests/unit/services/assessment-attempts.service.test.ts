@@ -692,6 +692,89 @@ describeIfMongo('AssessmentAttemptsService - Unit Tests', () => {
       expect(result.questions[0].isCorrect).toBe(true);
       expect(result.questions[0].pointsEarned).toBe(10);
     });
+
+    it('should create projected short-answer grading for near-threshold responses', async () => {
+      const questionId = new mongoose.Types.ObjectId();
+
+      const attempt = await AssessmentAttempt.create({
+        assessmentId: new mongoose.Types.ObjectId(),
+        learnerId,
+        enrollmentId,
+        attemptNumber: 1,
+        status: 'in_progress',
+        questions: [{
+          questionId,
+          questionSnapshot: {
+            questionType: 'short_answer',
+            correctAnswers: ['paris'],
+            matchThreshold: 90
+          },
+          response: 'pariss',
+          pointsPossible: 10
+        }],
+        timing: {
+          startedAt: new Date(Date.now() - 120000),
+          lastActivityAt: new Date(),
+          timeSpentSeconds: 120
+        },
+        scoring: {
+          gradingComplete: false,
+          requiresManualGrading: false
+        }
+      });
+
+      const result = await AssessmentAttemptsService.submitAttempt(attempt._id.toString());
+
+      expect(result.status).toBe('submitted');
+      expect(result.scoring.gradingComplete).toBe(false);
+      expect(result.scoring.requiresManualGrading).toBe(true);
+      expect(result.questions[0].gradedAt).toBeUndefined();
+      expect(result.questions[0].projectedCorrect).toBe(true);
+      expect(result.questions[0].projectedMethod).toBe('short_answer_fuzzy');
+      expect(result.questions[0].requiresInstructorReview).toBe(true);
+      expect(result.questions[0].projectedScore).toBe(10);
+    });
+
+    it('should create projected long-answer grading using heuristic signals', async () => {
+      const questionId = new mongoose.Types.ObjectId();
+
+      const attempt = await AssessmentAttempt.create({
+        assessmentId: new mongoose.Types.ObjectId(),
+        learnerId,
+        enrollmentId,
+        attemptNumber: 1,
+        status: 'in_progress',
+        questions: [{
+          questionId,
+          questionSnapshot: {
+            questionType: 'long_answer',
+            modelAnswer: 'The mitochondria is responsible for energy production and ATP generation in the cell.',
+            rubric: 'Discuss energy production and ATP generation clearly.'
+          },
+          response: 'Mitochondria helps with energy production and ATP in cells.',
+          pointsPossible: 20
+        }],
+        timing: {
+          startedAt: new Date(Date.now() - 120000),
+          lastActivityAt: new Date(),
+          timeSpentSeconds: 120
+        },
+        scoring: {
+          gradingComplete: false,
+          requiresManualGrading: false
+        }
+      });
+
+      const result = await AssessmentAttemptsService.submitAttempt(attempt._id.toString());
+
+      expect(result.status).toBe('submitted');
+      expect(result.scoring.requiresManualGrading).toBe(true);
+      expect(result.questions[0].gradedAt).toBeUndefined();
+      expect(result.questions[0].projectedMethod).toBe('long_answer_heuristic');
+      expect(result.questions[0].projectedConfidence).toBeDefined();
+      expect(result.questions[0].requiresInstructorReview).toBe(true);
+      expect(result.questions[0].projectedAt).toBeDefined();
+    });
   });
 
   describe('getAttemptResults()', () => {
@@ -1648,12 +1731,26 @@ describeIfMongo('AssessmentAttemptsService - Unit Tests', () => {
           {
             questionId: questionOneId,
             questionSnapshot: { questionType: 'long_answer', learningUnitQuestionId: new mongoose.Types.ObjectId() },
-            pointsPossible: 20
+            pointsPossible: 20,
+            projectedScore: 20,
+            projectedCorrect: true,
+            projectedConfidence: 0.86,
+            projectedMethod: 'long_answer_heuristic',
+            projectedReason: 'Projected as correct pending instructor verification',
+            requiresInstructorReview: true,
+            projectedAt: new Date()
           },
           {
             questionId: questionTwoId,
             questionSnapshot: { questionType: 'long_answer' },
-            pointsPossible: 20
+            pointsPossible: 20,
+            projectedScore: 16,
+            projectedCorrect: false,
+            projectedConfidence: 0.54,
+            projectedMethod: 'long_answer_heuristic',
+            projectedReason: 'Projected partial credit pending instructor verification',
+            requiresInstructorReview: true,
+            projectedAt: new Date()
           }
         ],
         timing: {
@@ -1690,6 +1787,12 @@ describeIfMongo('AssessmentAttemptsService - Unit Tests', () => {
       expect(result.questionGrades).toHaveLength(2);
       expect(result.questionGrades[0].questionIndex).toBe(0);
       expect(result.questionGrades[0].learningUnitQuestionId).toBeDefined();
+
+      const gradedAttempt = await AssessmentAttempt.findById(attempt._id);
+      expect(gradedAttempt?.questions[0].requiresInstructorReview).toBe(false);
+      expect(gradedAttempt?.questions[0].reviewedAt).toBeDefined();
+      expect(gradedAttempt?.questions[1].requiresInstructorReview).toBe(false);
+      expect(gradedAttempt?.questions[1].reviewedAt).toBeDefined();
     });
 
     it('should enforce atomic behavior when any grade is invalid', async () => {

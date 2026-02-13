@@ -12,6 +12,14 @@ export interface IQuestionAttempt {
   gradedAt?: Date;
   gradedBy?: mongoose.Types.ObjectId;
   feedback?: string;
+  projectedScore?: number;
+  projectedCorrect?: boolean;
+  projectedConfidence?: number;
+  projectedMethod?: string;
+  projectedReason?: string;
+  requiresInstructorReview?: boolean;
+  projectedAt?: Date;
+  reviewedAt?: Date;
 }
 
 export interface IAttemptTiming {
@@ -88,6 +96,37 @@ const questionAttemptSchema = new Schema<IQuestionAttempt>(
     },
     feedback: {
       type: String
+    },
+    projectedScore: {
+      type: Number,
+      min: [0, 'Projected score cannot be negative']
+    },
+    projectedCorrect: {
+      type: Boolean
+    },
+    projectedConfidence: {
+      type: Number,
+      min: [0, 'Projected confidence cannot be negative'],
+      max: [1, 'Projected confidence cannot exceed 1']
+    },
+    projectedMethod: {
+      type: String,
+      trim: true
+    },
+    projectedReason: {
+      type: String,
+      trim: true,
+      maxlength: [500, 'Projected reason cannot exceed 500 characters']
+    },
+    requiresInstructorReview: {
+      type: Boolean,
+      default: false
+    },
+    projectedAt: {
+      type: Date
+    },
+    reviewedAt: {
+      type: Date
     }
   },
   { _id: false }

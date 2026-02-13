@@ -359,6 +359,12 @@ export const AssessmentAttemptsContracts = {
       ]
     },
 
+    notes: `
+      - Learner-facing feedback fields remain hidden until grading completes.
+      - While scoring.gradingComplete=false, question.feedback and scoring.overallFeedback are withheld.
+      - Projected grading fields are advisory and not final grades.
+    `,
+
     permissions: ['take:assessments', 'read:assessments']
   },
 
@@ -395,6 +401,11 @@ export const AssessmentAttemptsContracts = {
         { status: 404, code: 'ATTEMPT_NOT_FOUND', message: 'Attempt not found' }
       ]
     },
+
+    notes: `
+      - Staff detail includes projected grading metadata when non-final heuristic/fuzzy projections exist.
+      - Projected fields require instructor approval/override to become final grades.
+    `,
 
     permissions: ['read:assessments', 'grade:assessments']
   },
@@ -769,6 +780,7 @@ export const AssessmentAttemptsContracts = {
     notes: `
       - notifyLearner is completion-gated; notifications are deferred while grading is still in progress.
       - Learner-visible feedback is released when scoring.gradingComplete becomes true.
+      - This endpoint is also used to approve/override projected grading suggestions.
     `,
 
     permissions: ['grade:assessments']

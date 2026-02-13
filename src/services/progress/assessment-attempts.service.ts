@@ -8,6 +8,7 @@ import LearningUnit from '@/models/content/LearningUnit.model';
 import Question from '@/models/assessment/Question.model';
 import { ApiError } from '@/utils/ApiError';
 import { LearnerExceptionService } from '@/services/exception/learnerException.service';
+import { calculateSimilarity } from '@/utils/fuzzy-match.util';
 
 interface ListAttemptsFilters {
   status?: 'in_progress' | 'submitted' | 'graded';
@@ -102,6 +103,32 @@ interface GradeAttemptBatchResult {
     gradedBy: string;
   }>;
 }
+
+interface AutoGradeResult {
+  graded: boolean;
+  isCorrect: boolean;
+  pointsEarned: number;
+  projected?: {
+    score: number;
+    isCorrect: boolean;
+    confidence: number;
+    method: string;
+    reason: string;
+    requiresInstructorReview: boolean;
+  };
+}
+
+const SHORT_ANSWER_REVIEW_BAND = 0.1;
+const LONG_ANSWER_CONFIDENCE_CORRECT_THRESHOLD = 0.7;
+const LONG_ANSWER_CONFIDENCE_PARTIAL_THRESHOLD = 0.45;
+const KEYWORD_MIN_LENGTH = 4;
+const STOP_WORDS = new Set([
+  'the', 'and', 'that', 'this', 'with', 'from', 'your', 'their', 'have', 'has', 'were',
+  'what', 'when', 'where', 'which', 'about', 'into', 'for', 'not', 'you', 'are', 'was',
+  'can', 'will', 'would', 'there', 'than', 'then', 'them', 'they', 'but', 'because',
+  'while', 'also', 'been', 'being', 'onto', 'over', 'under', 'such', 'only', 'just',
+  'more', 'most', 'some', 'each', 'other', 'many', 'much', 'very'
+]);
 
 /**
  * AssessmentAttemptsService
@@ -209,7 +236,13 @@ export class AssessmentAttemptsService {
         options: q.options,
         correctAnswer: q.correctAnswer,
         correctAnswers: q.correctAnswers,
+        acceptedAnswers: q.acceptedAnswers,
+        matchThreshold: q.matchThreshold,
+        shortAnswerData: q.shortAnswerData,
         modelAnswer: q.modelAnswer,
+        sampleAnswer: q.sampleAnswer,
+        rubric: q.rubric,
+        longAnswerData: q.longAnswerData,
         matchingPairs: q.matchingPairs,
         maxWordCount: q.maxWordCount,
         explanation: q.explanation,
@@ -357,10 +390,28 @@ export class AssessmentAttemptsService {
         question.isCorrect = gradeResult.isCorrect;
         question.pointsEarned = gradeResult.pointsEarned;
         question.gradedAt = new Date();
+        question.projectedScore = undefined;
+        question.projectedCorrect = undefined;
+        question.projectedConfidence = undefined;
+        question.projectedMethod = undefined;
+        question.projectedReason = undefined;
+        question.requiresInstructorReview = false;
+        question.projectedAt = undefined;
+        question.reviewedAt = question.gradedAt;
         totalPointsEarned += gradeResult.pointsEarned;
       } else {
         allQuestionsGraded = false;
         requiresManualGrading = true;
+
+        if (gradeResult.projected) {
+          question.projectedScore = gradeResult.projected.score;
+          question.projectedCorrect = gradeResult.projected.isCorrect;
+          question.projectedConfidence = gradeResult.projected.confidence;
+          question.projectedMethod = gradeResult.projected.method;
+          question.projectedReason = gradeResult.projected.reason;
+          question.requiresInstructorReview = gradeResult.projected.requiresInstructorReview;
+          question.projectedAt = new Date();
+        }
       }
     }
 
@@ -972,6 +1023,8 @@ export class AssessmentAttemptsService {
       question.gradedBy = graderId;
       question.gradedAt = now;
       question.isCorrect = grade.scoreEarned === question.pointsPossible;
+      question.requiresInstructorReview = false;
+      question.reviewedAt = now;
     }
 
     if (data.overallFeedback !== undefined) {
@@ -1086,6 +1139,8 @@ export class AssessmentAttemptsService {
     question.gradedBy = new mongoose.Types.ObjectId(gradedBy);
     question.gradedAt = new Date();
     question.isCorrect = score === question.pointsPossible;
+    question.requiresInstructorReview = false;
+    question.reviewedAt = question.gradedAt;
 
     // Check if all questions are now graded
     const allGraded = this.checkAllQuestionsGraded(attempt);
@@ -1151,14 +1206,19 @@ export class AssessmentAttemptsService {
    */
   private static autoGradeQuestion(
     question: IQuestionAttempt
-  ): { graded: boolean; isCorrect: boolean; pointsEarned: number } {
+  ): AutoGradeResult {
     const questionType = question.questionSnapshot?.questionType;
     const response = question.response;
 
     // If no response, mark as incorrect
     if (response === undefined || response === null || response === '') {
       if (questionType === 'essay' || questionType === 'long_answer') {
-        return { graded: false, isCorrect: false, pointsEarned: 0 };
+        return {
+          graded: false,
+          isCorrect: false,
+          pointsEarned: 0,
+          projected: this.projectLongAnswerGrade(question, '')
+        };
       }
       return { graded: true, isCorrect: false, pointsEarned: 0 };
     }
@@ -1181,29 +1241,25 @@ export class AssessmentAttemptsService {
 
       case 'short_answer':
       case 'short-answer': {   // Legacy support
-        const correctAnswers = question.questionSnapshot?.correctAnswers || [];
-        const correctAnswer = question.questionSnapshot?.correctAnswer;
-
-        // Check against array of correct answers
-        const allAnswers = correctAnswer
-          ? [correctAnswer, ...correctAnswers]
-          : correctAnswers;
-
-        const isCorrect = allAnswers.some(
-          (ans: string) => String(ans).toLowerCase().trim() === String(response).toLowerCase().trim()
-        );
+        const shortAnswerResult = this.evaluateShortAnswer(question, String(response));
 
         return {
-          graded: true,
-          isCorrect,
-          pointsEarned: isCorrect ? question.pointsPossible : 0
+          graded: shortAnswerResult.graded,
+          isCorrect: shortAnswerResult.isCorrect,
+          pointsEarned: shortAnswerResult.pointsEarned,
+          projected: shortAnswerResult.projected
         };
       }
 
       case 'long_answer':
       case 'essay':          // Legacy support
-        // Essay/long_answer questions require manual grading
-        return { graded: false, isCorrect: false, pointsEarned: 0 };
+        // Essay/long_answer questions always require instructor-final grading.
+        return {
+          graded: false,
+          isCorrect: false,
+          pointsEarned: 0,
+          projected: this.projectLongAnswerGrade(question, String(response))
+        };
 
       case 'fill_in_blank':
       case 'fill-blank': {   // Legacy support
@@ -1248,6 +1304,134 @@ export class AssessmentAttemptsService {
         // Unknown question type - require manual grading
         return { graded: false, isCorrect: false, pointsEarned: 0 };
     }
+  }
+
+  private static evaluateShortAnswer(question: IQuestionAttempt, response: string): AutoGradeResult {
+    const snapshot = question.questionSnapshot || {};
+    const caseSensitive = Boolean(snapshot.shortAnswerData?.caseSensitive);
+    const normalize = (value: string) => {
+      const trimmed = value.trim();
+      return caseSensitive ? trimmed : trimmed.toLowerCase();
+    };
+
+    const candidateAnswers = new Set<string>();
+    const fromSnapshot = [
+      snapshot.correctAnswer,
+      ...(Array.isArray(snapshot.correctAnswers) ? snapshot.correctAnswers : []),
+      ...(Array.isArray(snapshot.acceptedAnswers) ? snapshot.acceptedAnswers : []),
+      ...(Array.isArray(snapshot.shortAnswerData?.alternateAccepted) ? snapshot.shortAnswerData.alternateAccepted : [])
+    ];
+
+    for (const answer of fromSnapshot) {
+      if (typeof answer === 'string' && answer.trim().length > 0) {
+        candidateAnswers.add(normalize(answer));
+      }
+    }
+
+    const normalizedResponse = normalize(response);
+    const acceptedAnswers = Array.from(candidateAnswers);
+    const bestSimilarity = acceptedAnswers.reduce((best, answer) => {
+      const similarity = calculateSimilarity(normalizedResponse, answer);
+      return similarity > best ? similarity : best;
+    }, 0);
+
+    const thresholdPercentRaw = snapshot.shortAnswerData?.matchThreshold ?? snapshot.matchThreshold ?? 80;
+    const thresholdPercent = Math.max(0, Math.min(100, Number(thresholdPercentRaw) || 80));
+    const threshold = thresholdPercent / 100;
+    const reviewFloor = Math.max(0, threshold - SHORT_ANSWER_REVIEW_BAND);
+    const isExactOrAboveThreshold = bestSimilarity >= threshold;
+    const requiresReview = !isExactOrAboveThreshold && bestSimilarity >= reviewFloor;
+
+    if (isExactOrAboveThreshold) {
+      return {
+        graded: true,
+        isCorrect: true,
+        pointsEarned: question.pointsPossible
+      };
+    }
+
+    if (requiresReview) {
+      return {
+        graded: false,
+        isCorrect: false,
+        pointsEarned: 0,
+        projected: {
+          score: question.pointsPossible,
+          isCorrect: true,
+          confidence: bestSimilarity,
+          method: 'short_answer_fuzzy',
+          reason: `Near-threshold fuzzy match (${Math.round(bestSimilarity * 100)}% vs ${thresholdPercent}% threshold)`,
+          requiresInstructorReview: true
+        }
+      };
+    }
+
+    return {
+      graded: true,
+      isCorrect: false,
+      pointsEarned: 0
+    };
+  }
+
+  private static projectLongAnswerGrade(question: IQuestionAttempt, response: string): AutoGradeResult['projected'] {
+    const snapshot = question.questionSnapshot || {};
+    const referenceParts = [
+      snapshot.modelAnswer,
+      snapshot.longAnswerData?.sampleAnswer,
+      snapshot.sampleAnswer,
+      snapshot.correctAnswer,
+      ...(Array.isArray(snapshot.correctAnswers) ? snapshot.correctAnswers : []),
+      snapshot.longAnswerData?.rubric,
+      snapshot.rubric
+    ].filter((part: unknown) => typeof part === 'string' && (part as string).trim().length > 0) as string[];
+
+    const referenceText = referenceParts.join(' ').trim();
+    const keywordSet = this.extractKeywords(referenceText);
+    const responseKeywords = this.extractKeywords(response);
+
+    const keywordMatches = keywordSet.filter((keyword) => responseKeywords.includes(keyword)).length;
+    const keywordCoverage = keywordSet.length > 0 ? keywordMatches / keywordSet.length : 0;
+    const similarity = referenceText ? calculateSimilarity(response, referenceText) : 0;
+    const confidence = Math.min(1, Math.max(0, (similarity * 0.55) + (keywordCoverage * 0.45)));
+
+    let projectedScore = 0;
+    let projectedCorrect = false;
+    let reason = `Heuristic projection: similarity=${Math.round(similarity * 100)}%, keywordCoverage=${Math.round(keywordCoverage * 100)}%`;
+
+    if (confidence >= LONG_ANSWER_CONFIDENCE_CORRECT_THRESHOLD) {
+      projectedScore = question.pointsPossible;
+      projectedCorrect = true;
+      reason = `${reason}; projected correct pending instructor verification`;
+    } else if (confidence >= LONG_ANSWER_CONFIDENCE_PARTIAL_THRESHOLD) {
+      projectedScore = Math.max(1, Math.round(question.pointsPossible * confidence));
+      reason = `${reason}; projected partial credit pending instructor verification`;
+    } else {
+      reason = `${reason}; projected below correctness threshold pending instructor verification`;
+    }
+
+    return {
+      score: projectedScore,
+      isCorrect: projectedCorrect,
+      confidence,
+      method: 'long_answer_heuristic',
+      reason,
+      requiresInstructorReview: true
+    };
+  }
+
+  private static extractKeywords(input: string): string[] {
+    if (!input || !input.trim()) {
+      return [];
+    }
+
+    const tokens = input
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter((token) => token.length >= KEYWORD_MIN_LENGTH)
+      .filter((token) => !STOP_WORDS.has(token));
+
+    return Array.from(new Set(tokens));
   }
 
   /**
