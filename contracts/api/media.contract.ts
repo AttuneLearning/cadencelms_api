@@ -47,7 +47,7 @@ export const MediaUploadContracts = {
         purpose: {
           type: 'string',
           required: true,
-          enum: ['flashcard', 'question', 'answer', 'hint', 'explanation', 'content', 'thumbnail'],
+          enum: ['flashcard', 'question', 'content', 'thumbnail', 'avatar', 'certificate', 'assignment', 'general'],
           description: 'What this media is for'
         },
         entityId: {
@@ -81,7 +81,7 @@ export const MediaUploadContracts = {
             expiresAt: 'Date',
             fields: 'object|null',
             method: 'PUT|POST',
-            provider: 'local|aws_s3|digitalocean_spaces|cloudflare_r2'
+            provider: 'local|aws_s3'
           }
         }
       },

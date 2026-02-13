@@ -155,75 +155,11 @@ router.post('/scorm/:id/unpublish',
 
 /**
  * =====================
- * MEDIA LIBRARY ROUTES
- * Base: /api/v2/content/media
- * =====================
- */
-
-/**
- * GET /api/v2/content/media
- * List media files
- * Access Right: content:courses:read
- * Roles: course-taker, auditor, instructor, content-admin, department-admin
- */
-router.get('/media',
-  authorize('content:courses:read'),
-  contentController.listMedia
-);
-
-/**
- * POST /api/v2/content/media
- * Upload media file
- * Access Right: content:courses:manage
- * Roles: content-admin, department-admin
- * Content-Type: multipart/form-data
- */
-router.post('/media',
-  authorize('content:courses:manage'),
-  upload.single('file'),
-  contentController.uploadMedia
-);
-
-/**
- * GET /api/v2/content/media/:id
- * Get media file details
- * Access Right: content:courses:read
- * Roles: course-taker, auditor, instructor, content-admin, department-admin
- */
-router.get('/media/:id',
-  authorize('content:courses:read'),
-  contentController.getMedia
-);
-
-/**
- * PUT /api/v2/content/media/:id
- * Update media metadata
- * Access Right: content:courses:manage
- * Roles: content-admin, department-admin
- */
-router.put('/media/:id',
-  authorize('content:courses:manage'),
-  contentController.updateMedia
-);
-
-/**
- * DELETE /api/v2/content/media/:id
- * Delete media file
- * Access Right: content:courses:manage
- * Roles: content-admin, department-admin
- */
-router.delete('/media/:id',
-  authorize('content:courses:manage'),
-  contentController.deleteMedia
-);
-
-/**
- * =====================
  * CONTENT OVERVIEW ROUTES
  * Base: /api/v2/content
  * =====================
  * Note: These generic routes must come LAST to avoid
- * catching specific routes like /scorm and /media
+ * catching specific routes like /scorm
  */
 
 /**

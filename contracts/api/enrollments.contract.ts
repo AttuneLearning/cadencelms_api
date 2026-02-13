@@ -1693,7 +1693,7 @@ export const EnrollmentsContract = {
 
   /**
    * Override/Edit Student Grade
-   * PUT /api/v2/enrollments/:enrollmentId/grade/override
+   * PUT /api/v2/enrollments/:enrollmentId/grades/override
    * 
    * REQUIRES: grades:override access right (dept-admin role)
    * 
@@ -1703,7 +1703,7 @@ export const EnrollmentsContract = {
    * @added 2026-01-14 (ISS-021)
    */
   overrideGrade: {
-    endpoint: '/api/v2/enrollments/:enrollmentId/grade/override',
+    endpoint: '/api/v2/enrollments/:enrollmentId/grades/override',
     method: 'PUT' as const,
     version: '1.0.0',
     description: 'Override or correct a student grade (dept-admin only)',
@@ -1855,14 +1855,14 @@ export const EnrollmentsContract = {
 
   /**
    * Get Grade Override History
-   * GET /api/v2/enrollments/:enrollmentId/grade/history
+   * GET /api/v2/enrollments/:enrollmentId/grades/history
    * 
    * View audit trail of all grade changes for an enrollment.
    * 
    * @added 2026-01-14 (ISS-021)
    */
   getGradeHistory: {
-    endpoint: '/api/v2/enrollments/:enrollmentId/grade/history',
+    endpoint: '/api/v2/enrollments/:enrollmentId/grades/history',
     method: 'GET' as const,
     version: '1.0.0',
     description: 'Get grade override history for an enrollment',

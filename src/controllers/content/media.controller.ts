@@ -13,7 +13,7 @@ import { ApiError } from '@/utils/ApiError';
 import { LocalStorageProvider } from '@/services/storage/local-storage.service';
 import { getLocalStorageProvider, isLocalProvider } from '@/services/storage';
 import { storageConfig } from '@/config/storage.config';
-import type { MediaPurpose } from '@/models/content/MediaAttachment.model';
+import { MEDIA_PURPOSES, type MediaPurpose } from '@/models/content/MediaAttachment.model';
 
 /**
  * POST /api/v2/media/upload-url
@@ -49,7 +49,7 @@ export const requestUploadUrl = asyncHandler(async (req: Request, res: Response)
     throw ApiError.badRequest('purpose is required and must be a string');
   }
 
-  const validPurposes = ['flashcard', 'question', 'content', 'thumbnail', 'avatar', 'certificate', 'general'];
+  const validPurposes: string[] = [...MEDIA_PURPOSES];
   if (!validPurposes.includes(purpose)) {
     throw ApiError.badRequest(`purpose must be one of: ${validPurposes.join(', ')}`);
   }
@@ -236,7 +236,7 @@ export const listMedia = asyncHandler(async (req: Request, res: Response) => {
   }
 
   // Validate purpose if provided
-  const validPurposes = ['flashcard', 'question', 'content', 'thumbnail', 'avatar', 'certificate', 'general'];
+  const validPurposes: string[] = [...MEDIA_PURPOSES];
   if (filters.purpose && !validPurposes.includes(filters.purpose)) {
     throw ApiError.badRequest(`purpose must be one of: ${validPurposes.join(', ')}`);
   }

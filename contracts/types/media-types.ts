@@ -12,6 +12,18 @@
 
 export type MediaType = 'text' | 'image' | 'video' | 'audio';
 
+export const MEDIA_PURPOSES = [
+  'flashcard',
+  'question',
+  'content',
+  'thumbnail',
+  'avatar',
+  'certificate',
+  'assignment',
+  'general'
+] as const;
+export type MediaPurpose = (typeof MEDIA_PURPOSES)[number];
+
 /**
  * How to display media relative to text
  */
@@ -102,7 +114,7 @@ export interface MediaUploadRequest {
   filename: string;
   mimeType: string;
   fileSize: number;
-  purpose: 'flashcard' | 'question' | 'answer' | 'hint' | 'explanation' | 'content';
+  purpose: MediaPurpose;
   entityId?: string;             // Associated entity (exercise, module, etc.)
   entityType?: string;           // Entity type
   altText?: string;
@@ -162,7 +174,8 @@ export const MediaConstraints = {
 // Storage Provider Types
 // ============================================================================
 
-export type StorageProvider = 'local' | 'aws_s3' | 'digitalocean_spaces' | 'cloudflare_r2';
+export const STORAGE_PROVIDERS = ['local', 'aws_s3'] as const;
+export type StorageProvider = (typeof STORAGE_PROVIDERS)[number];
 
 export interface StorageConfig {
   provider: StorageProvider;

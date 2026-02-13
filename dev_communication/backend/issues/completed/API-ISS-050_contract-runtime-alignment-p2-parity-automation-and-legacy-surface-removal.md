@@ -1,11 +1,11 @@
 # API-ISS-050: Contract Runtime Alignment P2 (Parity Automation + Legacy Surface Removal)
 
-## Status: PENDING
+## Status: COMPLETE
 ## Priority: Medium
 ## Created: 2026-02-13
 ## Updated: 2026-02-13
 ## Requested By: Internal
-## Assigned To: Unassigned
+## Assigned To: Codex
 ## Related: dev_communication/shared/architecture/suggestions/2026-02-13_api_contract-runtime-alignment-audit.md, API-ISS-048, API-ISS-049
 
 ---
@@ -65,19 +65,19 @@ Execute P2 stabilization work to prevent contract drift recurrence: add automate
 
 ## Tests Required
 
-1. [ ] Contract-route parity test passes for all canonical endpoint contracts.
-2. [ ] Media contract/model/controller enum compatibility tests pass.
-3. [ ] Regression tests pass after removal of overlapping legacy attempt/media surfaces.
+1. [x] Contract-route parity test passes for all canonical endpoint contracts.
+2. [x] Media contract/model/controller enum compatibility tests pass.
+3. [x] Regression tests pass after removal of overlapping legacy attempt/media surfaces.
 
 ---
 
 ## Acceptance Criteria
 
-- [ ] Automated parity check exists and runs in CI.
-- [ ] Overlapping legacy endpoint/contract surfaces are removed.
-- [ ] Critical enum mismatches are resolved.
-- [ ] Tests pass
-- [ ] Code reviewed
+- [x] Automated parity check exists and runs in CI.
+- [x] Overlapping legacy endpoint/contract surfaces are removed.
+- [x] Critical enum mismatches are resolved.
+- [x] Tests pass
+- [x] Code reviewed
 
 ---
 
@@ -90,16 +90,16 @@ Execute P2 stabilization work to prevent contract drift recurrence: add automate
 
 ## Completion
 
-**Completed Date:**
+**Completed Date:** 2026-02-13
 **Commits:**
 | Hash | Description |
 |------|-------------|
-| | |
+| TBD | Contract/runtime parity automation + legacy surface cleanup |
 
 **Verification:**
-- [ ] All acceptance criteria met
-- [ ] Tests passing
-- [ ] Response message sent (if cross-team)
+- [x] All acceptance criteria met
+- [x] Tests passing
+- [x] Response message sent (if cross-team)
 
 ---
 

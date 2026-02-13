@@ -10,25 +10,29 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 /**
  * Media type categories
  */
-export type MediaType = 'image' | 'video' | 'audio';
+export const MEDIA_TYPES = ['image', 'video', 'audio'] as const;
+export type MediaType = (typeof MEDIA_TYPES)[number];
 
 /**
  * Storage provider types
  */
-export type StorageProvider = 'local' | 'aws_s3';
+export const STORAGE_PROVIDERS = ['local', 'aws_s3'] as const;
+export type StorageProvider = (typeof STORAGE_PROVIDERS)[number];
 
 /**
  * Purpose of the media attachment
  */
-export type MediaPurpose =
-  | 'flashcard'
-  | 'question'
-  | 'content'
-  | 'thumbnail'
-  | 'avatar'
-  | 'certificate'
-  | 'assignment'
-  | 'general';
+export const MEDIA_PURPOSES = [
+  'flashcard',
+  'question',
+  'content',
+  'thumbnail',
+  'avatar',
+  'certificate',
+  'assignment',
+  'general'
+] as const;
+export type MediaPurpose = (typeof MEDIA_PURPOSES)[number];
 
 /**
  * MediaAttachment interface
@@ -124,7 +128,7 @@ const mediaAttachmentSchema = new Schema<IMediaAttachment>(
       type: String,
       required: [true, 'Media type is required'],
       enum: {
-        values: ['image', 'video', 'audio'],
+        values: [...MEDIA_TYPES],
         message: '{VALUE} is not a valid media type'
       }
     },
@@ -133,7 +137,7 @@ const mediaAttachmentSchema = new Schema<IMediaAttachment>(
       type: String,
       required: [true, 'Storage provider is required'],
       enum: {
-        values: ['local', 'aws_s3'],
+        values: [...STORAGE_PROVIDERS],
         message: '{VALUE} is not a valid storage provider'
       }
     },
@@ -197,7 +201,7 @@ const mediaAttachmentSchema = new Schema<IMediaAttachment>(
       type: String,
       required: [true, 'Purpose is required'],
       enum: {
-        values: ['flashcard', 'question', 'content', 'thumbnail', 'avatar', 'certificate', 'assignment', 'general'],
+        values: [...MEDIA_PURPOSES],
         message: '{VALUE} is not a valid purpose'
       }
     },

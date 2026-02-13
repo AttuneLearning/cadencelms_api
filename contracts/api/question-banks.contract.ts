@@ -653,6 +653,7 @@ export const QuestionBanksContracts = {
   adminCopyQuestions: {
     endpoint: '/api/v2/admin/questions/copy',
     method: 'POST' as const,
+    internalOnly: true,
     version: '1.0.0',
     description: 'Copy questions between departments (system admin only)',
 
@@ -709,6 +710,7 @@ export const QuestionBanksContracts = {
   adminCopyBank: {
     endpoint: '/api/v2/admin/question-banks/copy',
     method: 'POST' as const,
+    internalOnly: true,
     version: '1.0.0',
     description: 'Copy entire question bank between departments (system admin only)',
 
@@ -769,6 +771,7 @@ export const QuestionBanksContracts = {
   getQuestionSettings: {
     endpoint: '/api/v2/settings/question',
     method: 'GET' as const,
+    internalOnly: true,
     version: '1.0.0',
     description: 'Get admin-configurable question settings',
 
@@ -818,6 +821,7 @@ export const QuestionBanksContracts = {
   updateQuestionSettings: {
     endpoint: '/api/v2/settings/question',
     method: 'PUT' as const,
+    internalOnly: true,
     version: '1.0.0',
     description: 'Update admin-configurable question settings',
 

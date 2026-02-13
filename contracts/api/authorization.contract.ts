@@ -262,6 +262,7 @@ export const AuthorizationContracts = {
   refreshPermissions: {
     endpoint: '/api/v2/auth/permissions/refresh',
     method: 'POST' as const,
+    internalOnly: true,
     version: '1.0.0',
     description: 'Force refresh of cached permissions (use after role changes)',
 
@@ -298,6 +299,7 @@ export const AuthorizationContracts = {
   getUserPermissions: {
     endpoint: '/api/v2/admin/users/:userId/permissions',
     method: 'GET' as const,
+    internalOnly: true,
     version: '1.0.0',
     description: 'Get detailed permission breakdown for debugging (admin only)',
     requiredRight: 'system:users:read',

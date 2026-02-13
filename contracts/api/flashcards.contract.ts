@@ -31,6 +31,7 @@ export const FlashcardAuthoringContracts = {
   listByModule: {
     endpoint: '/api/v2/modules/:moduleId/flashcards',
     method: 'GET' as const,
+    internalOnly: true,
     version: '1.0.0',
     description: 'List all flashcards in a module',
 
@@ -116,6 +117,7 @@ export const FlashcardAuthoringContracts = {
   create: {
     endpoint: '/api/v2/modules/:moduleId/flashcards',
     method: 'POST' as const,
+    internalOnly: true,
     version: '1.0.0',
     description: 'Create a new flashcard in a module',
 
@@ -250,6 +252,7 @@ export const FlashcardAuthoringContracts = {
   update: {
     endpoint: '/api/v2/modules/:moduleId/flashcards/:cardId',
     method: 'PUT' as const,
+    internalOnly: true,
     version: '1.0.0',
     description: 'Update a flashcard',
 
@@ -310,6 +313,7 @@ export const FlashcardAuthoringContracts = {
   delete: {
     endpoint: '/api/v2/modules/:moduleId/flashcards/:cardId',
     method: 'DELETE' as const,
+    internalOnly: true,
     version: '1.0.0',
     description: 'Delete a flashcard (soft delete)',
 
@@ -351,6 +355,7 @@ export const FlashcardAuthoringContracts = {
   bulkCreate: {
     endpoint: '/api/v2/modules/:moduleId/flashcards/bulk',
     method: 'POST' as const,
+    internalOnly: true,
     version: '1.0.0',
     description: 'Bulk create flashcards in a module',
 
@@ -404,6 +409,7 @@ export const FlashcardAuthoringContracts = {
   reorder: {
     endpoint: '/api/v2/modules/:moduleId/flashcards/reorder',
     method: 'PATCH' as const,
+    internalOnly: true,
     version: '1.0.0',
     description: 'Update the order of flashcards in a module',
 

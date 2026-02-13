@@ -492,7 +492,7 @@ export const MatchingExerciseContracts = {
    * Update matching exercise pairs
    */
   updatePairs: {
-    endpoint: '/api/v2/content/exercises/:id/matching-pairs',
+    endpoint: '/api/v2/content/exercises/:id/matching',
     method: 'PUT' as const,
     version: '1.0.0',
     description: 'Update matching pairs for an exercise',

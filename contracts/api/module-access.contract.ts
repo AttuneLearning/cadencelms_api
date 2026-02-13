@@ -11,10 +11,10 @@
 export const ModuleAccessContracts = {
   /**
    * Record Module Access
-   * POST /modules/:moduleId/access
+   * POST /module-access
    */
   recordAccess: {
-    endpoint: '/api/v2/modules/:moduleId/access',
+    endpoint: '/api/v2/module-access',
     method: 'POST' as const,
     version: '1.0.0',
     description: 'Record that a learner has accessed a module',
@@ -24,14 +24,21 @@ export const ModuleAccessContracts = {
         'Authorization': 'Bearer <token>',
         'Content-Type': 'application/json'
       },
-      params: {
-        moduleId: { type: 'ObjectId', required: true, description: 'Module ID' }
-      },
       body: {
+        moduleId: {
+          type: 'ObjectId',
+          required: true,
+          description: 'Module ID'
+        },
         enrollmentId: {
           type: 'ObjectId',
           required: true,
           description: 'Class enrollment ID'
+        },
+        courseId: {
+          type: 'ObjectId',
+          required: true,
+          description: 'Course ID'
         }
       }
     },
@@ -66,8 +73,9 @@ export const ModuleAccessContracts = {
 
     example: {
       request: {
-        params: { moduleId: '507f1f77bcf86cd799439012' },
         body: {
+          moduleId: '507f1f77bcf86cd799439012',
+          courseId: '507f1f77bcf86cd799439011',
           enrollmentId: '507f1f77bcf86cd799439100'
         }
       },
@@ -103,10 +111,10 @@ export const ModuleAccessContracts = {
 
   /**
    * Get Module Access by Enrollment
-   * GET /enrollments/:enrollmentId/module-access
+   * GET /module-access?enrollmentId=...
    */
   getByEnrollment: {
-    endpoint: '/api/v2/enrollments/:enrollmentId/module-access',
+    endpoint: '/api/v2/module-access',
     method: 'GET' as const,
     version: '1.0.0',
     description: 'Get all module access records for an enrollment',
@@ -115,7 +123,7 @@ export const ModuleAccessContracts = {
       headers: {
         'Authorization': 'Bearer <token>'
       },
-      params: {
+      query: {
         enrollmentId: { type: 'ObjectId', required: true, description: 'Enrollment ID' }
       }
     },
@@ -166,7 +174,7 @@ export const ModuleAccessContracts = {
 
     example: {
       request: {
-        params: { enrollmentId: '507f1f77bcf86cd799439100' }
+        query: { enrollmentId: '507f1f77bcf86cd799439100' }
       },
       response: {
         success: true,
@@ -231,10 +239,10 @@ export const ModuleAccessContracts = {
 
   /**
    * Get Module Access Analytics
-   * GET /modules/:moduleId/access
+   * GET /module-access?moduleId=...
    */
   getByModule: {
-    endpoint: '/api/v2/modules/:moduleId/access',
+    endpoint: '/api/v2/module-access',
     method: 'GET' as const,
     version: '1.0.0',
     description: 'Get all learner access records for a module (analytics)',
@@ -243,10 +251,8 @@ export const ModuleAccessContracts = {
       headers: {
         'Authorization': 'Bearer <token>'
       },
-      params: {
-        moduleId: { type: 'ObjectId', required: true, description: 'Module ID' }
-      },
       query: {
+        moduleId: { type: 'ObjectId', required: true, description: 'Module ID' },
         hasStartedLearningUnit: {
           type: 'boolean',
           required: false,
@@ -315,8 +321,7 @@ export const ModuleAccessContracts = {
 
     example: {
       request: {
-        params: { moduleId: '507f1f77bcf86cd799439012' },
-        query: { hasStartedLearningUnit: false, page: 1, limit: 20 }
+        query: { moduleId: '507f1f77bcf86cd799439012', hasStartedLearningUnit: false, page: 1, limit: 20 }
       },
       response: {
         success: true,
@@ -372,10 +377,10 @@ export const ModuleAccessContracts = {
 
   /**
    * Get Course Module Access Summary
-   * GET /courses/:courseId/module-access-summary
+   * GET /module-access/analytics/drop-off
    */
   getSummary: {
-    endpoint: '/api/v2/courses/:courseId/module-access-summary',
+    endpoint: '/api/v2/module-access/analytics/drop-off',
     method: 'GET' as const,
     version: '1.0.0',
     description: 'Get aggregated module access summary for a course',
@@ -384,10 +389,8 @@ export const ModuleAccessContracts = {
       headers: {
         'Authorization': 'Bearer <token>'
       },
-      params: {
-        courseId: { type: 'ObjectId', required: true, description: 'Course ID' }
-      },
       query: {
+        courseId: { type: 'ObjectId', required: true, description: 'Course ID' },
         classId: {
           type: 'ObjectId',
           required: false,
@@ -440,52 +443,25 @@ export const ModuleAccessContracts = {
 
     example: {
       request: {
-        params: { courseId: '507f1f77bcf86cd799439011' },
-        query: {}
+        query: { courseId: '507f1f77bcf86cd799439011' },
       },
       response: {
         success: true,
         data: {
           courseId: '507f1f77bcf86cd799439011',
-          courseTitle: 'Introduction to Computer Science',
-          totalEnrollments: 200,
-          modules: [
-            {
-              moduleId: '507f1f77bcf86cd799439012',
-              moduleTitle: 'Chapter 1: Programming Basics',
-              moduleOrder: 1,
-              metrics: {
-                totalAccessed: 180,
-                accessedPercent: 0.9,
-                startedLearningUnit: 165,
-                startedPercent: 0.825,
-                completed: 150,
-                completedPercent: 0.75,
-                dropOffCount: 15,
-                dropOffPercent: 0.083
-              }
-            },
-            {
-              moduleId: '507f1f77bcf86cd799439020',
-              moduleTitle: 'Chapter 2: Data Structures',
-              moduleOrder: 2,
-              metrics: {
-                totalAccessed: 140,
-                accessedPercent: 0.7,
-                startedLearningUnit: 125,
-                startedPercent: 0.625,
-                completed: 100,
-                completedPercent: 0.5,
-                dropOffCount: 15,
-                dropOffPercent: 0.107
-              }
-            }
-          ],
-          funnel: {
-            enrolled: 200,
-            startedCourse: 180,
-            reachedMidpoint: 130,
-            completedCourse: 85
+          metrics: {
+            totalModules: 12,
+            totalAccess: 180,
+            accessedOnly: 30,
+            inProgress: 55,
+            completed: 95,
+            dropOffRate: 0.166,
+            dropOffPercentage: 17
+          },
+          insights: {
+            learnersNotStartingContent: 30,
+            learnersStuckInProgress: 55,
+            completionRate: 53
           }
         }
       }
@@ -494,30 +470,38 @@ export const ModuleAccessContracts = {
     permissions: ['read:analytics'],
 
     notes: `
-      - Provides high-level view of course engagement
-      - dropOffPercent = learners who accessed but didn't start learning units
-      - funnel shows progression through course
-      - Useful for course effectiveness analysis
+      - Runtime analytics summary endpoint under /module-access/analytics/drop-off
+      - Requires courseId query parameter
+      - Returns drop-off focused aggregate metrics + insights
       - Filter by classId for class-specific metrics
     `
   },
 
   /**
    * Mark Learning Unit Started
-   * POST /module-access/:moduleAccessId/learning-unit-started
+   * PUT /module-access/:accessId
    */
   markLearningUnitStarted: {
-    endpoint: '/api/v2/module-access/:moduleAccessId/learning-unit-started',
-    method: 'POST' as const,
+    endpoint: '/api/v2/module-access/:accessId',
+    method: 'PUT' as const,
     version: '1.0.0',
     description: 'Mark that learner has started a learning unit in the module',
 
     request: {
       headers: {
-        'Authorization': 'Bearer <token>'
+        'Authorization': 'Bearer <token>',
+        'Content-Type': 'application/json'
       },
       params: {
-        moduleAccessId: { type: 'ObjectId', required: true, description: 'Module Access ID' }
+        accessId: { type: 'ObjectId', required: true, description: 'Module Access ID' }
+      },
+      body: {
+        action: {
+          type: 'string',
+          required: true,
+          enum: ['mark_learning_unit_started'],
+          description: 'Update action'
+        }
       }
     },
 
@@ -545,7 +529,7 @@ export const ModuleAccessContracts = {
 
     notes: `
       - Called when learner starts first learning unit in module
-      - Only updates if hasStartedLearningUnit is false
+      - Uses update action payload on canonical PUT /module-access/:accessId endpoint
       - Sets status to 'in_progress'
       - Records timestamp for time-to-first-unit analytics
     `
@@ -553,11 +537,11 @@ export const ModuleAccessContracts = {
 
   /**
    * Update Progress
-   * PATCH /module-access/:moduleAccessId/progress
+   * PUT /module-access/:accessId
    */
   updateProgress: {
-    endpoint: '/api/v2/module-access/:moduleAccessId/progress',
-    method: 'PATCH' as const,
+    endpoint: '/api/v2/module-access/:accessId',
+    method: 'PUT' as const,
     version: '1.0.0',
     description: 'Update learning unit completion progress',
 
@@ -567,9 +551,15 @@ export const ModuleAccessContracts = {
         'Content-Type': 'application/json'
       },
       params: {
-        moduleAccessId: { type: 'ObjectId', required: true, description: 'Module Access ID' }
+        accessId: { type: 'ObjectId', required: true, description: 'Module Access ID' }
       },
       body: {
+        action: {
+          type: 'string',
+          required: true,
+          enum: ['update_progress'],
+          description: 'Update action'
+        },
         learningUnitsCompleted: {
           type: 'number',
           required: true,
@@ -612,6 +602,7 @@ export const ModuleAccessContracts = {
 
     notes: `
       - Called when learner completes a learning unit
+      - Uses update action payload on canonical PUT /module-access/:accessId endpoint
       - progress = learningUnitsCompleted / learningUnitsTotal
       - status changes to 'completed' when all required units done
       - completedAt set when status becomes 'completed'
