@@ -10,14 +10,15 @@ import { AuthContracts } from '../api/auth.contract';
 
 // Contract registry - add new contracts here
 const contracts: Record<string, unknown> = {
-  'POST /api/v2/auth/register': AuthContracts.register,
+  'POST /api/v2/auth/register/staff': AuthContracts.registerStaff,
+  'POST /api/v2/auth/register/learner': AuthContracts.registerLearner,
   'POST /api/v2/auth/login': AuthContracts.login,
   'POST /api/v2/auth/logout': AuthContracts.logout,
   'POST /api/v2/auth/refresh': AuthContracts.refreshToken,
-  'POST /api/v2/auth/forgot-password': AuthContracts.forgotPassword,
-  'POST /api/v2/auth/reset-password': AuthContracts.resetPassword,
+  'POST /api/v2/auth/password/forgot': AuthContracts.forgotPassword,
+  'PUT /api/v2/auth/password/reset/:token': AuthContracts.resetPassword,
   'GET /api/v2/auth/me': AuthContracts.me,
-  'POST /api/v2/auth/change-password': AuthContracts.changePassword,
+  'PUT /api/v2/auth/password/change': AuthContracts.changePassword,
 };
 
 interface ContractDefinition {

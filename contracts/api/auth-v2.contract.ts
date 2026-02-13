@@ -24,7 +24,7 @@
  * - Access rights follow GNAP pattern: domain:resource:action
  */
 
-import { DepartmentMembership, UserType, RoleSystemTypes } from './roles.contract';
+import { DepartmentMembership } from './roles.contract';
 import { UserTypeObject } from './lookup-values.contract';
 
 // ============================================================================
@@ -619,7 +619,7 @@ export const AuthContractsV2 = {
   },
 
   forgotPassword: {
-    endpoint: '/api/v2/auth/forgot-password',
+    endpoint: '/api/v2/auth/password/forgot',
     method: 'POST' as const,
     version: '2.0.0',
     description: 'Request password reset email',
@@ -627,77 +627,19 @@ export const AuthContractsV2 = {
   },
 
   resetPassword: {
-    endpoint: '/api/v2/auth/reset-password',
-    method: 'POST' as const,
+    endpoint: '/api/v2/auth/password/reset/:token',
+    method: 'PUT' as const,
     version: '2.0.0',
     description: 'Reset password using token from email',
     notes: 'Same as V1 - no changes'
   },
 
   changePassword: {
-    endpoint: '/api/v2/auth/change-password',
-    method: 'POST' as const,
+    endpoint: '/api/v2/auth/password/change',
+    method: 'PUT' as const,
     version: '2.0.0',
     description: 'Change password for authenticated user',
     notes: 'Same as V1 - no changes'
-  },
-
-  /**
-   * Set Escalation Password (NEW)
-   * POST /api/v2/auth/set-escalation-password
-   * 
-   * For GlobalAdmin users to set/change their escalation password.
-   */
-  setEscalationPassword: {
-    endpoint: '/api/v2/auth/set-escalation-password',
-    method: 'POST' as const,
-    version: '2.0.0',
-    description: 'Set or change escalation password for Admin Dashboard access',
-    
-    request: {
-      headers: {
-        'Authorization': 'Bearer <token>',
-        'Content-Type': 'application/json'
-      },
-      body: {
-        currentEscalationPassword: { 
-          type: 'string', 
-          required: false,
-          description: 'Required if changing existing password, not required for first setup'
-        },
-        newEscalationPassword: { 
-          type: 'string', 
-          required: true, 
-          minLength: 12,
-          description: 'Must be different from login password'
-        }
-      }
-    },
-    
-    response: {
-      success: {
-        status: 200,
-        body: {
-          success: 'boolean',
-          message: 'string'
-        }
-      },
-      errors: [
-        { status: 401, code: 'UNAUTHORIZED', message: 'Invalid or expired token' },
-        { status: 401, code: 'INVALID_CURRENT_PASSWORD', message: 'Current escalation password is incorrect' },
-        { status: 403, code: 'NOT_ADMIN', message: 'User does not have global-admin userType' },
-        { status: 400, code: 'SAME_AS_LOGIN', message: 'Escalation password must be different from login password' },
-        { status: 400, code: 'WEAK_PASSWORD', message: 'Escalation password does not meet complexity requirements' }
-      ]
-    },
-
-    notes: `
-      - Only users with 'global-admin' userType can set escalation password
-      - First time setup: currentEscalationPassword not required
-      - Changing: currentEscalationPassword required
-      - Must be different from login password
-      - Recommend: 12+ characters, mix of upper/lower/number/symbol
-    `
   }
 };
 
@@ -761,4 +703,6 @@ export const initialAuthState: AuthState = {
   adminAccessRights: []
 };
 
-export default AuthContractsV2;
+export const AuthV2Contracts = AuthContractsV2;
+
+export default AuthV2Contracts;

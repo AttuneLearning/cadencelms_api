@@ -10,11 +10,11 @@ export const AuthContracts = {
   /**
    * User Registration
    */
-  register: {
-    endpoint: '/api/v2/auth/register',
+  registerStaff: {
+    endpoint: '/api/v2/auth/register/staff',
     method: 'POST' as const,
     version: '1.0.0',
-    description: 'Register a new user account',
+    description: 'Register a new staff account',
     
     request: {
       headers: {
@@ -25,7 +25,7 @@ export const AuthContracts = {
         password: { type: 'string', required: true, minLength: 8 },
         firstName: { type: 'string', required: true },
         lastName: { type: 'string', required: true },
-        role: { type: 'string', required: false, enum: ['learner', 'staff'], default: 'learner' }
+        roles: { type: 'string[]', required: true }
       }
     },
     
@@ -69,6 +69,79 @@ export const AuthContracts = {
             email: 'newuser@example.com',
             firstName: 'John',
             lastName: 'Doe',
+            role: 'staff',
+            isActive: true,
+            createdAt: '2026-01-08T00:00:00.000Z'
+          },
+          token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+        }
+      }
+    }
+  },
+
+  /**
+   * Learner Registration
+   */
+  registerLearner: {
+    endpoint: '/api/v2/auth/register/learner',
+    method: 'POST' as const,
+    version: '1.0.0',
+    description: 'Register a new learner account',
+
+    request: {
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: {
+        email: { type: 'string', required: true, format: 'email' },
+        password: { type: 'string', required: true, minLength: 8 },
+        firstName: { type: 'string', required: true },
+        lastName: { type: 'string', required: true },
+        dateOfBirth: { type: 'string', required: false, format: 'date' },
+        phoneNumber: { type: 'string', required: false }
+      }
+    },
+
+    response: {
+      success: {
+        status: 201,
+        body: {
+          success: 'boolean',
+          data: {
+            user: {
+              id: 'string',
+              email: 'string',
+              firstName: 'string',
+              lastName: 'string',
+              role: 'string',
+              isActive: 'boolean',
+              createdAt: 'Date'
+            },
+            token: 'string'
+          }
+        }
+      },
+      errors: [
+        { status: 400, code: 'VALIDATION_ERROR', message: 'Invalid input data' },
+        { status: 409, code: 'EMAIL_EXISTS', message: 'Email already registered' }
+      ]
+    },
+
+    example: {
+      request: {
+        email: 'learner@example.com',
+        password: 'SecurePass123!',
+        firstName: 'Ava',
+        lastName: 'Lee'
+      },
+      response: {
+        success: true,
+        data: {
+          user: {
+            id: '507f1f77bcf86cd799439012',
+            email: 'learner@example.com',
+            firstName: 'Ava',
+            lastName: 'Lee',
             role: 'learner',
             isActive: true,
             createdAt: '2026-01-08T00:00:00.000Z'
@@ -248,7 +321,7 @@ export const AuthContracts = {
    * Forgot Password
    */
   forgotPassword: {
-    endpoint: '/api/v2/auth/forgot-password',
+    endpoint: '/api/v2/auth/password/forgot',
     method: 'POST' as const,
     version: '1.0.0',
     description: 'Request password reset email',
@@ -290,18 +363,20 @@ export const AuthContracts = {
    * Reset Password
    */
   resetPassword: {
-    endpoint: '/api/v2/auth/reset-password',
-    method: 'POST' as const,
+    endpoint: '/api/v2/auth/password/reset/:token',
+    method: 'PUT' as const,
     version: '1.0.0',
-    description: 'Reset password using token from email',
+    description: 'Reset password using token from email path parameter',
     
     request: {
       headers: {
         'Content-Type': 'application/json'
       },
+      params: {
+        token: { type: 'string', required: true }
+      },
       body: {
-        token: { type: 'string', required: true },
-        password: { type: 'string', required: true, minLength: 8 }
+        newPassword: { type: 'string', required: true, minLength: 8 }
       }
     },
     
@@ -321,8 +396,7 @@ export const AuthContracts = {
     
     example: {
       request: {
-        token: 'reset-token-from-email',
-        password: 'NewSecurePass123!'
+        newPassword: 'NewSecurePass123!'
       },
       response: {
         success: true,
@@ -396,8 +470,8 @@ export const AuthContracts = {
    * Change Password
    */
   changePassword: {
-    endpoint: '/api/v2/auth/change-password',
-    method: 'POST' as const,
+    endpoint: '/api/v2/auth/password/change',
+    method: 'PUT' as const,
     version: '1.0.0',
     description: 'Change password for authenticated user',
     
@@ -443,5 +517,7 @@ export const AuthContracts = {
 export type AuthContractType = typeof AuthContracts;
 export type LoginRequest = typeof AuthContracts.login.example.request;
 export type LoginResponse = typeof AuthContracts.login.example.response;
-export type RegisterRequest = typeof AuthContracts.register.example.request;
-export type RegisterResponse = typeof AuthContracts.register.example.response;
+export type StaffRegisterRequest = typeof AuthContracts.registerStaff.example.request;
+export type StaffRegisterResponse = typeof AuthContracts.registerStaff.example.response;
+export type LearnerRegisterRequest = typeof AuthContracts.registerLearner.example.request;
+export type LearnerRegisterResponse = typeof AuthContracts.registerLearner.example.response;

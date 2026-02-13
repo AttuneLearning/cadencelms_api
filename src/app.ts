@@ -27,6 +27,7 @@ import modulesRoutes from './routes/v2/modules.routes';
 import { courseVersionsRouter, versionRouter } from './routes/v2/courseVersion.routes';
 import learningUnitsRoutes from './routes/v2/learning-units.routes';
 import learningUnitQuestionsRoutes from './routes/v2/learning-unit-questions.routes';
+import assessmentsRoutes from './routes/v2/assessments.routes';
 import assessmentAttemptsRoutes from './routes/v2/assessment-attempts.routes';
 import aiQuizRoutes from './routes/v2/ai-quiz.routes';
 import learnerQuestionProgressRoutes from './routes/v2/learner-question-progress.routes';
@@ -183,6 +184,7 @@ app.use('/api/v2/course-versions', versionRouter); // Course versioning - get/up
 // Note: courseSegmentsRoutes replaced by modulesRoutes for /courses/:courseId/modules endpoints
 app.use('/api/v2/modules/:moduleId/learning-units', learningUnitsRoutes); // Learning units nested under modules
 app.use('/api/v2/learning-units/:learningUnitId/questions', learningUnitQuestionsRoutes); // Question linking for learning units
+app.use('/api/v2/assessments', assessmentsRoutes); // Assessments CRUD/publish/archive
 app.use('/api/v2/assessments/:assessmentId/attempts', assessmentAttemptsRoutes); // Assessment attempts
 app.use('/api/v2/learning-units/:learningUnitId/ai-quiz', aiQuizRoutes); // AI Quiz shell endpoints (501)
 app.use('/api/v2/learning-units/:learningUnitId/progress/:learnerId/questions', learnerQuestionProgressRoutes); // Learner question progress tracking

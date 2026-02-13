@@ -53,6 +53,9 @@ function main(): void {
     generator: 'lms-api-v2/scripts/export-contracts.ts',
     contracts: {}
   };
+
+  let failedCount = 0;
+  let skippedCount = 0;
   
   // Process each contract file
   for (const file of contractFiles) {
@@ -73,9 +76,11 @@ function main(): void {
         exported.contracts[contractName] = contractModule[contractExport];
         console.log(`✅ Exported: ${file}`);
       } else {
+        skippedCount++;
         console.log(`⚠️  Skipped: ${file} (no Contract export found)`);
       }
     } catch (error) {
+      failedCount++;
       console.log(`❌ Failed: ${file} - ${(error as Error).message}`);
     }
   }
@@ -95,11 +100,19 @@ function main(): void {
   console.log('\n' + '─'.repeat(50));
   console.log('\n📊 EXPORT SUMMARY\n');
   console.log(`   Contracts exported: ${Object.keys(exported.contracts).length}`);
+  console.log(`   Contracts failed: ${failedCount}`);
+  console.log(`   Contracts skipped: ${skippedCount}`);
   console.log(`   Output directory: ${outputDir}`);
   console.log(`   Files generated:`);
   console.log(`     • contracts.json`);
   console.log(`     • contract-types.d.ts`);
   console.log('\n' + '─'.repeat(50));
+
+  if (failedCount > 0 || skippedCount > 0) {
+    console.error('\n❌ Export failed quality gate: partial contract export is not allowed.\n');
+    process.exit(1);
+  }
+
   console.log('\n✅ Export complete! Share contracts/dist/ with the UI team.\n');
 }
 

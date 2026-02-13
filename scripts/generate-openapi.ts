@@ -132,6 +132,9 @@ function main(): void {
   }
   
   console.log(`Found ${contractFiles.length} contract file(s)\n`);
+
+  let failedCount = 0;
+  let skippedCount = 0;
   
   // Process each contract file
   for (const file of contractFiles) {
@@ -164,9 +167,11 @@ function main(): void {
         
         console.log(`✅ Processed: ${file}`);
       } else {
+        skippedCount++;
         console.log(`⚠️  Skipped: ${file} (no Contract export found)`);
       }
     } catch (error) {
+      failedCount++;
       console.log(`❌ Failed: ${file} - ${(error as Error).message}`);
     }
   }
@@ -186,10 +191,18 @@ function main(): void {
   console.log('\n📊 GENERATION SUMMARY\n');
   console.log(`   Endpoints documented: ${Object.keys(spec.paths).length}`);
   console.log(`   Tags created: ${spec.tags.length}`);
+  console.log(`   Contracts failed: ${failedCount}`);
+  console.log(`   Contracts skipped: ${skippedCount}`);
   console.log(`   Output files:`);
   console.log(`     • openapi.yaml`);
   console.log(`     • openapi.json`);
   console.log('\n' + '─'.repeat(50));
+
+  if (failedCount > 0 || skippedCount > 0) {
+    console.error('\n❌ OpenAPI generation failed quality gate: partial contract docs are not allowed.\n');
+    process.exit(1);
+  }
+
   console.log('\n✅ OpenAPI spec generated! Use with Swagger UI or similar.\n');
 }
 

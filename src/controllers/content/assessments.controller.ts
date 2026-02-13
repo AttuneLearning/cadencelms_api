@@ -13,6 +13,37 @@ import {
  * Handles all assessment management endpoints (quizzes and exams)
  */
 
+interface AssessmentAccessContext {
+  userRole: string;
+  userDepartments: string[];
+}
+
+function getAssessmentAccessContext(req: Request): AssessmentAccessContext {
+  const user = (req as any).user;
+  if (!user) {
+    throw ApiError.unauthorized('No authenticated user context');
+  }
+
+  const legacyDepartments = Array.isArray(user.departments)
+    ? user.departments.map((departmentId: unknown) => String(departmentId))
+    : [];
+
+  const membershipDepartments = Array.isArray(user.departmentMemberships)
+    ? user.departmentMemberships
+      .map((membership: any) => membership?.departmentId)
+      .filter((departmentId: unknown): departmentId is string => typeof departmentId === 'string')
+    : [];
+
+  const userDepartments = legacyDepartments.length > 0 ? legacyDepartments : membershipDepartments;
+  const userRole = typeof user.role === 'string'
+    ? user.role
+    : Array.isArray(user.userTypes) && user.userTypes.includes('global-admin')
+      ? 'admin'
+      : 'staff';
+
+  return { userRole, userDepartments };
+}
+
 /**
  * GET /api/v2/assessments
  * List assessments with filtering and pagination
@@ -52,10 +83,7 @@ export const listAssessments = asyncHandler(async (req: Request, res: Response) 
     }
   }
 
-  // Get user info from auth middleware
-  const user = (req as any).user;
-  const userRole = user.role;
-  const userDepartments = user.departments || [];
+  const { userRole, userDepartments } = getAssessmentAccessContext(req);
 
   const result = await AssessmentsService.listAssessments(filters, userRole, userDepartments);
   res.status(200).json(ApiResponse.success(result));
@@ -72,10 +100,7 @@ export const getAssessment = asyncHandler(async (req: Request, res: Response) =>
     throw ApiError.badRequest('Assessment ID is required');
   }
 
-  // Get user info from auth middleware
-  const user = (req as any).user;
-  const userRole = user.role;
-  const userDepartments = user.departments || [];
+  const { userRole, userDepartments } = getAssessmentAccessContext(req);
 
   const result = await AssessmentsService.getAssessment(assessmentId, userRole, userDepartments);
   res.status(200).json(ApiResponse.success(result));
@@ -98,9 +123,8 @@ export const createAssessment = asyncHandler(async (req: Request, res: Response)
     feedback
   } = req.body;
 
-  // Get user info from auth middleware
   const user = (req as any).user;
-  const userId = user.id;
+  const userId = user.userId || user.id;
 
   const assessmentData = {
     departmentId,
@@ -139,10 +163,7 @@ export const updateAssessment = asyncHandler(async (req: Request, res: Response)
     throw ApiError.badRequest('Assessment ID is required');
   }
 
-  // Get user info from auth middleware
-  const user = (req as any).user;
-  const userRole = user.role;
-  const userDepartments = user.departments || [];
+  const { userRole, userDepartments } = getAssessmentAccessContext(req);
 
   const updateData = {
     title,
@@ -175,10 +196,7 @@ export const deleteAssessment = asyncHandler(async (req: Request, res: Response)
     throw ApiError.badRequest('Assessment ID is required');
   }
 
-  // Get user info from auth middleware
-  const user = (req as any).user;
-  const userRole = user.role;
-  const userDepartments = user.departments || [];
+  const { userRole, userDepartments } = getAssessmentAccessContext(req);
 
   await AssessmentsService.deleteAssessment(assessmentId, userRole, userDepartments);
   res.status(200).json(ApiResponse.success(null, 'Assessment deleted successfully'));
@@ -195,10 +213,7 @@ export const publishAssessment = asyncHandler(async (req: Request, res: Response
     throw ApiError.badRequest('Assessment ID is required');
   }
 
-  // Get user info from auth middleware
-  const user = (req as any).user;
-  const userRole = user.role;
-  const userDepartments = user.departments || [];
+  const { userRole, userDepartments } = getAssessmentAccessContext(req);
 
   const result = await AssessmentsService.publishAssessment(assessmentId, userRole, userDepartments);
   res.status(200).json(ApiResponse.success(result, 'Assessment published successfully'));
@@ -215,10 +230,7 @@ export const archiveAssessment = asyncHandler(async (req: Request, res: Response
     throw ApiError.badRequest('Assessment ID is required');
   }
 
-  // Get user info from auth middleware
-  const user = (req as any).user;
-  const userRole = user.role;
-  const userDepartments = user.departments || [];
+  const { userRole, userDepartments } = getAssessmentAccessContext(req);
 
   const result = await AssessmentsService.archiveAssessment(assessmentId, userRole, userDepartments);
   res.status(200).json(ApiResponse.success(result, 'Assessment archived successfully'));
