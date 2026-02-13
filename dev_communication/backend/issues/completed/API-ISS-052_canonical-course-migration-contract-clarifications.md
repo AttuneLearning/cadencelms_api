@@ -67,7 +67,7 @@ Use runtime-first clarification: update contract docs where currently ambiguous,
 **Commits:**
 | Hash | Description |
 |------|-------------|
-| | |
+| `555dfe8` | docs(contracts): clarify canonical course migration payloads |
 
 **Verification:**
 - [x] All acceptance criteria met
