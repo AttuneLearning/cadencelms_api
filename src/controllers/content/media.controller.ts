@@ -30,7 +30,17 @@ import { MEDIA_PURPOSES, type MediaPurpose } from '@/models/content/MediaAttachm
  */
 export const requestUploadUrl = asyncHandler(async (req: Request, res: Response) => {
   const user = (req as any).user;
-  const { filename, mimeType, fileSize, purpose, entityType, entityId, departmentId } = req.body;
+  const {
+    filename,
+    mimeType,
+    fileSize,
+    purpose,
+    entityType,
+    entityId,
+    departmentId,
+    title,
+    description
+  } = req.body;
 
   // Validate required fields
   if (!filename || typeof filename !== 'string') {
@@ -59,6 +69,20 @@ export const requestUploadUrl = asyncHandler(async (req: Request, res: Response)
     throw ApiError.badRequest('filename cannot exceed 255 characters');
   }
 
+  if (title !== undefined && typeof title !== 'string') {
+    throw ApiError.badRequest('title must be a string');
+  }
+  if (title && title.length > 200) {
+    throw ApiError.badRequest('title cannot exceed 200 characters');
+  }
+
+  if (description !== undefined && typeof description !== 'string') {
+    throw ApiError.badRequest('description must be a string');
+  }
+  if (description && description.length > 2000) {
+    throw ApiError.badRequest('description cannot exceed 2000 characters');
+  }
+
   const result = await MediaService.requestUploadUrl({
     filename,
     mimeType,
@@ -67,6 +91,8 @@ export const requestUploadUrl = asyncHandler(async (req: Request, res: Response)
     entityType,
     entityId,
     departmentId,
+    title,
+    description,
     userId: user.userId
   });
 
@@ -145,6 +171,8 @@ export const confirmUpload = asyncHandler(async (req: Request, res: Response) =>
           storageKey: media.storageKey,
           cdnUrl: media.cdnUrl,
           filename: media.filename,
+          title: media.title,
+          description: media.description,
           mimeType: media.mimeType,
           fileSize: media.fileSize,
           width: media.width,
@@ -180,6 +208,8 @@ export const getMedia = asyncHandler(async (req: Request, res: Response) => {
         storageKey: media.storageKey,
         cdnUrl: media.cdnUrl,
         filename: media.filename,
+        title: media.title,
+        description: media.description,
         mimeType: media.mimeType,
         fileSize: media.fileSize,
         width: media.width,
@@ -219,7 +249,7 @@ export const listMedia = asyncHandler(async (req: Request, res: Response) => {
   const user = (req as any).user;
 
   const filters = {
-    type: req.query.type as 'image' | 'video' | 'audio' | undefined,
+    type: req.query.type as 'image' | 'video' | 'audio' | 'document' | undefined,
     purpose: req.query.purpose as any,
     entityType: req.query.entityType as string | undefined,
     entityId: req.query.entityId as string | undefined,
@@ -231,8 +261,8 @@ export const listMedia = asyncHandler(async (req: Request, res: Response) => {
   };
 
   // Validate type if provided
-  if (filters.type && !['image', 'video', 'audio'].includes(filters.type)) {
-    throw ApiError.badRequest('type must be one of: image, video, audio');
+  if (filters.type && !['image', 'video', 'audio', 'document'].includes(filters.type)) {
+    throw ApiError.badRequest('type must be one of: image, video, audio, document');
   }
 
   // Validate purpose if provided
@@ -260,6 +290,8 @@ export const listMedia = asyncHandler(async (req: Request, res: Response) => {
           type: m.type,
           cdnUrl: m.cdnUrl,
           filename: m.filename,
+          title: m.title,
+          description: m.description,
           mimeType: m.mimeType,
           fileSize: m.fileSize,
           width: m.width,
@@ -287,7 +319,23 @@ export const listMedia = asyncHandler(async (req: Request, res: Response) => {
 export const updateMedia = asyncHandler(async (req: Request, res: Response) => {
   const user = (req as any).user;
   const { mediaId } = req.params;
-  const { altText, metadata } = req.body;
+  const { title, description, altText, metadata } = req.body;
+
+  if (title !== undefined && typeof title !== 'string') {
+    throw ApiError.badRequest('title must be a string');
+  }
+
+  if (title && title.length > 200) {
+    throw ApiError.badRequest('title cannot exceed 200 characters');
+  }
+
+  if (description !== undefined && typeof description !== 'string') {
+    throw ApiError.badRequest('description must be a string');
+  }
+
+  if (description && description.length > 2000) {
+    throw ApiError.badRequest('description cannot exceed 2000 characters');
+  }
 
   // Validate altText
   if (altText !== undefined && typeof altText !== 'string') {
@@ -305,7 +353,7 @@ export const updateMedia = asyncHandler(async (req: Request, res: Response) => {
 
   const media = await MediaService.updateMedia(
     mediaId,
-    { altText, metadata },
+    { title, description, altText, metadata },
     user.userId
   );
 
@@ -314,6 +362,8 @@ export const updateMedia = asyncHandler(async (req: Request, res: Response) => {
       {
         data: {
           id: media._id.toString(),
+          title: media.title,
+          description: media.description,
           altText: media.altText,
           metadata: media.metadata,
           updatedAt: media.updatedAt
@@ -457,9 +507,14 @@ export const getMediaConfig = asyncHandler(async (_req: Request, res: Response) 
             maxSize: storageConfig.constraints.audio.maxSize,
             maxSizeMB: Math.round(storageConfig.constraints.audio.maxSize / (1024 * 1024)),
             allowedTypes: storageConfig.constraints.audio.types
+          },
+          document: {
+            maxSize: storageConfig.constraints.document.maxSize,
+            maxSizeMB: Math.round(storageConfig.constraints.document.maxSize / (1024 * 1024)),
+            allowedTypes: storageConfig.constraints.document.types
           }
         },
-        purposes: ['flashcard', 'question', 'content', 'thumbnail', 'avatar', 'certificate', 'general'],
+        purposes: [...MEDIA_PURPOSES],
         presignedUrlExpiry: storageConfig.presignedUrlExpiry
       }
     })

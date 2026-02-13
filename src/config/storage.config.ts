@@ -40,6 +40,7 @@ export interface StorageConfig {
     image: MediaConstraints;
     video: MediaConstraints;
     audio: MediaConstraints;
+    document: MediaConstraints;
   };
 
   /** Default presigned URL expiration in seconds */
@@ -135,6 +136,19 @@ export const storageConfig: StorageConfig = {
         'audio/ogg',
         'audio/webm'
       ]
+    },
+    document: {
+      maxSize: parseFileSize(process.env.MAX_DOCUMENT_SIZE, 25 * 1024 * 1024), // 25MB default
+      types: [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-powerpoint',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'text/plain'
+      ]
     }
   },
 
@@ -148,7 +162,7 @@ export const storageConfig: StorageConfig = {
 /**
  * Get media type from MIME type
  */
-export function getMediaTypeFromMime(mimeType: string): 'image' | 'video' | 'audio' | null {
+export function getMediaTypeFromMime(mimeType: string): 'image' | 'video' | 'audio' | 'document' | null {
   if (storageConfig.constraints.image.types.includes(mimeType)) {
     return 'image';
   }
@@ -157,6 +171,9 @@ export function getMediaTypeFromMime(mimeType: string): 'image' | 'video' | 'aud
   }
   if (storageConfig.constraints.audio.types.includes(mimeType)) {
     return 'audio';
+  }
+  if (storageConfig.constraints.document.types.includes(mimeType)) {
+    return 'document';
   }
   return null;
 }
@@ -167,14 +184,15 @@ export function getMediaTypeFromMime(mimeType: string): 'image' | 'video' | 'aud
 export function validateMediaFile(
   mimeType: string,
   fileSize: number
-): { valid: boolean; error?: string; mediaType?: 'image' | 'video' | 'audio' } {
+): { valid: boolean; error?: string; mediaType?: 'image' | 'video' | 'audio' | 'document' } {
   const mediaType = getMediaTypeFromMime(mimeType);
 
   if (!mediaType) {
     const allTypes = [
       ...storageConfig.constraints.image.types,
       ...storageConfig.constraints.video.types,
-      ...storageConfig.constraints.audio.types
+      ...storageConfig.constraints.audio.types,
+      ...storageConfig.constraints.document.types
     ];
     return {
       valid: false,

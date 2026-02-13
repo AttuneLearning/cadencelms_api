@@ -185,6 +185,81 @@ export const AssessmentAttemptsContracts = {
   },
 
   /**
+   * List Attempts Across Assessments (Staff Aggregate)
+   * GET /assessment-attempts
+   */
+  listAll: {
+    endpoint: '/api/v2/assessment-attempts',
+    method: 'GET' as const,
+    version: '2.0.0',
+    description: 'Staff aggregate list/search/filter across assessment attempts',
+
+    request: {
+      headers: {
+        'Authorization': 'Bearer <token>'
+      },
+      query: {
+        assessmentId: { type: 'ObjectId', required: false, description: 'Filter by assessment ID' },
+        learnerId: { type: 'ObjectId', required: false, description: 'Filter by learner ID' },
+        enrollmentId: { type: 'ObjectId', required: false, description: 'Filter by enrollment ID' },
+        search: { type: 'string', required: false, description: 'Search by learner name/email, assessment title, status, or IDs' },
+        status: {
+          type: 'string',
+          required: false,
+          enum: ['in_progress', 'submitted', 'graded', 'abandoned'],
+          description: 'Attempt status'
+        },
+        sort: { type: 'string', required: false, default: '-updatedAt' },
+        page: { type: 'number', required: false, default: 1 },
+        limit: { type: 'number', required: false, default: 20 }
+      }
+    },
+
+    response: {
+      success: {
+        status: 200,
+        body: {
+          success: 'boolean',
+          data: {
+            attempts: [
+              {
+                id: 'ObjectId',
+                assessmentId: 'ObjectId',
+                assessmentTitle: 'string | undefined',
+                learnerId: 'ObjectId',
+                learnerName: 'string | undefined',
+                learnerEmail: 'string | undefined',
+                enrollmentId: 'ObjectId',
+                attemptNumber: 'number',
+                status: 'in_progress | submitted | graded | abandoned',
+                scoring: 'object',
+                timing: 'object',
+                createdAt: 'Date',
+                updatedAt: 'Date'
+              }
+            ],
+            pagination: {
+              page: 'number',
+              limit: 'number',
+              total: 'number',
+              totalPages: 'number',
+              hasNext: 'boolean',
+              hasPrev: 'boolean'
+            }
+          }
+        }
+      },
+      errors: [
+        { status: 400, code: 'VALIDATION_ERROR', message: 'Invalid filters' },
+        { status: 401, code: 'UNAUTHORIZED', message: 'Invalid or expired token' },
+        { status: 403, code: 'FORBIDDEN', message: 'Only staff can access aggregate attempt queries' }
+      ]
+    },
+
+    permissions: ['read:assessments', 'grade:assessments']
+  },
+
+  /**
    * List Current User Attempts
    * GET /assessments/:assessmentId/attempts/my
    */
@@ -268,6 +343,43 @@ export const AssessmentAttemptsContracts = {
     },
 
     permissions: ['take:assessments', 'read:assessments']
+  },
+
+  /**
+   * Get Attempt by Attempt ID (Staff Aggregate Surface)
+   * GET /assessment-attempts/:attemptId
+   */
+  getByAttemptId: {
+    endpoint: '/api/v2/assessment-attempts/:attemptId',
+    method: 'GET' as const,
+    version: '2.0.0',
+    description: 'Staff attempt detail lookup by attemptId',
+
+    request: {
+      headers: {
+        'Authorization': 'Bearer <token>'
+      },
+      params: {
+        attemptId: { type: 'ObjectId', required: true, description: 'Attempt ID' }
+      }
+    },
+
+    response: {
+      success: {
+        status: 200,
+        body: {
+          success: 'boolean',
+          data: 'AssessmentAttempt with assessment and learner context'
+        }
+      },
+      errors: [
+        { status: 401, code: 'UNAUTHORIZED', message: 'Invalid or expired token' },
+        { status: 403, code: 'FORBIDDEN', message: 'Only staff can access attempt detail by attemptId' },
+        { status: 404, code: 'ATTEMPT_NOT_FOUND', message: 'Attempt not found' }
+      ]
+    },
+
+    permissions: ['read:assessments', 'grade:assessments']
   },
 
   /**
@@ -557,6 +669,60 @@ export const AssessmentAttemptsContracts = {
           }
         }
       }
+    },
+
+    permissions: ['grade:assessments']
+  },
+
+  /**
+   * Grade Question by Attempt ID (Staff Aggregate Surface)
+   * POST /assessment-attempts/:attemptId/grade
+   */
+  gradeByAttemptId: {
+    endpoint: '/api/v2/assessment-attempts/:attemptId/grade',
+    method: 'POST' as const,
+    version: '2.0.0',
+    description: 'Manually grade a question using attemptId-only route',
+
+    request: {
+      headers: {
+        'Authorization': 'Bearer <token>',
+        'Content-Type': 'application/json'
+      },
+      params: {
+        attemptId: { type: 'ObjectId', required: true, description: 'Attempt ID' }
+      },
+      body: {
+        questionIndex: { type: 'number', required: true },
+        score: { type: 'number', required: true, min: 0 },
+        feedback: { type: 'string', required: false, maxLength: 2000 }
+      }
+    },
+
+    response: {
+      success: {
+        status: 200,
+        body: {
+          success: 'boolean',
+          message: 'string',
+          data: {
+            attemptId: 'ObjectId',
+            questionIndex: 'number',
+            pointsEarned: 'number',
+            pointsPossible: 'number',
+            gradedAt: 'Date',
+            gradedBy: 'ObjectId',
+            updatedScoring: 'object'
+          }
+        }
+      },
+      errors: [
+        { status: 400, code: 'VALIDATION_ERROR', message: 'questionIndex and score are required; score must be >= 0' },
+        { status: 401, code: 'UNAUTHORIZED', message: 'Invalid or expired token' },
+        { status: 403, code: 'FORBIDDEN', message: 'Only staff can grade attempts' },
+        { status: 404, code: 'ATTEMPT_NOT_FOUND', message: 'Attempt not found' },
+        { status: 409, code: 'ATTEMPT_NOT_SUBMITTED', message: 'Attempt must be submitted before grading' }
+      ]
     },
 
     permissions: ['grade:assessments']

@@ -1,7 +1,7 @@
 /**
  * MediaAttachment Model
  *
- * Represents a media file (image, video, audio) stored in the system.
+ * Represents a media file (image, video, audio, document) stored in the system.
  * Used for flashcards, questions, content thumbnails, and other media needs.
  */
 
@@ -10,7 +10,7 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 /**
  * Media type categories
  */
-export const MEDIA_TYPES = ['image', 'video', 'audio'] as const;
+export const MEDIA_TYPES = ['image', 'video', 'audio', 'document'] as const;
 export type MediaType = (typeof MEDIA_TYPES)[number];
 
 /**
@@ -54,6 +54,12 @@ export interface IMediaAttachment extends Document {
 
   /** Original filename from upload */
   filename: string;
+
+  /** Display title for media library UX */
+  title?: string;
+
+  /** Optional description for media library UX */
+  description?: string;
 
   /** MIME type of the file */
   mimeType: string;
@@ -161,6 +167,18 @@ const mediaAttachmentSchema = new Schema<IMediaAttachment>(
       required: [true, 'Filename is required'],
       trim: true,
       maxlength: [255, 'Filename cannot exceed 255 characters']
+    },
+
+    title: {
+      type: String,
+      trim: true,
+      maxlength: [200, 'Title cannot exceed 200 characters']
+    },
+
+    description: {
+      type: String,
+      trim: true,
+      maxlength: [2000, 'Description cannot exceed 2000 characters']
     },
 
     mimeType: {

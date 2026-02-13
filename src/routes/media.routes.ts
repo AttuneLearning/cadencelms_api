@@ -142,7 +142,7 @@ router.delete(
  * List media attachments
  *
  * Query params:
- * - type: 'image' | 'video' | 'audio'
+ * - type: 'image' | 'video' | 'audio' | 'document'
  * - purpose: MediaPurpose
  * - entityType: string
  * - entityId: string
@@ -178,6 +178,8 @@ router.get(
  * Update media metadata
  *
  * Body:
+ * - title?: string
+ * - description?: string
  * - altText?: string
  * - metadata?: object
  *

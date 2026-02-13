@@ -41,6 +41,10 @@ export interface RequestUploadUrlParams {
   entityId?: string;
   /** Optional department ID for access control */
   departmentId?: string;
+  /** Optional display title */
+  title?: string;
+  /** Optional description */
+  description?: string;
   /** User requesting the upload */
   userId: string;
 }
@@ -158,6 +162,8 @@ export class MediaService {
       entityType: params.entityType,
       entityId: params.entityId ? new mongoose.Types.ObjectId(params.entityId) : undefined,
       departmentId: params.departmentId ? new mongoose.Types.ObjectId(params.departmentId) : undefined,
+      title: params.title,
+      description: params.description,
       requestedBy: new mongoose.Types.ObjectId(params.userId),
       requestedAt: new Date(),
       expiresAt: presignedResult.expiresAt,
@@ -230,6 +236,8 @@ export class MediaService {
       storageKey: uploadRequest.storageKey,
       cdnUrl: storage.getPublicUrl(uploadRequest.storageKey),
       filename: uploadRequest.filename,
+      title: uploadRequest.title,
+      description: uploadRequest.description,
       mimeType: uploadRequest.mimeType,
       fileSize: actualSize,
       width: params.width,
@@ -328,6 +336,8 @@ export class MediaService {
     if (filters.search) {
       query.$or = [
         { filename: { $regex: filters.search, $options: 'i' } },
+        { title: { $regex: filters.search, $options: 'i' } },
+        { description: { $regex: filters.search, $options: 'i' } },
         { altText: { $regex: filters.search, $options: 'i' } }
       ];
     }
@@ -368,6 +378,8 @@ export class MediaService {
   static async updateMedia(
     mediaId: string,
     updates: {
+      title?: string;
+      description?: string;
       altText?: string;
       metadata?: Record<string, any>;
     },
@@ -387,6 +399,14 @@ export class MediaService {
     }
 
     // TODO: Add permission check
+
+    if (updates.title !== undefined) {
+      media.title = updates.title;
+    }
+
+    if (updates.description !== undefined) {
+      media.description = updates.description;
+    }
 
     if (updates.altText !== undefined) {
       media.altText = updates.altText;

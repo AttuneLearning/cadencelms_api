@@ -10,7 +10,7 @@
 // Media Types
 // ============================================================================
 
-export type MediaType = 'text' | 'image' | 'video' | 'audio';
+export type MediaType = 'text' | 'image' | 'video' | 'audio' | 'document';
 
 export const MEDIA_PURPOSES = [
   'flashcard',
@@ -53,6 +53,8 @@ export interface MediaAttachment {
 
   // Metadata
   filename: string;
+  title?: string;
+  description?: string;
   mimeType: string;
   fileSize: number;              // In bytes
 
@@ -167,6 +169,19 @@ export const MediaConstraints = {
     maxFileSize: 20 * 1024 * 1024,  // 20 MB
     maxDuration: 5 * 60,            // 5 minutes
     allowedMimeTypes: ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp4']
+  },
+  document: {
+    maxFileSize: 25 * 1024 * 1024,  // 25 MB
+    allowedMimeTypes: [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/plain'
+    ]
   }
 } as const;
 

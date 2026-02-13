@@ -9,6 +9,11 @@ import { ApiError } from '@/utils/ApiError';
  * Handles all assessment attempt endpoints for learner progress tracking
  */
 
+function isStaffOrAdmin(user: any): boolean {
+  const userTypes = user?.userTypes || [];
+  return userTypes.includes('staff') || userTypes.includes('global-admin');
+}
+
 /**
  * GET /api/v2/assessments/:assessmentId/attempts
  * List all attempts for an assessment (learner sees own, staff sees all)
@@ -239,6 +244,125 @@ export const gradeQuestion = asyncHandler(async (req: Request, res: Response) =>
 
   const question = attempt.questions[questionIndex];
 
+  res.status(200).json(ApiResponse.success({
+    attemptId: attempt._id,
+    questionIndex,
+    pointsEarned: question.pointsEarned,
+    pointsPossible: question.pointsPossible,
+    gradedAt: question.gradedAt,
+    gradedBy: question.gradedBy,
+    updatedScoring: {
+      rawScore: attempt.scoring.rawScore,
+      percentageScore: attempt.scoring.percentageScore,
+      passed: attempt.scoring.passed,
+      gradingComplete: attempt.scoring.gradingComplete
+    }
+  }, 'Question graded successfully'));
+});
+
+/**
+ * GET /api/v2/assessment-attempts
+ * Staff aggregate attempt list/search/filter across assessments.
+ */
+export const listAttemptSummaries = asyncHandler(async (req: Request, res: Response) => {
+  const user = (req as any).user;
+  if (!isStaffOrAdmin(user)) {
+    throw ApiError.forbidden('Only staff can access aggregate attempt queries');
+  }
+
+  const filters = {
+    status: req.query.status as 'in_progress' | 'submitted' | 'graded' | 'abandoned' | undefined,
+    search: req.query.search as string | undefined,
+    assessmentId: req.query.assessmentId as string | undefined,
+    learnerId: req.query.learnerId as string | undefined,
+    enrollmentId: req.query.enrollmentId as string | undefined,
+    sort: req.query.sort as string | undefined,
+    page: req.query.page ? parseInt(req.query.page as string, 10) : undefined,
+    limit: req.query.limit ? parseInt(req.query.limit as string, 10) : undefined
+  };
+
+  const validStatuses = ['in_progress', 'submitted', 'graded', 'abandoned'];
+  if (filters.status && !validStatuses.includes(filters.status)) {
+    throw ApiError.badRequest(`Invalid status. Must be one of: ${validStatuses.join(', ')}`);
+  }
+
+  if (filters.page !== undefined && (isNaN(filters.page) || filters.page < 1)) {
+    throw ApiError.badRequest('Page must be a positive number');
+  }
+
+  if (filters.limit !== undefined && (isNaN(filters.limit) || filters.limit < 1 || filters.limit > 100)) {
+    throw ApiError.badRequest('Limit must be between 1 and 100');
+  }
+
+  const result = await AssessmentAttemptsService.listAttemptSummaries(filters);
+  res.status(200).json(ApiResponse.success(result));
+});
+
+/**
+ * GET /api/v2/assessment-attempts/:attemptId
+ * Staff attempt detail by attemptId.
+ */
+export const getAttemptById = asyncHandler(async (req: Request, res: Response) => {
+  const user = (req as any).user;
+  if (!isStaffOrAdmin(user)) {
+    throw ApiError.forbidden('Only staff can access attempt detail by attemptId');
+  }
+
+  const { attemptId } = req.params;
+  if (!attemptId) {
+    throw ApiError.badRequest('Attempt ID is required');
+  }
+
+  const result = await AssessmentAttemptsService.getAttemptById(attemptId);
+  res.status(200).json(ApiResponse.success(result));
+});
+
+/**
+ * POST /api/v2/assessment-attempts/:attemptId/grade
+ * Staff grading action by attemptId.
+ */
+export const gradeAttemptById = asyncHandler(async (req: Request, res: Response) => {
+  const user = (req as any).user;
+  if (!isStaffOrAdmin(user)) {
+    throw ApiError.forbidden('Only staff can grade attempts');
+  }
+
+  const { attemptId } = req.params;
+  const { questionIndex, score, feedback } = req.body;
+
+  if (!attemptId) {
+    throw ApiError.badRequest('Attempt ID is required');
+  }
+
+  if (questionIndex === undefined || typeof questionIndex !== 'number') {
+    throw ApiError.badRequest('questionIndex is required and must be a number');
+  }
+
+  if (score === undefined || typeof score !== 'number') {
+    throw ApiError.badRequest('score is required and must be a number');
+  }
+
+  if (score < 0) {
+    throw ApiError.badRequest('score must be at least 0');
+  }
+
+  if (feedback !== undefined && typeof feedback !== 'string') {
+    throw ApiError.badRequest('feedback must be a string');
+  }
+
+  if (feedback && feedback.length > 2000) {
+    throw ApiError.badRequest('feedback cannot exceed 2000 characters');
+  }
+
+  const attempt = await AssessmentAttemptsService.gradeQuestion(
+    attemptId,
+    questionIndex,
+    score,
+    feedback || '',
+    user.userId
+  );
+
+  const question = attempt.questions[questionIndex];
   res.status(200).json(ApiResponse.success({
     attemptId: attempt._id,
     questionIndex,

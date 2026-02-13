@@ -32,6 +32,12 @@ export interface IMediaUploadRequest extends Document {
   /** Original filename from the request */
   filename: string;
 
+  /** Optional display title from client */
+  title?: string;
+
+  /** Optional description from client */
+  description?: string;
+
   /** Expected MIME type */
   mimeType: string;
 
@@ -139,6 +145,18 @@ const mediaUploadRequestSchema = new Schema<IMediaUploadRequest>(
       maxlength: [255, 'Filename cannot exceed 255 characters']
     },
 
+    title: {
+      type: String,
+      trim: true,
+      maxlength: [200, 'Title cannot exceed 200 characters']
+    },
+
+    description: {
+      type: String,
+      trim: true,
+      maxlength: [2000, 'Description cannot exceed 2000 characters']
+    },
+
     mimeType: {
       type: String,
       required: [true, 'MIME type is required'],
@@ -156,7 +174,7 @@ const mediaUploadRequestSchema = new Schema<IMediaUploadRequest>(
       type: String,
       required: [true, 'Media type is required'],
       enum: {
-        values: ['image', 'video', 'audio'],
+        values: ['image', 'video', 'audio', 'document'],
         message: '{VALUE} is not a valid media type'
       }
     },
@@ -165,7 +183,7 @@ const mediaUploadRequestSchema = new Schema<IMediaUploadRequest>(
       type: String,
       required: [true, 'Purpose is required'],
       enum: {
-        values: ['flashcard', 'question', 'content', 'thumbnail', 'avatar', 'certificate', 'general'],
+        values: ['flashcard', 'question', 'content', 'thumbnail', 'avatar', 'certificate', 'assignment', 'general'],
         message: '{VALUE} is not a valid purpose'
       }
     },

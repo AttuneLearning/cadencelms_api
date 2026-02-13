@@ -29,6 +29,7 @@ import learningUnitsRoutes from './routes/v2/learning-units.routes';
 import learningUnitQuestionsRoutes from './routes/v2/learning-unit-questions.routes';
 import assessmentsRoutes from './routes/v2/assessments.routes';
 import assessmentAttemptsRoutes from './routes/v2/assessment-attempts.routes';
+import assessmentAttemptsGlobalRoutes from './routes/v2/assessment-attempts-global.routes';
 import aiQuizRoutes from './routes/v2/ai-quiz.routes';
 import learnerQuestionProgressRoutes from './routes/v2/learner-question-progress.routes';
 import moduleEditLockRoutes from './routes/v2/module-edit-lock.routes';
@@ -185,6 +186,7 @@ app.use('/api/v2/modules/:moduleId/learning-units', learningUnitsRoutes); // Lea
 app.use('/api/v2/learning-units/:learningUnitId/questions', learningUnitQuestionsRoutes); // Question linking for learning units
 app.use('/api/v2/assessments', assessmentsRoutes); // Assessments CRUD/publish/archive
 app.use('/api/v2/assessments/:assessmentId/attempts', assessmentAttemptsRoutes); // Assessment attempts
+app.use('/api/v2/assessment-attempts', assessmentAttemptsGlobalRoutes); // Staff aggregate/attemptId-only assessment attempt endpoints
 app.use('/api/v2/learning-units/:learningUnitId/ai-quiz', aiQuizRoutes); // AI Quiz shell endpoints (501)
 app.use('/api/v2/learning-units/:learningUnitId/progress/:learnerId/questions', learnerQuestionProgressRoutes); // Learner question progress tracking
 app.use('/api/v2/modules', moduleEditLockRoutes); // Module edit locking for concurrent edit prevention

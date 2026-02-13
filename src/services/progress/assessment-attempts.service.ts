@@ -15,6 +15,17 @@ interface ListAttemptsFilters {
   limit?: number;
 }
 
+interface ListAttemptSummaryFilters {
+  status?: 'in_progress' | 'submitted' | 'graded' | 'abandoned';
+  search?: string;
+  assessmentId?: string;
+  learnerId?: string;
+  enrollmentId?: string;
+  page?: number;
+  limit?: number;
+  sort?: string;
+}
+
 interface ResponseInput {
   questionId: string;
   response: any;
@@ -29,11 +40,31 @@ interface PaginationResult {
   hasPrev: boolean;
 }
 
+interface AttemptSummaryRow {
+  id: string;
+  assessmentId: string;
+  assessmentTitle?: string;
+  learnerId: string;
+  learnerName?: string;
+  learnerEmail?: string;
+  enrollmentId: string;
+  attemptNumber: number;
+  status: string;
+  scoring: IAssessmentAttempt['scoring'];
+  timing: IAssessmentAttempt['timing'];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 /**
  * AssessmentAttemptsService
  * Handles assessment attempt lifecycle: start, save, submit, grade, and results
  */
 export class AssessmentAttemptsService {
+  private static escapeRegex(input: string): string {
+    return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
   /**
    * Start a new assessment attempt
    */
@@ -412,6 +443,217 @@ export class AssessmentAttemptsService {
         hasPrev: page > 1
       }
     };
+  }
+
+  /**
+   * List attempts across assessments for staff workflows.
+   */
+  static async listAttemptSummaries(
+    filters: ListAttemptSummaryFilters = {}
+  ): Promise<{ attempts: AttemptSummaryRow[]; pagination: PaginationResult }> {
+    const page = filters.page || 1;
+    const limit = Math.min(filters.limit || 20, 100);
+    const skip = (page - 1) * limit;
+
+    const baseMatch: Record<string, unknown> = {};
+
+    if (filters.status) {
+      baseMatch.status = filters.status;
+    }
+
+    if (filters.assessmentId) {
+      if (!mongoose.Types.ObjectId.isValid(filters.assessmentId)) {
+        throw ApiError.badRequest('Invalid assessmentId');
+      }
+      baseMatch.assessmentId = new mongoose.Types.ObjectId(filters.assessmentId);
+    }
+
+    if (filters.learnerId) {
+      if (!mongoose.Types.ObjectId.isValid(filters.learnerId)) {
+        throw ApiError.badRequest('Invalid learnerId');
+      }
+      baseMatch.learnerId = new mongoose.Types.ObjectId(filters.learnerId);
+    }
+
+    if (filters.enrollmentId) {
+      if (!mongoose.Types.ObjectId.isValid(filters.enrollmentId)) {
+        throw ApiError.badRequest('Invalid enrollmentId');
+      }
+      baseMatch.enrollmentId = new mongoose.Types.ObjectId(filters.enrollmentId);
+    }
+
+    const allowedSortFields = new Set(['updatedAt', 'createdAt', 'attemptNumber', 'status']);
+    const rawSort = filters.sort || '-updatedAt';
+    const sortDirection = rawSort.startsWith('-') ? -1 : 1;
+    const sortField = rawSort.replace(/^-/, '');
+    const resolvedSortField = allowedSortFields.has(sortField) ? sortField : 'updatedAt';
+    const sortStage: Record<string, 1 | -1> = { [resolvedSortField]: sortDirection as 1 | -1, _id: -1 };
+
+    const pipeline: any[] = [
+      { $match: baseMatch },
+      {
+        $lookup: {
+          from: 'assessments',
+          localField: 'assessmentId',
+          foreignField: '_id',
+          as: 'assessment'
+        }
+      },
+      {
+        $unwind: {
+          path: '$assessment',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
+          from: 'learners',
+          localField: 'learnerId',
+          foreignField: '_id',
+          as: 'learner'
+        }
+      },
+      {
+        $unwind: {
+          path: '$learner',
+          preserveNullAndEmptyArrays: true
+        }
+      }
+    ];
+
+    if (filters.search) {
+      const searchRegex = new RegExp(this.escapeRegex(filters.search), 'i');
+      const searchMatch: any = {
+        $or: [
+          { 'assessment.title': searchRegex },
+          { 'learner.person.firstName': searchRegex },
+          { 'learner.person.lastName': searchRegex },
+          { 'learner.person.preferredFirstName': searchRegex },
+          { 'learner.person.emails.email': searchRegex },
+          { status: searchRegex }
+        ]
+      };
+
+      if (mongoose.Types.ObjectId.isValid(filters.search)) {
+        const searchId = new mongoose.Types.ObjectId(filters.search);
+        searchMatch.$or.push(
+          { _id: searchId },
+          { assessmentId: searchId },
+          { learnerId: searchId },
+          { enrollmentId: searchId }
+        );
+      }
+
+      pipeline.push({ $match: searchMatch });
+    }
+
+    pipeline.push(
+      { $sort: sortStage },
+      {
+        $facet: {
+          attempts: [
+            { $skip: skip },
+            { $limit: limit },
+            {
+              $project: {
+                _id: 1,
+                assessmentId: 1,
+                enrollmentId: 1,
+                learnerId: 1,
+                attemptNumber: 1,
+                status: 1,
+                scoring: 1,
+                timing: 1,
+                createdAt: 1,
+                updatedAt: 1,
+                assessmentTitle: '$assessment.title',
+                learnerFirstName: '$learner.person.firstName',
+                learnerLastName: '$learner.person.lastName',
+                learnerEmail: {
+                  $let: {
+                    vars: {
+                      primaryEmail: {
+                        $first: {
+                          $filter: {
+                            input: '$learner.person.emails',
+                            as: 'email',
+                            cond: { $eq: ['$$email.isPrimary', true] }
+                          }
+                        }
+                      }
+                    },
+                    in: {
+                      $ifNull: [
+                        '$$primaryEmail.email',
+                        {
+                          $ifNull: [
+                            { $arrayElemAt: ['$learner.person.emails.email', 0] },
+                            null
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          total: [{ $count: 'count' }]
+        }
+      }
+    );
+
+    const [result] = await AssessmentAttempt.aggregate(pipeline);
+    const total = result?.total?.[0]?.count ?? 0;
+    const totalPages = Math.ceil(total / limit);
+
+    const attempts: AttemptSummaryRow[] = (result?.attempts ?? []).map((attempt: any) => ({
+      id: attempt._id.toString(),
+      assessmentId: attempt.assessmentId.toString(),
+      assessmentTitle: attempt.assessmentTitle || undefined,
+      learnerId: attempt.learnerId.toString(),
+      learnerName: [attempt.learnerFirstName, attempt.learnerLastName].filter(Boolean).join(' ') || undefined,
+      learnerEmail: attempt.learnerEmail || undefined,
+      enrollmentId: attempt.enrollmentId.toString(),
+      attemptNumber: attempt.attemptNumber,
+      status: attempt.status,
+      scoring: attempt.scoring,
+      timing: attempt.timing,
+      createdAt: attempt.createdAt,
+      updatedAt: attempt.updatedAt
+    }));
+
+    return {
+      attempts,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1
+      }
+    };
+  }
+
+  /**
+   * Get attempt by ID for staff context.
+   */
+  static async getAttemptById(attemptId: string): Promise<any> {
+    if (!mongoose.Types.ObjectId.isValid(attemptId)) {
+      throw ApiError.notFound('Attempt not found');
+    }
+
+    const attempt = await AssessmentAttempt.findById(attemptId)
+      .populate('assessmentId', 'title style')
+      .populate('learnerId', 'person')
+      .lean();
+
+    if (!attempt) {
+      throw ApiError.notFound('Attempt not found');
+    }
+
+    return attempt;
   }
 
   /**

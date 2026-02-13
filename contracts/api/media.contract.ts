@@ -37,7 +37,7 @@ export const MediaUploadContracts = {
         mimeType: {
           type: 'string',
           required: true,
-          description: 'MIME type of the file'
+          description: 'MIME type of the file (images, video, audio, documents)'
         },
         fileSize: {
           type: 'number',
@@ -60,6 +60,16 @@ export const MediaUploadContracts = {
           required: false,
           enum: ['exercise', 'module', 'course', 'question', 'flashcard'],
           description: 'Type of associated entity'
+        },
+        title: {
+          type: 'string',
+          required: false,
+          description: 'Display title for media library listings'
+        },
+        description: {
+          type: 'string',
+          required: false,
+          description: 'Optional description for media library context'
         },
         altText: {
           type: 'string',
@@ -339,7 +349,7 @@ export const MediaUploadContracts = {
         type: {
           type: 'string',
           required: false,
-          enum: ['image', 'video', 'audio'],
+          enum: ['image', 'video', 'audio', 'document'],
           description: 'Filter by media type'
         },
         page: { type: 'number', required: false, default: 1 },
@@ -371,6 +381,8 @@ export const MediaUploadContracts = {
       - Without filters, returns user's own uploads
       - Admins can view all media
       - Results ordered by uploadedAt desc
+      - Canonical list/detail payloads expose title/description when provided
+      - Document uploads are supported through the same canonical media endpoint
     `
   }
 };
