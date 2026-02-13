@@ -565,6 +565,8 @@ export const ProgressContract = {
       - passed is true if score >= passingScore, null if not yet graded
       - activityLog shows recent 10 events (use separate endpoint for full log)
       - Module types: scorm, custom, exercise, video, document
+      - Canonical identity: moduleProgress[].moduleId is always Module._id from course-version linkage
+      - Consumers should treat moduleProgress[].moduleId as authoritative module identity
     `
   },
 

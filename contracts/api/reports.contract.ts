@@ -877,6 +877,8 @@ export const ReportsContract = {
       - Term format: "Fall 2025", "Spring 2026", etc.
       - Signatures and seals configured in system settings
       - Disclaimers configured by institution
+      - transcript.programs[].courses[].courseId is the canonical course identifier (CanonicalCourse._id)
+      - Transcript course rows do not currently include courseVersionId/version fields
     `
   },
 
@@ -1242,6 +1244,8 @@ export const ReportsContract = {
       - moduleAnalytics aggregates data across all learners
       - timeSpent in seconds
       - Date filters apply to enrollment date
+      - course.id is the canonical course identifier (CanonicalCourse._id)
+      - Course report payload does not currently include courseVersionId/version fields
     `
   },
 
@@ -1459,6 +1463,8 @@ export const ReportsContract = {
       - currentLevel is highest level with active enrollment
       - Date filters apply to enrollment date
       - academicYearId filter useful for year-over-year comparisons
+      - coursePerformance[].courseId is the canonical course identifier (CanonicalCourse._id)
+      - Program report payload does not currently include courseVersionId/version fields
     `
   },
 

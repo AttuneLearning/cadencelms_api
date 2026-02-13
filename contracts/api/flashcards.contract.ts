@@ -656,21 +656,41 @@ export const LearnerFlashcardContracts = {
         body: {
           success: 'boolean',
           data: {
-            sessionId: 'string',
             courseId: 'string',
-            moduleId: 'string',
+            moduleId: 'string | undefined',
+            sessionSize: 'number',
             cards: [
               {
-                id: 'string',
-                front: 'MediaContent',
-                back: 'MediaContent',
-                difficulty: 'string',
-                tags: ['string']
+                questionId: 'string',
+                promptIndex: 'number',
+                learningUnitId: 'string | undefined',
+                learningUnitQuestionId: 'string | undefined',
+                sourceModuleId: 'string | undefined',
+                front: {
+                  text: 'string',
+                  media: 'object | undefined'
+                },
+                back: {
+                  text: 'string',
+                  media: 'object | undefined'
+                },
+                explanation: 'string | undefined',
+                hints: 'string[] | undefined',
+                difficulty: 'string | undefined',
+                progress: {
+                  timesCorrect: 'number',
+                  timesIncorrect: 'number',
+                  lastReviewed: 'Date | null',
+                  mastered: 'boolean'
+                }
               }
             ],
-            totalCardsInModule: 'number',
-            masteredCount: 'number',
-            sessionSize: 'number'
+            stats: {
+              totalCards: 'number',
+              dueCards: 'number',
+              masteredCards: 'number',
+              newCards: 'number'
+            }
           }
         }
       }
@@ -680,21 +700,35 @@ export const LearnerFlashcardContracts = {
       response: {
         success: true,
         data: {
-          sessionId: 'session_abc123',
           courseId: '507f1f77bcf86cd799439012',
           moduleId: '507f1f77bcf86cd799439013',
+          sessionSize: 10,
           cards: [
             {
-              id: 'card_001',
-              front: { text: 'What is photosynthesis?', layout: 'text_only' },
-              back: { text: 'The process by which plants convert light energy to chemical energy.', layout: 'text_only' },
+              questionId: '507f1f77bcf86cd799439201',
+              promptIndex: 0,
+              learningUnitId: '507f1f77bcf86cd799439041',
+              learningUnitQuestionId: '507f1f77bcf86cd799439301',
+              sourceModuleId: '507f1f77bcf86cd799439013',
+              front: { text: 'What is photosynthesis?' },
+              back: { text: 'The process by which plants convert light energy to chemical energy.' },
+              explanation: 'Core biology concept',
+              hints: ['Think chloroplasts'],
               difficulty: 'easy',
-              tags: ['biology']
+              progress: {
+                timesCorrect: 3,
+                timesIncorrect: 1,
+                lastReviewed: '2026-01-20T10:00:00.000Z',
+                mastered: false
+              }
             }
           ],
-          totalCardsInModule: 15,
-          masteredCount: 5,
-          sessionSize: 10
+          stats: {
+            totalCards: 15,
+            dueCards: 6,
+            masteredCards: 5,
+            newCards: 4
+          }
         }
       }
     },
@@ -702,9 +736,9 @@ export const LearnerFlashcardContracts = {
     permissions: ['read:modules'],
 
     notes: `
-      - Used for in-module practice (Phase 1 in spec)
+      - Used for in-module practice
       - Cards selected based on SM-2 priority by default
-      - Mastered cards excluded unless includeMastered=true
+      - Card payloads include canonical provenance fields: learningUnitId, learningUnitQuestionId, sourceModuleId
       - Returns fewer cards if module has fewer than sessionSize
     `
   },
@@ -727,17 +761,17 @@ export const LearnerFlashcardContracts = {
         courseId: { type: 'ObjectId', required: true }
       },
       body: {
-        sessionId: {
-          type: 'string',
-          required: false,
-          description: 'Session ID (for analytics)'
-        },
-        cardId: {
+        questionId: {
           type: 'string',
           required: true,
-          description: 'Flashcard ID'
+          description: 'Question ID'
         },
-        correct: {
+        promptIndex: {
+          type: 'number',
+          required: true,
+          description: 'Prompt variation index shown to learner'
+        },
+        isCorrect: {
           type: 'boolean',
           required: true,
           description: 'Whether answer was correct'
@@ -763,15 +797,13 @@ export const LearnerFlashcardContracts = {
         body: {
           success: 'boolean',
           data: {
-            cardId: 'string',
-            progress: {
-              timesCorrect: 'number',
-              timesIncorrect: 'number',
-              easeFactor: 'number',
-              interval: 'number',
-              nextReviewDate: 'Date',
-              mastered: 'boolean'
-            }
+            questionId: 'string',
+            promptIndex: 'number',
+            isCorrect: 'boolean',
+            newInterval: 'number',
+            nextReviewDate: 'Date',
+            mastered: 'boolean',
+            masteredAt: 'Date | undefined'
           }
         }
       }
@@ -780,24 +812,22 @@ export const LearnerFlashcardContracts = {
     example: {
       request: {
         body: {
-          cardId: 'card_001',
-          correct: true,
-          quality: 4,
-          timeSpent: 5000
+          questionId: '507f1f77bcf86cd799439201',
+          promptIndex: 0,
+          isCorrect: true,
+          quality: 4
         }
       },
       response: {
         success: true,
         data: {
-          cardId: 'card_001',
-          progress: {
-            timesCorrect: 3,
-            timesIncorrect: 1,
-            easeFactor: 2.5,
-            interval: 6,
-            nextReviewDate: '2026-02-03T10:00:00.000Z',
-            mastered: true
-          }
+          questionId: '507f1f77bcf86cd799439201',
+          promptIndex: 0,
+          isCorrect: true,
+          newInterval: 6,
+          nextReviewDate: '2026-02-03T10:00:00.000Z',
+          mastered: true,
+          masteredAt: '2026-02-03T10:00:00.000Z'
         }
       }
     },
@@ -805,9 +835,9 @@ export const LearnerFlashcardContracts = {
     permissions: ['write:progress'],
 
     notes: `
-      - Updates SM-2 algorithm fields for the card
+      - Updates SM-2 algorithm fields for the question/prompt pair
       - Quality defaults to 1 (incorrect) or 4 (correct) if not provided
-      - mastered set to true when repetitions >= masteryThreshold
+      - mastered transitions based on course mastery config
       - Works for both in-module practice and retention checks
     `
   },
@@ -954,10 +984,9 @@ export const RetentionCheckContracts = {
               {
                 checkId: 'string',
                 sourceModuleId: 'string',
-                sourceModuleName: 'string',
+                sourceModuleName: 'string | undefined',
                 cardCount: 'number',
                 triggeredAt: 'Date',
-                dueBy: 'Date|null',
                 isBlocking: 'boolean'
               }
             ],
@@ -975,10 +1004,9 @@ export const RetentionCheckContracts = {
             {
               checkId: 'check_001',
               sourceModuleId: '507f1f77bcf86cd799439013',
-              sourceModuleName: 'Cell Structure',
+              sourceModuleName: undefined,
               cardCount: 3,
               triggeredAt: '2026-01-28T10:00:00.000Z',
-              dueBy: null,
               isBlocking: true
             }
           ],
@@ -1020,13 +1048,16 @@ export const RetentionCheckContracts = {
           data: {
             checkId: 'string',
             sourceModuleId: 'string',
-            sourceModuleName: 'string',
             failureThreshold: 'number',
             cards: [
               {
-                id: 'string',
-                front: 'MediaContent',
-                back: 'MediaContent'
+                questionId: 'string',
+                promptIndex: 'number',
+                learningUnitId: 'string | undefined',
+                learningUnitQuestionId: 'string | undefined',
+                sourceModuleId: 'string | undefined',
+                front: { text: 'string', media: 'object | undefined' },
+                back: { text: 'string', media: 'object | undefined' }
               }
             ],
             startedAt: 'Date'
@@ -1066,7 +1097,8 @@ export const RetentionCheckContracts = {
           required: true,
           description: 'Array of card responses',
           items: {
-            cardId: { type: 'string', required: true },
+            questionId: { type: 'string', required: true },
+            promptIndex: { type: 'number', required: false },
             correct: { type: 'boolean', required: true },
             quality: { type: 'number', required: false, min: 0, max: 5 },
             timeSpent: { type: 'number', required: false }
@@ -1092,8 +1124,7 @@ export const RetentionCheckContracts = {
               remediationId: 'string',
               requireContentReview: 'boolean',
               requireFinalRetake: 'boolean',
-              moduleId: 'string',
-              moduleName: 'string'
+              moduleId: 'string'
             }
           }
         }
@@ -1108,9 +1139,9 @@ export const RetentionCheckContracts = {
       request: {
         body: {
           answers: [
-            { cardId: 'card_001', correct: true, quality: 4 },
-            { cardId: 'card_002', correct: false, quality: 1 },
-            { cardId: 'card_003', correct: true, quality: 5 }
+            { questionId: '507f1f77bcf86cd799439201', promptIndex: 0, correct: true, quality: 4 },
+            { questionId: '507f1f77bcf86cd799439202', promptIndex: 0, correct: false, quality: 1 },
+            { questionId: '507f1f77bcf86cd799439203', promptIndex: 0, correct: true, quality: 5 }
           ]
         }
       },
@@ -1132,7 +1163,7 @@ export const RetentionCheckContracts = {
     permissions: ['write:progress'],
 
     notes: `
-      - Must answer all cards in the check
+      - Must answer all cards in the check using questionId values returned by getCheck
       - Updates SM-2 progress for each card
       - If incorrectCount >= failureThreshold, remediation is triggered
       - Remediation details included if required
@@ -1170,7 +1201,6 @@ export const RetentionCheckContracts = {
               {
                 checkId: 'string',
                 sourceModuleId: 'string',
-                sourceModuleName: 'string',
                 completedAt: 'Date',
                 passed: 'boolean',
                 correctCount: 'number',
