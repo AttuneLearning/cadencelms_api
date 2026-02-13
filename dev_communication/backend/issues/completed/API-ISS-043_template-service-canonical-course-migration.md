@@ -1,9 +1,9 @@
 # API-ISS-043: Template Service CanonicalCourse Migration
 
-## Status: REVIEW
+## Status: COMPLETE
 ## Priority: High
 ## Created: 2026-02-11
-## Updated: 2026-02-12
+## Updated: 2026-02-13
 ## Requested By: UI Team (inbox message: 2026-02-11_template-service-canonical-course-migration-request.md)
 ## Assigned To: Codex
 ## Related: UI-ISS-144
@@ -91,3 +91,18 @@ Current evidence:
 
 - `id` is canonical course ID.
 - `versionId`, `version`, and `versionStatus` are optional when version resolution is available.
+
+---
+
+## Completion
+
+**Completed Date:** 2026-02-13
+
+**Verification**
+- `timeout 30 env NODE_ENV=test npx jest --runInBand tests/unit/services/templates.service.test.ts` (pass)
+- `timeout 30 npm run contracts:validate` (pass)
+
+**Commits**
+| Hash | Description |
+|------|-------------|
+| TBD | Finalize contract docs for canonical template `usedByCourses` fields and close issue |

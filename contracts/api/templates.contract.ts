@@ -381,8 +381,11 @@ export const TemplatesContract = {
             usedByCourses: [
               {
                 id: 'string',
+                code: 'string',
                 title: 'string',
-                code: 'string'
+                versionId: 'string | undefined',
+                version: 'number | undefined',
+                versionStatus: 'draft|published|archived | undefined'
               }
             ],
             previewUrl: 'string | null',
@@ -426,13 +429,19 @@ export const TemplatesContract = {
           usedByCourses: [
             {
               id: '507f1f77bcf86cd799439014',
+              code: 'CS101',
               title: 'Introduction to Programming',
-              code: 'CS101'
+              versionId: '507f1f77bcf86cd799439114',
+              version: 2,
+              versionStatus: 'published'
             },
             {
               id: '507f1f77bcf86cd799439015',
+              code: 'CS201',
               title: 'Data Structures',
-              code: 'CS201'
+              versionId: '507f1f77bcf86cd799439115',
+              version: 4,
+              versionStatus: 'draft'
             }
           ],
           previewUrl: '/api/v2/templates/507f1f77bcf86cd799439011/preview',
@@ -446,7 +455,8 @@ export const TemplatesContract = {
 
     notes: `
       - Returns full template details including CSS/HTML content
-      - usedByCourses includes up to 100 courses using this template
+      - usedByCourses includes canonical course rows with stable canonical id/code/title
+      - usedByCourses may include versionId/version/versionStatus when a preferred course version is resolved
       - Access control:
         - Master templates: Visible to all staff
         - Department templates: Visible to department staff only
