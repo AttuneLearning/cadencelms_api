@@ -4,6 +4,7 @@ import AssessmentAttempt, {
   IQuestionAttempt
 } from '@/models/progress/AssessmentAttempt.model';
 import Assessment, { IAssessment } from '@/models/content/Assessment.model';
+import LearningUnit from '@/models/content/LearningUnit.model';
 import Question from '@/models/assessment/Question.model';
 import { ApiError } from '@/utils/ApiError';
 import { LearnerExceptionService } from '@/services/exception/learnerException.service';
@@ -56,6 +57,39 @@ export class AssessmentAttemptsService {
 
     if (!assessment) {
       throw ApiError.notFound('Assessment not found or not published');
+    }
+
+    let resolvedModuleId = moduleId;
+
+    // learningUnitId is optional launch context; when present it must map to assessmentId.
+    if (learningUnitId) {
+      const learningUnit = await LearningUnit.findById(learningUnitId)
+        .select('_id contentId moduleId')
+        .lean();
+
+      if (!learningUnit) {
+        throw new ApiError(
+          404,
+          'Learning unit not found',
+          true,
+          undefined,
+          'LEARNING_UNIT_NOT_FOUND'
+        );
+      }
+
+      if (!learningUnit.contentId || learningUnit.contentId.toString() !== assessmentId) {
+        throw new ApiError(
+          400,
+          'learningUnitId does not map to the provided assessmentId',
+          true,
+          undefined,
+          'LEARNING_UNIT_ASSESSMENT_MISMATCH'
+        );
+      }
+
+      if (!resolvedModuleId && learningUnit.moduleId) {
+        resolvedModuleId = learningUnit.moduleId.toString();
+      }
     }
 
     // Check for existing in-progress attempt
@@ -120,7 +154,7 @@ export class AssessmentAttemptsService {
       assessmentId,
       learnerId,
       enrollmentId,
-      moduleId: moduleId || undefined,
+      moduleId: resolvedModuleId || undefined,
       learningUnitId: learningUnitId || undefined,
       attemptNumber: previousAttemptCount + 1,
       status: 'in_progress',

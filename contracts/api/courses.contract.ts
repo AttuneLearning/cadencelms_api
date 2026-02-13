@@ -4,6 +4,7 @@
  *
  * These contracts define the course management endpoints for the LMS API.
  * Both backend and UI teams use these as the source of truth.
+ * Canonical hierarchy: Course -> Module -> LearningUnit -> Assessment (via learningUnit.contentId).
  *
  * Phase 2: Programs & Courses (High Priority - CRITICAL)
  */

@@ -8,12 +8,14 @@ import { Learner } from '@/models/auth/Learner.model';
 import { Staff } from '@/models/auth/Staff.model';
 import Department from '@/models/organization/Department.model';
 import Assessment from '@/models/content/Assessment.model';
+import LearningUnit from '@/models/content/LearningUnit.model';
 import Question from '@/models/assessment/Question.model';
 import AssessmentAttempt from '@/models/progress/AssessmentAttempt.model';
 import ClassEnrollment from '@/models/enrollment/ClassEnrollment.model';
 import { hashPassword } from '@/utils/password';
 import { describeIfMongo } from '../../helpers/mongo-guard';
 import { refreshDepartmentCache } from '../../helpers/department-cache';
+import { seedLearningUnitLookups } from '../../helpers/lookup-values';
 
 /**
  * Assessment Attempts E2E Integration Tests
@@ -260,6 +262,22 @@ async function createTestEnrollment(
   });
 }
 
+async function createAssessmentLearningUnit(
+  assessmentId: mongoose.Types.ObjectId,
+  moduleId?: mongoose.Types.ObjectId
+): Promise<any> {
+  return LearningUnit.create({
+    moduleId: moduleId || new mongoose.Types.ObjectId(),
+    title: 'Assessment Launch Unit',
+    description: 'Learning unit used to launch an assessment attempt',
+    type: 'assessment',
+    contentId: assessmentId,
+    category: 'graded',
+    sequence: 1,
+    isActive: true
+  });
+}
+
 /**
  * Create multiple choice questions for auto-grading tests
  */
@@ -332,6 +350,8 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
     for (const key in collections) {
       await collections[key].deleteMany({});
     }
+
+    await seedLearningUnitLookups();
 
     // Create department
     department = await Department.create({
@@ -1147,14 +1167,67 @@ describeIfMongo('Assessment Attempts E2E Tests', () => {
       expect(response.status).toBe(401);
     });
 
-    it('should return 400 for missing enrollmentId', async () => {
+    it('should return 422 for missing enrollmentId', async () => {
       const response = await request(app)
         .post(`/api/v2/assessments/${assessment._id}/attempts/start`)
         .set('Authorization', `Bearer ${learner.token}`)
         .send({});
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(422);
       expect(response.body.message).toContain('enrollmentId');
+    });
+
+    it('should start attempt when learningUnitId maps to assessmentId', async () => {
+      const launchUnit = await createAssessmentLearningUnit(assessment._id);
+
+      const response = await request(app)
+        .post(`/api/v2/assessments/${assessment._id}/attempts/start`)
+        .set('Authorization', `Bearer ${learner.token}`)
+        .send({
+          enrollmentId: enrollment._id.toString(),
+          learningUnitId: launchUnit._id.toString()
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body.data.learningUnitId).toBe(launchUnit._id.toString());
+      expect(response.body.data.moduleId).toBe(launchUnit.moduleId.toString());
+    });
+
+    it('should return 404 LEARNING_UNIT_NOT_FOUND for unknown learningUnitId', async () => {
+      const missingLearningUnitId = new mongoose.Types.ObjectId();
+
+      const response = await request(app)
+        .post(`/api/v2/assessments/${assessment._id}/attempts/start`)
+        .set('Authorization', `Bearer ${learner.token}`)
+        .send({
+          enrollmentId: enrollment._id.toString(),
+          learningUnitId: missingLearningUnitId.toString()
+        });
+
+      expect(response.status).toBe(404);
+      expect(response.body.code).toBe('LEARNING_UNIT_NOT_FOUND');
+    });
+
+    it('should return 400 LEARNING_UNIT_ASSESSMENT_MISMATCH when learningUnitId points to another assessment', async () => {
+      const otherAssessment = await createTestAssessment({
+        title: 'Different Assessment',
+        departmentId: department._id,
+        createdBy: staff.user._id,
+        questionBankId,
+        questionCount: 1
+      });
+      const mismatchedLaunchUnit = await createAssessmentLearningUnit(otherAssessment._id);
+
+      const response = await request(app)
+        .post(`/api/v2/assessments/${assessment._id}/attempts/start`)
+        .set('Authorization', `Bearer ${learner.token}`)
+        .send({
+          enrollmentId: enrollment._id.toString(),
+          learningUnitId: mismatchedLaunchUnit._id.toString()
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.code).toBe('LEARNING_UNIT_ASSESSMENT_MISMATCH');
     });
 
     it('should return 422 for invalid responses format', async () => {

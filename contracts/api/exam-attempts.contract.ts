@@ -2,6 +2,11 @@
  * Exam Attempts API Contracts
  * Version: 1.0.0
  *
+ * DEPRECATED FOR NEW DEVELOPMENT:
+ * - Canonical attempt APIs are assessment-based under /api/v2/assessments/:assessmentId/attempts/*
+ * - Use assessmentId as authoritative identifier for new integrations
+ * - learningUnitId remains optional launch context (provenance) in assessment-attempt start
+ *
  * These contracts define the exam/assessment attempt and submission endpoints for the LMS API.
  * Covers starting exams, submitting answers, grading, and viewing results.
  * Both backend and UI teams use these as the source of truth.

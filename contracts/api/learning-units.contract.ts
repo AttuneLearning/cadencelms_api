@@ -4,6 +4,7 @@
  *
  * These contracts define the LearningUnit entity - individual pieces of content/activities within modules.
  * Learning units are categorized as topic (instructional), assignment, practice, or graded.
+ * For assessment units, learningUnit.contentId stores the authoritative assessmentId used for attempts.
  *
  * Nested under /modules/:moduleId/learning-units
  */
@@ -346,15 +347,17 @@ export const LearningUnitsContracts = {
       - weight must be 0-100, used for percentage-based completion
       - For graded category, settings.passingScore is recommended
       - estimatedDuration is in minutes
+      - For type='assessment', contentId must reference Assessment._id
+      - Assessment attempts are started by assessmentId (from learningUnit.contentId), with learningUnitId sent as context
     `
   },
 
   /**
    * Get Learning Unit Details
-   * GET /learning-units/:learningUnitId
+   * GET /modules/:moduleId/learning-units/:learningUnitId
    */
   getOne: {
-    endpoint: '/api/v2/learning-units/:learningUnitId',
+    endpoint: '/api/v2/modules/:moduleId/learning-units/:learningUnitId',
     method: 'GET' as const,
     version: '1.0.0',
     description: 'Get detailed information about a specific learning unit',
@@ -364,6 +367,7 @@ export const LearningUnitsContracts = {
         'Authorization': 'Bearer <token>'
       },
       params: {
+        moduleId: { type: 'ObjectId', required: true, description: 'Module ID' },
         learningUnitId: { type: 'ObjectId', required: true, description: 'Learning Unit ID' }
       }
     },
@@ -427,10 +431,10 @@ export const LearningUnitsContracts = {
 
   /**
    * Update Learning Unit
-   * PUT /learning-units/:learningUnitId
+   * PUT /modules/:moduleId/learning-units/:learningUnitId
    */
   update: {
-    endpoint: '/api/v2/learning-units/:learningUnitId',
+    endpoint: '/api/v2/modules/:moduleId/learning-units/:learningUnitId',
     method: 'PUT' as const,
     version: '1.0.0',
     description: 'Update an existing learning unit',
@@ -441,6 +445,7 @@ export const LearningUnitsContracts = {
         'Content-Type': 'application/json'
       },
       params: {
+        moduleId: { type: 'ObjectId', required: true, description: 'Module ID' },
         learningUnitId: { type: 'ObjectId', required: true, description: 'Learning Unit ID' }
       },
       body: {
@@ -489,10 +494,10 @@ export const LearningUnitsContracts = {
 
   /**
    * Delete Learning Unit
-   * DELETE /learning-units/:learningUnitId
+   * DELETE /modules/:moduleId/learning-units/:learningUnitId
    */
   delete: {
-    endpoint: '/api/v2/learning-units/:learningUnitId',
+    endpoint: '/api/v2/modules/:moduleId/learning-units/:learningUnitId',
     method: 'DELETE' as const,
     version: '1.0.0',
     description: 'Delete a learning unit from a module',
@@ -502,6 +507,7 @@ export const LearningUnitsContracts = {
         'Authorization': 'Bearer <token>'
       },
       params: {
+        moduleId: { type: 'ObjectId', required: true, description: 'Module ID' },
         learningUnitId: { type: 'ObjectId', required: true, description: 'Learning Unit ID' }
       },
       query: {
@@ -547,11 +553,11 @@ export const LearningUnitsContracts = {
 
   /**
    * Reorder Learning Units
-   * PATCH /modules/:moduleId/learning-units/reorder
+   * PUT /modules/:moduleId/learning-units/reorder
    */
   reorder: {
     endpoint: '/api/v2/modules/:moduleId/learning-units/reorder',
-    method: 'PATCH' as const,
+    method: 'PUT' as const,
     version: '1.0.0',
     description: 'Reorder learning units within a module',
 
@@ -612,11 +618,11 @@ export const LearningUnitsContracts = {
 
   /**
    * Move Learning Unit to Another Module
-   * POST /learning-units/:learningUnitId/move
+   * PUT /modules/:moduleId/learning-units/:learningUnitId/move
    */
   move: {
-    endpoint: '/api/v2/learning-units/:learningUnitId/move',
-    method: 'POST' as const,
+    endpoint: '/api/v2/modules/:moduleId/learning-units/:learningUnitId/move',
+    method: 'PUT' as const,
     version: '1.0.0',
     description: 'Move a learning unit to a different module',
 
@@ -626,6 +632,7 @@ export const LearningUnitsContracts = {
         'Content-Type': 'application/json'
       },
       params: {
+        moduleId: { type: 'ObjectId', required: true, description: 'Current module ID' },
         learningUnitId: { type: 'ObjectId', required: true, description: 'Learning Unit ID' }
       },
       body: {

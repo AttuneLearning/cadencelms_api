@@ -23,10 +23,20 @@ const objectIdValidator = (value: string, helpers: Joi.CustomHelpers) => {
  * Schema for starting an assessment attempt
  *
  * Validates:
+ * - enrollmentId (required, valid ObjectId)
  * - moduleId (optional, valid ObjectId)
  * - learningUnitId (optional, valid ObjectId)
  */
 const startAttemptSchema = Joi.object({
+  enrollmentId: Joi.string()
+    .required()
+    .custom(objectIdValidator, 'ObjectId validation')
+    .messages({
+      'string.empty': 'enrollmentId cannot be empty',
+      'string.objectId': 'enrollmentId must be a valid MongoDB ObjectId',
+      'any.required': 'enrollmentId is required'
+    }),
+
   moduleId: Joi.string()
     .optional()
     .custom(objectIdValidator, 'ObjectId validation')
@@ -121,6 +131,7 @@ const gradeQuestionSchema = Joi.object({
  * Validate start attempt request
  *
  * Validates:
+ * - enrollmentId (required, valid ObjectId)
  * - moduleId (optional, valid ObjectId)
  * - learningUnitId (optional, valid ObjectId)
  */

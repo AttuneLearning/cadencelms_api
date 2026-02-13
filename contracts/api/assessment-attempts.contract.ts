@@ -1,20 +1,23 @@
 /**
  * Assessment Attempts API Contracts
- * Version: 1.0.0
+ * Version: 2.0.0
  *
- * These contracts define the AssessmentAttempt entity - tracking learner attempts
- * on assessments including questions, responses, timing, and scoring.
+ * Canonical contract:
+ * - assessmentId is the authoritative attempt target.
+ * - learningUnitId is optional launch context/provenance.
+ * - If learningUnitId is provided, backend must validate
+ *   learningUnit.contentId === assessmentId.
  */
 
 export const AssessmentAttemptsContracts = {
   /**
    * Start Assessment Attempt
-   * POST /assessments/:assessmentId/attempts
+   * POST /assessments/:assessmentId/attempts/start
    */
   start: {
-    endpoint: '/api/v2/assessments/:assessmentId/attempts',
+    endpoint: '/api/v2/assessments/:assessmentId/attempts/start',
     method: 'POST' as const,
-    version: '1.0.0',
+    version: '2.0.0',
     description: 'Start a new attempt on an assessment',
 
     request: {
@@ -23,23 +26,23 @@ export const AssessmentAttemptsContracts = {
         'Content-Type': 'application/json'
       },
       params: {
-        assessmentId: { type: 'ObjectId', required: true, description: 'Assessment ID' }
+        assessmentId: { type: 'ObjectId', required: true, description: 'Assessment ID (authoritative attempt target)' }
       },
       body: {
         enrollmentId: {
           type: 'ObjectId',
           required: true,
-          description: 'Class enrollment ID for this attempt'
+          description: 'Enrollment ID for learner/course context'
         },
         moduleId: {
           type: 'ObjectId',
           required: false,
-          description: 'Module ID if assessment is part of a module'
+          description: 'Module context (optional provenance)'
         },
         learningUnitId: {
           type: 'ObjectId',
           required: false,
-          description: 'Learning unit ID if assessment is a learning unit'
+          description: 'Learning unit launch context; must resolve to the same assessment via learningUnit.contentId'
         }
       }
     },
@@ -51,47 +54,31 @@ export const AssessmentAttemptsContracts = {
           success: 'boolean',
           message: 'string',
           data: {
-            attemptId: 'ObjectId',
+            _id: 'ObjectId',
             assessmentId: 'ObjectId',
-            assessmentTitle: 'string',
+            enrollmentId: 'ObjectId',
+            moduleId: 'ObjectId | null',
+            learningUnitId: 'ObjectId | null',
             attemptNumber: 'number',
             status: 'in_progress',
-            questions: [
-              {
-                index: 'number',
-                questionId: 'ObjectId',
-                questionText: 'string',
-                questionType: 'multiple_choice | multiple_select | true_false | short_answer | long_answer | matching | flashcard | fill_in_blank',
-                options: 'string[] | null',
-                matchingPairs: 'object | null',
-                points: 'number',
-                hints: 'string[] | null'
-              }
-            ],
-            totalQuestions: 'number',
-            totalPoints: 'number',
-            timing: {
-              startedAt: 'Date',
-              timeLimitSeconds: 'number | null',
-              expiresAt: 'Date | null'
-            },
-            settings: {
-              showFeedback: 'boolean',
-              feedbackTiming: 'immediate | after_submit | after_grading',
-              allowSkip: 'boolean'
-            }
+            questions: 'array',
+            timing: 'object',
+            scoring: 'object',
+            createdAt: 'Date',
+            updatedAt: 'Date'
           }
         }
       },
       errors: [
-        { status: 400, code: 'MAX_ATTEMPTS_REACHED', message: 'Maximum attempts reached for this assessment' },
-        { status: 400, code: 'COOLDOWN_ACTIVE', message: 'Must wait before starting new attempt' },
-        { status: 400, code: 'ATTEMPT_IN_PROGRESS', message: 'You have an unfinished attempt' },
-        { status: 400, code: 'INSTRUCTOR_UNLOCK_REQUIRED', message: 'Instructor must unlock retake' },
+        { status: 400, code: 'LEARNING_UNIT_ASSESSMENT_MISMATCH', message: 'learningUnitId does not map to the provided assessmentId' },
         { status: 401, code: 'UNAUTHORIZED', message: 'Invalid or expired token' },
-        { status: 403, code: 'FORBIDDEN', message: 'Not enrolled in this course' },
-        { status: 404, code: 'ASSESSMENT_NOT_FOUND', message: 'Assessment not found' },
-        { status: 404, code: 'ENROLLMENT_NOT_FOUND', message: 'Enrollment not found' }
+        { status: 404, code: 'ASSESSMENT_NOT_FOUND', message: 'Assessment not found or not published' },
+        { status: 404, code: 'LEARNING_UNIT_NOT_FOUND', message: 'Learning unit not found' },
+        { status: 409, code: 'ATTEMPT_IN_PROGRESS', message: 'An attempt is already in progress for this assessment' },
+        { status: 409, code: 'MAX_ATTEMPTS_REACHED', message: 'Maximum attempts reached for this assessment' },
+        { status: 422, code: 'VALIDATION_ERROR', message: 'enrollmentId is required and all IDs must be valid ObjectIds' },
+        { status: 403, code: 'FORBIDDEN', message: 'Not permitted to start this attempt' },
+        { status: 500, code: 'INTERNAL_SERVER_ERROR', message: 'Unexpected server error' }
       ]
     },
 
@@ -100,7 +87,6 @@ export const AssessmentAttemptsContracts = {
         params: { assessmentId: '507f1f77bcf86cd799439070' },
         body: {
           enrollmentId: '507f1f77bcf86cd799439100',
-          moduleId: '507f1f77bcf86cd799439012',
           learningUnitId: '507f1f77bcf86cd799439041'
         }
       },
@@ -108,40 +94,25 @@ export const AssessmentAttemptsContracts = {
         success: true,
         message: 'Assessment attempt started',
         data: {
-          attemptId: '507f1f77bcf86cd799439200',
+          _id: '507f1f77bcf86cd799439200',
           assessmentId: '507f1f77bcf86cd799439070',
-          assessmentTitle: 'Variables and Data Types Quiz',
+          enrollmentId: '507f1f77bcf86cd799439100',
+          moduleId: '507f1f77bcf86cd799439012',
+          learningUnitId: '507f1f77bcf86cd799439041',
           attemptNumber: 1,
           status: 'in_progress',
-          questions: [
-            {
-              index: 0,
-              questionId: '507f1f77bcf86cd799439150',
-              questionText: 'What is a variable?',
-              questionType: 'multiple_choice',
-              options: [
-                'A container for storing data',
-                'A type of function',
-                'A loop construct',
-                'A comment'
-              ],
-              matchingPairs: null,
-              points: 10,
-              hints: ['Think about what holds values in programming']
-            }
-          ],
-          totalQuestions: 10,
-          totalPoints: 100,
+          questions: [],
           timing: {
-            startedAt: '2026-01-08T10:00:00.000Z',
-            timeLimitSeconds: 1800,
-            expiresAt: '2026-01-08T10:30:00.000Z'
+            startedAt: '2026-02-13T10:00:00.000Z',
+            lastActivityAt: '2026-02-13T10:00:00.000Z',
+            timeSpentSeconds: 0
           },
-          settings: {
-            showFeedback: true,
-            feedbackTiming: 'after_submit',
-            allowSkip: true
-          }
+          scoring: {
+            gradingComplete: false,
+            requiresManualGrading: false
+          },
+          createdAt: '2026-02-13T10:00:00.000Z',
+          updatedAt: '2026-02-13T10:00:00.000Z'
         }
       }
     },
@@ -149,24 +120,21 @@ export const AssessmentAttemptsContracts = {
     permissions: ['take:assessments'],
 
     notes: `
-      - Questions are selected based on assessment's questionSelection rules
-      - Questions are shuffled if assessment has shuffleQuestions enabled
-      - Correct answers are NOT included in response (graded server-side)
-      - timeLimitSeconds from assessment timing configuration
-      - expiresAt calculated from startedAt + timeLimitSeconds
-      - hints only included if assessment allows hints
+      - assessmentId is the canonical identifier for attempt lifecycle APIs
+      - learningUnitId is optional and used for launch provenance/analytics
+      - if learningUnitId is supplied, backend validates learningUnit.contentId === assessmentId
     `
   },
 
   /**
-   * Get Current Attempt
-   * GET /assessments/:assessmentId/attempts/current
+   * List Attempts for Assessment
+   * GET /assessments/:assessmentId/attempts
    */
-  getCurrent: {
-    endpoint: '/api/v2/assessments/:assessmentId/attempts/current',
+  list: {
+    endpoint: '/api/v2/assessments/:assessmentId/attempts',
     method: 'GET' as const,
-    version: '1.0.0',
-    description: 'Get the current in-progress attempt for an assessment',
+    version: '2.0.0',
+    description: 'List attempts for an assessment (own attempts for learner; filterable for staff)',
 
     request: {
       headers: {
@@ -174,6 +142,17 @@ export const AssessmentAttemptsContracts = {
       },
       params: {
         assessmentId: { type: 'ObjectId', required: true, description: 'Assessment ID' }
+      },
+      query: {
+        learnerId: { type: 'ObjectId', required: false, description: 'Staff-only learner filter' },
+        status: {
+          type: 'string',
+          required: false,
+          enum: ['in_progress', 'submitted', 'graded', 'abandoned'],
+          description: 'Attempt status'
+        },
+        page: { type: 'number', required: false, default: 1 },
+        limit: { type: 'number', required: false, default: 20 }
       }
     },
 
@@ -183,54 +162,123 @@ export const AssessmentAttemptsContracts = {
         body: {
           success: 'boolean',
           data: {
-            attemptId: 'ObjectId',
-            assessmentId: 'ObjectId',
-            attemptNumber: 'number',
-            status: 'in_progress',
-            questions: 'array (same as start)',
-            responses: [
-              {
-                questionIndex: 'number',
-                response: 'any',
-                savedAt: 'Date'
-              }
-            ],
-            timing: {
-              startedAt: 'Date',
-              lastActivityAt: 'Date',
-              timeLimitSeconds: 'number | null',
-              expiresAt: 'Date | null',
-              timeRemainingSeconds: 'number | null'
+            attempts: 'array',
+            pagination: {
+              page: 'number',
+              limit: 'number',
+              total: 'number',
+              totalPages: 'number',
+              hasNext: 'boolean',
+              hasPrev: 'boolean'
             }
           }
         }
       },
       errors: [
         { status: 401, code: 'UNAUTHORIZED', message: 'Invalid or expired token' },
-        { status: 404, code: 'NO_ACTIVE_ATTEMPT', message: 'No in-progress attempt found' },
+        { status: 403, code: 'FORBIDDEN', message: 'Insufficient permissions' },
         { status: 404, code: 'ASSESSMENT_NOT_FOUND', message: 'Assessment not found' }
       ]
     },
 
-    permissions: ['take:assessments'],
+    permissions: ['take:assessments', 'read:assessments']
+  },
 
-    notes: `
-      - Returns existing in-progress attempt if one exists
-      - Includes any saved responses from auto-save
-      - Calculates timeRemainingSeconds based on current time
-      - Use to resume an interrupted attempt
-    `
+  /**
+   * List Current User Attempts
+   * GET /assessments/:assessmentId/attempts/my
+   */
+  getCurrent: {
+    endpoint: '/api/v2/assessments/:assessmentId/attempts/my',
+    method: 'GET' as const,
+    version: '2.0.0',
+    description: 'List current authenticated user attempts for an assessment',
+
+    request: {
+      headers: {
+        'Authorization': 'Bearer <token>'
+      },
+      params: {
+        assessmentId: { type: 'ObjectId', required: true, description: 'Assessment ID' }
+      },
+      query: {
+        status: {
+          type: 'string',
+          required: false,
+          enum: ['in_progress', 'submitted', 'graded', 'abandoned']
+        },
+        page: { type: 'number', required: false, default: 1 },
+        limit: { type: 'number', required: false, default: 20 }
+      }
+    },
+
+    response: {
+      success: {
+        status: 200,
+        body: {
+          success: 'boolean',
+          data: {
+            attempts: 'array',
+            pagination: 'object'
+          }
+        }
+      },
+      errors: [
+        { status: 401, code: 'UNAUTHORIZED', message: 'Invalid or expired token' },
+        { status: 404, code: 'ASSESSMENT_NOT_FOUND', message: 'Assessment not found' }
+      ]
+    },
+
+    permissions: ['take:assessments']
+  },
+
+  /**
+   * Get Attempt by ID
+   * GET /assessments/:assessmentId/attempts/:attemptId
+   */
+  getResults: {
+    endpoint: '/api/v2/assessments/:assessmentId/attempts/:attemptId',
+    method: 'GET' as const,
+    version: '2.0.0',
+    description: 'Get attempt details/results by attempt ID',
+
+    request: {
+      headers: {
+        'Authorization': 'Bearer <token>'
+      },
+      params: {
+        assessmentId: { type: 'ObjectId', required: true, description: 'Assessment ID' },
+        attemptId: { type: 'ObjectId', required: true, description: 'Attempt ID' }
+      }
+    },
+
+    response: {
+      success: {
+        status: 200,
+        body: {
+          success: 'boolean',
+          data: 'Attempt object with scoring/timing/questions'
+        }
+      },
+      errors: [
+        { status: 401, code: 'UNAUTHORIZED', message: 'Invalid or expired token' },
+        { status: 403, code: 'FORBIDDEN', message: 'Not authorized to view this attempt' },
+        { status: 404, code: 'ATTEMPT_NOT_FOUND', message: 'Attempt not found' }
+      ]
+    },
+
+    permissions: ['take:assessments', 'read:assessments']
   },
 
   /**
    * Save Progress (Auto-save)
-   * PUT /assessments/:assessmentId/attempts/:attemptId
+   * PUT /assessments/:assessmentId/attempts/:attemptId/save
    */
   saveProgress: {
-    endpoint: '/api/v2/assessments/:assessmentId/attempts/:attemptId',
+    endpoint: '/api/v2/assessments/:assessmentId/attempts/:attemptId/save',
     method: 'PUT' as const,
-    version: '1.0.0',
-    description: 'Save progress on an in-progress attempt (auto-save)',
+    version: '2.0.0',
+    description: 'Save in-progress responses for an attempt',
 
     request: {
       headers: {
@@ -248,11 +296,11 @@ export const AssessmentAttemptsContracts = {
           items: {
             type: 'object',
             properties: {
-              questionIndex: { type: 'number', required: true },
+              questionId: { type: 'ObjectId', required: true },
               response: { type: 'any', required: true }
             }
           },
-          description: 'Array of responses to save'
+          description: 'Question responses keyed by questionId'
         }
       }
     },
@@ -272,11 +320,10 @@ export const AssessmentAttemptsContracts = {
         }
       },
       errors: [
-        { status: 400, code: 'ATTEMPT_EXPIRED', message: 'Attempt has expired' },
-        { status: 400, code: 'ATTEMPT_NOT_IN_PROGRESS', message: 'Attempt is not in progress' },
-        { status: 400, code: 'INVALID_QUESTION_INDEX', message: 'Question index out of range' },
+        { status: 409, code: 'ATTEMPT_NOT_IN_PROGRESS', message: 'Attempt is not in progress' },
+        { status: 409, code: 'TIME_LIMIT_EXCEEDED', message: 'Time limit exceeded' },
+        { status: 422, code: 'VALIDATION_ERROR', message: 'responses must be a non-empty array of { questionId, response }' },
         { status: 401, code: 'UNAUTHORIZED', message: 'Invalid or expired token' },
-        { status: 403, code: 'FORBIDDEN', message: 'This is not your attempt' },
         { status: 404, code: 'ATTEMPT_NOT_FOUND', message: 'Attempt not found' }
       ]
     },
@@ -289,9 +336,8 @@ export const AssessmentAttemptsContracts = {
         },
         body: {
           responses: [
-            { questionIndex: 0, response: 'A container for storing data' },
-            { questionIndex: 1, response: true },
-            { questionIndex: 2, response: 'let x = 5;' }
+            { questionId: '507f1f77bcf86cd799439150', response: 'A container for storing data' },
+            { questionId: '507f1f77bcf86cd799439151', response: true }
           ]
         }
       },
@@ -300,22 +346,14 @@ export const AssessmentAttemptsContracts = {
         message: 'Progress saved',
         data: {
           attemptId: '507f1f77bcf86cd799439200',
-          savedResponses: 3,
-          lastActivityAt: '2026-01-08T10:15:00.000Z',
+          savedResponses: 2,
+          lastActivityAt: '2026-02-13T10:15:00.000Z',
           timeRemainingSeconds: 900
         }
       }
     },
 
-    permissions: ['take:assessments'],
-
-    notes: `
-      - Called periodically by UI for auto-save (recommended every 30s)
-      - Partial saves allowed (don't need all responses)
-      - Validates attempt is still in progress and not expired
-      - Updates lastActivityAt timestamp
-      - Response format depends on question type
-    `
+    permissions: ['take:assessments']
   },
 
   /**
@@ -325,8 +363,8 @@ export const AssessmentAttemptsContracts = {
   submit: {
     endpoint: '/api/v2/assessments/:assessmentId/attempts/:attemptId/submit',
     method: 'POST' as const,
-    version: '1.0.0',
-    description: 'Submit an attempt for grading',
+    version: '2.0.0',
+    description: 'Submit attempt for grading',
 
     request: {
       headers: {
@@ -341,7 +379,14 @@ export const AssessmentAttemptsContracts = {
         responses: {
           type: 'array',
           required: false,
-          description: 'Final responses (optional if already saved)'
+          description: 'Optional final responses to save before submit',
+          items: {
+            type: 'object',
+            properties: {
+              questionId: { type: 'ObjectId', required: true },
+              response: { type: 'any', required: true }
+            }
+          }
         }
       }
     },
@@ -361,27 +406,19 @@ export const AssessmentAttemptsContracts = {
               percentageScore: 'number',
               passed: 'boolean',
               gradingComplete: 'boolean',
-              requiresManualGrading: 'boolean',
-              autoGradedQuestions: 'number',
-              manualGradedQuestions: 'number'
+              requiresManualGrading: 'boolean'
             },
             timing: {
               startedAt: 'Date',
               submittedAt: 'Date',
               timeSpentSeconds: 'number'
-            },
-            feedback: 'object | null',
-            canViewResults: 'boolean',
-            attemptsRemaining: 'number | null',
-            nextAttemptAvailableAt: 'Date | null'
+            }
           }
         }
       },
       errors: [
-        { status: 400, code: 'ALREADY_SUBMITTED', message: 'Attempt has already been submitted' },
-        { status: 400, code: 'ATTEMPT_EXPIRED', message: 'Attempt has expired and was auto-submitted' },
+        { status: 409, code: 'ALREADY_SUBMITTED', message: 'Attempt has already been submitted' },
         { status: 401, code: 'UNAUTHORIZED', message: 'Invalid or expired token' },
-        { status: 403, code: 'FORBIDDEN', message: 'This is not your attempt' },
         { status: 404, code: 'ATTEMPT_NOT_FOUND', message: 'Attempt not found' }
       ]
     },
@@ -394,9 +431,7 @@ export const AssessmentAttemptsContracts = {
         },
         body: {
           responses: [
-            { questionIndex: 0, response: 'A container for storing data' },
-            { questionIndex: 1, response: true },
-            { questionIndex: 2, response: 'let x = 5;' }
+            { questionId: '507f1f77bcf86cd799439150', response: 'A container for storing data' }
           ]
         }
       },
@@ -406,215 +441,34 @@ export const AssessmentAttemptsContracts = {
         data: {
           attemptId: '507f1f77bcf86cd799439200',
           status: 'graded',
-          submittedAt: '2026-01-08T10:25:00.000Z',
+          submittedAt: '2026-02-13T10:25:00.000Z',
           scoring: {
             rawScore: 85,
             percentageScore: 85,
             passed: true,
             gradingComplete: true,
-            requiresManualGrading: false,
-            autoGradedQuestions: 10,
-            manualGradedQuestions: 0
+            requiresManualGrading: false
           },
           timing: {
-            startedAt: '2026-01-08T10:00:00.000Z',
-            submittedAt: '2026-01-08T10:25:00.000Z',
+            startedAt: '2026-02-13T10:00:00.000Z',
+            submittedAt: '2026-02-13T10:25:00.000Z',
             timeSpentSeconds: 1500
-          },
-          feedback: null,
-          canViewResults: true,
-          attemptsRemaining: 2,
-          nextAttemptAvailableAt: '2026-01-08T11:25:00.000Z'
-        }
-      }
-    },
-
-    permissions: ['take:assessments'],
-
-    notes: `
-      - Final responses can be included or use previously saved responses
-      - Auto-grading runs for objective questions immediately
-      - Essay/short-answer questions marked as requiresManualGrading
-      - Status is 'graded' if all auto-gradeable, 'submitted' if needs manual grading
-      - canViewResults based on assessment's showCorrectAnswers setting
-      - nextAttemptAvailableAt based on cooldown settings
-    `
-  },
-
-  /**
-   * Get Attempt Results
-   * GET /assessments/:assessmentId/attempts/:attemptId/results
-   */
-  getResults: {
-    endpoint: '/api/v2/assessments/:assessmentId/attempts/:attemptId/results',
-    method: 'GET' as const,
-    version: '1.0.0',
-    description: 'Get detailed results for a completed attempt',
-
-    request: {
-      headers: {
-        'Authorization': 'Bearer <token>'
-      },
-      params: {
-        assessmentId: { type: 'ObjectId', required: true, description: 'Assessment ID' },
-        attemptId: { type: 'ObjectId', required: true, description: 'Attempt ID' }
-      }
-    },
-
-    response: {
-      success: {
-        status: 200,
-        body: {
-          success: 'boolean',
-          data: {
-            attemptId: 'ObjectId',
-            assessmentId: 'ObjectId',
-            assessmentTitle: 'string',
-            attemptNumber: 'number',
-            status: 'submitted | graded',
-            scoring: {
-              rawScore: 'number',
-              percentageScore: 'number',
-              passed: 'boolean',
-              gradingComplete: 'boolean'
-            },
-            timing: {
-              startedAt: 'Date',
-              submittedAt: 'Date',
-              timeSpentSeconds: 'number'
-            },
-            questions: [
-              {
-                index: 'number',
-                questionText: 'string',
-                questionType: 'string',
-                response: 'any',
-                isCorrect: 'boolean | null',
-                correctAnswer: 'any | null',
-                pointsEarned: 'number',
-                pointsPossible: 'number',
-                feedback: 'string | null',
-                explanation: 'string | null'
-              }
-            ],
-            overallFeedback: 'string | null'
           }
         }
-      },
-      errors: [
-        { status: 400, code: 'ATTEMPT_NOT_COMPLETE', message: 'Attempt has not been submitted yet' },
-        { status: 400, code: 'RESULTS_NOT_AVAILABLE', message: 'Results not available yet based on assessment settings' },
-        { status: 401, code: 'UNAUTHORIZED', message: 'Invalid or expired token' },
-        { status: 403, code: 'FORBIDDEN', message: 'Not authorized to view these results' },
-        { status: 404, code: 'ATTEMPT_NOT_FOUND', message: 'Attempt not found' }
-      ]
-    },
-
-    permissions: ['take:assessments', 'read:assessments'],
-
-    notes: `
-      - correctAnswer only included based on assessment's showCorrectAnswers setting
-      - If showCorrectAnswers is 'after_all_attempts', only shows after max attempts used
-      - feedback based on assessment's feedback settings
-      - explanation from question's explanation field
-      - Staff can view any learner's results
-      - Learners can only view their own results
-    `
-  },
-
-  /**
-   * List Attempts for Assessment
-   * GET /assessments/:assessmentId/attempts
-   */
-  list: {
-    endpoint: '/api/v2/assessments/:assessmentId/attempts',
-    method: 'GET' as const,
-    version: '1.0.0',
-    description: 'List all attempts for an assessment (learner sees own, staff sees all)',
-
-    request: {
-      headers: {
-        'Authorization': 'Bearer <token>'
-      },
-      params: {
-        assessmentId: { type: 'ObjectId', required: true, description: 'Assessment ID' }
-      },
-      query: {
-        learnerId: {
-          type: 'ObjectId',
-          required: false,
-          description: 'Filter by learner (staff only)'
-        },
-        status: {
-          type: 'string',
-          required: false,
-          enum: ['in_progress', 'submitted', 'graded', 'abandoned'],
-          description: 'Filter by status'
-        },
-        page: { type: 'number', required: false, default: 1 },
-        limit: { type: 'number', required: false, default: 20 }
       }
     },
 
-    response: {
-      success: {
-        status: 200,
-        body: {
-          success: 'boolean',
-          data: {
-            assessmentId: 'ObjectId',
-            assessmentTitle: 'string',
-            attempts: [
-              {
-                attemptId: 'ObjectId',
-                learnerId: 'ObjectId',
-                learnerName: 'string',
-                attemptNumber: 'number',
-                status: 'string',
-                scoring: {
-                  percentageScore: 'number | null',
-                  passed: 'boolean | null'
-                },
-                timing: {
-                  startedAt: 'Date',
-                  submittedAt: 'Date | null',
-                  timeSpentSeconds: 'number'
-                }
-              }
-            ],
-            pagination: {
-              page: 'number',
-              limit: 'number',
-              total: 'number',
-              totalPages: 'number'
-            }
-          }
-        }
-      },
-      errors: [
-        { status: 401, code: 'UNAUTHORIZED', message: 'Invalid or expired token' },
-        { status: 403, code: 'FORBIDDEN', message: 'Insufficient permissions' },
-        { status: 404, code: 'ASSESSMENT_NOT_FOUND', message: 'Assessment not found' }
-      ]
-    },
-
-    permissions: ['take:assessments', 'read:assessments'],
-
-    notes: `
-      - Learners see only their own attempts
-      - Staff see all attempts (can filter by learnerId)
-      - Useful for attempt history and progress tracking
-    `
+    permissions: ['take:assessments']
   },
 
   /**
-   * Grade Essay Question (Manual Grading)
-   * POST /assessment-attempts/:attemptId/grade-question
+   * Grade Essay/Manual Question
+   * POST /assessments/:assessmentId/attempts/:attemptId/grade
    */
   gradeQuestion: {
-    endpoint: '/api/v2/assessment-attempts/:attemptId/grade-question',
+    endpoint: '/api/v2/assessments/:assessmentId/attempts/:attemptId/grade',
     method: 'POST' as const,
-    version: '1.0.0',
+    version: '2.0.0',
     description: 'Manually grade a question (essay, short-answer)',
 
     request: {
@@ -623,6 +477,7 @@ export const AssessmentAttemptsContracts = {
         'Content-Type': 'application/json'
       },
       params: {
+        assessmentId: { type: 'ObjectId', required: true, description: 'Assessment ID' },
         attemptId: { type: 'ObjectId', required: true, description: 'Attempt ID' }
       },
       body: {
@@ -631,17 +486,17 @@ export const AssessmentAttemptsContracts = {
           required: true,
           description: 'Index of question to grade'
         },
-        pointsEarned: {
+        score: {
           type: 'number',
           required: true,
           min: 0,
-          description: 'Points to award (max: question points)'
+          description: 'Score to award for this question'
         },
         feedback: {
           type: 'string',
           required: false,
           maxLength: 2000,
-          description: 'Feedback for the learner'
+          description: 'Feedback for learner'
         }
       }
     },
@@ -659,33 +514,29 @@ export const AssessmentAttemptsContracts = {
             pointsPossible: 'number',
             gradedAt: 'Date',
             gradedBy: 'ObjectId',
-            updatedScoring: {
-              rawScore: 'number',
-              percentageScore: 'number',
-              passed: 'boolean',
-              gradingComplete: 'boolean'
-            }
+            updatedScoring: 'object'
           }
         }
       },
       errors: [
         { status: 400, code: 'INVALID_QUESTION_INDEX', message: 'Question index out of range' },
-        { status: 400, code: 'NOT_MANUAL_GRADE', message: 'Question does not require manual grading' },
-        { status: 400, code: 'ALREADY_GRADED', message: 'Question has already been graded' },
-        { status: 400, code: 'POINTS_EXCEED_MAX', message: 'Points cannot exceed question maximum' },
+        { status: 409, code: 'ATTEMPT_NOT_SUBMITTED', message: 'Attempt must be submitted before grading' },
+        { status: 422, code: 'VALIDATION_ERROR', message: 'questionIndex and score are required; score must be >= 0' },
         { status: 401, code: 'UNAUTHORIZED', message: 'Invalid or expired token' },
-        { status: 403, code: 'FORBIDDEN', message: 'Insufficient permissions to grade' },
         { status: 404, code: 'ATTEMPT_NOT_FOUND', message: 'Attempt not found' }
       ]
     },
 
     example: {
       request: {
-        params: { attemptId: '507f1f77bcf86cd799439200' },
+        params: {
+          assessmentId: '507f1f77bcf86cd799439070',
+          attemptId: '507f1f77bcf86cd799439200'
+        },
         body: {
           questionIndex: 5,
-          pointsEarned: 8,
-          feedback: 'Good explanation but missed the key point about memory allocation.'
+          score: 8,
+          feedback: 'Good explanation but missed one key detail.'
         }
       },
       response: {
@@ -696,7 +547,7 @@ export const AssessmentAttemptsContracts = {
           questionIndex: 5,
           pointsEarned: 8,
           pointsPossible: 10,
-          gradedAt: '2026-01-09T14:00:00.000Z',
+          gradedAt: '2026-02-13T14:00:00.000Z',
           gradedBy: '507f1f77bcf86cd799439030',
           updatedScoring: {
             rawScore: 88,
@@ -708,14 +559,7 @@ export const AssessmentAttemptsContracts = {
       }
     },
 
-    permissions: ['grade:assessments'],
-
-    notes: `
-      - Only for essay, short-answer, or other manual-grade questions
-      - Updates attempt status to 'graded' when all questions graded
-      - Triggers notification to learner when grading complete
-      - Points must be between 0 and question's maximum points
-    `
+    permissions: ['grade:assessments']
   }
 };
 

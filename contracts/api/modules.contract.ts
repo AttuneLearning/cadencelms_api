@@ -4,6 +4,7 @@
  *
  * These contracts define the Module entity - logical groupings of learning units within a course.
  * Modules organize course content into chapters/sections with completion criteria and presentation rules.
+ * Assessment launch identity remains assessmentId; module/learningUnit identifiers are context/provenance.
  *
  * Nested under /courses/:courseId/modules
  */
@@ -411,10 +412,10 @@ export const ModulesContracts = {
 
   /**
    * Get Module Details
-   * GET /modules/:moduleId
+   * GET /courses/:courseId/modules/:moduleId
    */
   getOne: {
-    endpoint: '/api/v2/modules/:moduleId',
+    endpoint: '/api/v2/courses/:courseId/modules/:moduleId',
     method: 'GET' as const,
     version: '1.0.0',
     description: 'Get detailed information about a specific module',
@@ -424,6 +425,7 @@ export const ModulesContracts = {
         'Authorization': 'Bearer <token>'
       },
       params: {
+        courseId: { type: 'ObjectId', required: true, description: 'Course ID' },
         moduleId: { type: 'ObjectId', required: true, description: 'Module ID' }
       },
       query: {
@@ -508,7 +510,10 @@ export const ModulesContracts = {
 
     example: {
       request: {
-        params: { moduleId: '507f1f77bcf86cd799439012' },
+        params: {
+          courseId: '507f1f77bcf86cd799439011',
+          moduleId: '507f1f77bcf86cd799439012'
+        },
         query: { includeLearningUnits: true }
       },
       response: {
@@ -584,15 +589,16 @@ export const ModulesContracts = {
       - learningUnits only included if includeLearningUnits=true
       - Statistics included for staff users only
       - Learners can only view published modules
+      - Modules are addressed within a parent course context
     `
   },
 
   /**
    * Update Module
-   * PUT /modules/:moduleId
+   * PUT /courses/:courseId/modules/:moduleId
    */
   update: {
-    endpoint: '/api/v2/modules/:moduleId',
+    endpoint: '/api/v2/courses/:courseId/modules/:moduleId',
     method: 'PUT' as const,
     version: '1.0.0',
     description: 'Update an existing module',
@@ -603,6 +609,7 @@ export const ModulesContracts = {
         'Content-Type': 'application/json'
       },
       params: {
+        courseId: { type: 'ObjectId', required: true, description: 'Course ID' },
         moduleId: { type: 'ObjectId', required: true, description: 'Module ID' }
       },
       body: {
@@ -650,10 +657,10 @@ export const ModulesContracts = {
 
   /**
    * Delete Module
-   * DELETE /modules/:moduleId
+   * DELETE /courses/:courseId/modules/:moduleId
    */
   delete: {
-    endpoint: '/api/v2/modules/:moduleId',
+    endpoint: '/api/v2/courses/:courseId/modules/:moduleId',
     method: 'DELETE' as const,
     version: '1.0.0',
     description: 'Delete a module from a course',
@@ -663,6 +670,7 @@ export const ModulesContracts = {
         'Authorization': 'Bearer <token>'
       },
       params: {
+        courseId: { type: 'ObjectId', required: true, description: 'Course ID' },
         moduleId: { type: 'ObjectId', required: true, description: 'Module ID' }
       },
       query: {

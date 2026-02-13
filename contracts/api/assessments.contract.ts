@@ -4,6 +4,7 @@
  *
  * These contracts define the Assessment entity - quiz and exam configurations
  * that can be used as learning unit content for evaluating learner knowledge.
+ * Assessment IDs are the canonical identifiers for attempt lifecycle APIs.
  *
  * Assessments define question selection rules, timing, attempt limits, and scoring.
  */
@@ -491,15 +492,17 @@ export const AssessmentsContracts = {
       - style 'exam' typically has stricter settings (fewer attempts, longer time)
       - style 'quiz' typically has lenient settings (more attempts, shorter)
       - timeLimit is in minutes
+      - Assessment attempts are keyed by assessmentId, not learningUnitId
+      - learningUnitId is contextual provenance when launching attempts from course player
     `
   },
 
   /**
    * Get Assessment Details
-   * GET /assessments/:id
+   * GET /assessments/:assessmentId
    */
   getOne: {
-    endpoint: '/api/v2/assessments/:id',
+    endpoint: '/api/v2/assessments/:assessmentId',
     method: 'GET' as const,
     version: '1.0.0',
     description: 'Get detailed information about an assessment',
@@ -509,7 +512,7 @@ export const AssessmentsContracts = {
         'Authorization': 'Bearer <token>'
       },
       params: {
-        id: { type: 'ObjectId', required: true, description: 'Assessment ID' }
+        assessmentId: { type: 'ObjectId', required: true, description: 'Assessment ID' }
       }
     },
 
@@ -563,10 +566,10 @@ export const AssessmentsContracts = {
 
   /**
    * Update Assessment
-   * PUT /assessments/:id
+   * PUT /assessments/:assessmentId
    */
   update: {
-    endpoint: '/api/v2/assessments/:id',
+    endpoint: '/api/v2/assessments/:assessmentId',
     method: 'PUT' as const,
     version: '1.0.0',
     description: 'Update an assessment',
@@ -577,7 +580,7 @@ export const AssessmentsContracts = {
         'Content-Type': 'application/json'
       },
       params: {
-        id: { type: 'ObjectId', required: true, description: 'Assessment ID' }
+        assessmentId: { type: 'ObjectId', required: true, description: 'Assessment ID' }
       },
       body: {
         title: { type: 'string', required: false },
@@ -621,10 +624,10 @@ export const AssessmentsContracts = {
 
   /**
    * Publish Assessment
-   * POST /assessments/:id/publish
+   * POST /assessments/:assessmentId/publish
    */
   publish: {
-    endpoint: '/api/v2/assessments/:id/publish',
+    endpoint: '/api/v2/assessments/:assessmentId/publish',
     method: 'POST' as const,
     version: '1.0.0',
     description: 'Publish an assessment to make it available',
@@ -634,7 +637,7 @@ export const AssessmentsContracts = {
         'Authorization': 'Bearer <token>'
       },
       params: {
-        id: { type: 'ObjectId', required: true, description: 'Assessment ID' }
+        assessmentId: { type: 'ObjectId', required: true, description: 'Assessment ID' }
       }
     },
 
@@ -671,10 +674,10 @@ export const AssessmentsContracts = {
 
   /**
    * Archive Assessment
-   * POST /assessments/:id/archive
+   * POST /assessments/:assessmentId/archive
    */
   archive: {
-    endpoint: '/api/v2/assessments/:id/archive',
+    endpoint: '/api/v2/assessments/:assessmentId/archive',
     method: 'POST' as const,
     version: '1.0.0',
     description: 'Archive an assessment (soft delete)',
@@ -684,7 +687,7 @@ export const AssessmentsContracts = {
         'Authorization': 'Bearer <token>'
       },
       params: {
-        id: { type: 'ObjectId', required: true, description: 'Assessment ID' }
+        assessmentId: { type: 'ObjectId', required: true, description: 'Assessment ID' }
       }
     },
 
@@ -722,10 +725,10 @@ export const AssessmentsContracts = {
 
   /**
    * Delete Assessment
-   * DELETE /assessments/:id
+   * DELETE /assessments/:assessmentId
    */
   delete: {
-    endpoint: '/api/v2/assessments/:id',
+    endpoint: '/api/v2/assessments/:assessmentId',
     method: 'DELETE' as const,
     version: '1.0.0',
     description: 'Permanently delete an assessment',
@@ -735,7 +738,7 @@ export const AssessmentsContracts = {
         'Authorization': 'Bearer <token>'
       },
       params: {
-        id: { type: 'ObjectId', required: true, description: 'Assessment ID' }
+        assessmentId: { type: 'ObjectId', required: true, description: 'Assessment ID' }
       }
     },
 
