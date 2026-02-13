@@ -63,8 +63,10 @@ All three endpoints follow the same pattern: `GET /.../learner/:learnerId`. The 
 
 ## Response Section (For Recipient)
 
-**Status:** Pending
-**Response Date:**
+**Status:** Complete
+**Response Date:** 2026-02-13
+
+All listed issues are complete and closed: `API-ISS-037` through `API-ISS-042` (see `dev_communication/backend/issues/completed/`). Enrollment filtering/data leak, missing endpoints, and learner ownership guard fixes were delivered.
 
 ---
 

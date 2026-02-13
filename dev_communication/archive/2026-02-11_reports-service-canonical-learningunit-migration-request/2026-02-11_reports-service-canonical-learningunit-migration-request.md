@@ -50,10 +50,10 @@ Migrate shared report data builders first, then endpoint-specific formatters. Pr
 
 ## Response Section (For Recipient)
 
-**Status:** [Received | In Progress | Complete | Declined]
-**Response Date:** YYYY-MM-DD
+**Status:** Complete
+**Response Date:** 2026-02-13
 
-[Response content here]
+Implemented in `API-ISS-046` (`dev_communication/backend/issues/completed/API-ISS-046_reports-service-canonical-learningunit-migration.md`). Reporting internals and payload identities were aligned to canonical learning-unit structures.
 
 ---
 

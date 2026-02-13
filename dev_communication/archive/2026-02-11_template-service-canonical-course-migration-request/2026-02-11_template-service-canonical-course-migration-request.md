@@ -48,10 +48,10 @@ Use `CanonicalCourse` as stable identifier and resolve display title from curren
 
 ## Response Section (For Recipient)
 
-**Status:** [Received | In Progress | Complete | Declined]
-**Response Date:** YYYY-MM-DD
+**Status:** Complete
+**Response Date:** 2026-02-13
 
-[Response content here]
+Implemented in `API-ISS-043` (`dev_communication/backend/issues/completed/API-ISS-043_template-service-canonical-course-migration.md`). Template usage/unlink logic is canonical-course based and contract notes now document canonical `usedByCourses` fields.
 
 ---
 

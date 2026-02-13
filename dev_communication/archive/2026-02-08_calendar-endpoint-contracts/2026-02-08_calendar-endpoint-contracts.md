@@ -103,8 +103,10 @@ These can be implemented later. The UI types are ready but no UI for reminders e
 
 ## Response Section (For Recipient)
 
-**Status:** Received
-**Response Date:**
+**Status:** Complete
+**Response Date:** 2026-02-13
+
+Implemented in `API-ISS-032` and now in `dev_communication/backend/issues/completed/API-ISS-032_calendar-feed-endpoints.md`. Feed endpoints shipped; reminder endpoints remain deferred as requested.
 
 ---
 

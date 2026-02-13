@@ -51,10 +51,10 @@ Resolve canonical course and active version, then derive module/learning unit se
 
 ## Response Section (For Recipient)
 
-**Status:** [Received | In Progress | Complete | Declined]
-**Response Date:** YYYY-MM-DD
+**Status:** Complete
+**Response Date:** 2026-02-13
 
-[Response content here]
+Implemented in `API-ISS-045` (`dev_communication/backend/issues/completed/API-ISS-045_progress-service-canonical-learningunit-migration.md`). Progress service runtime now follows canonical course + learning-unit structures.
 
 ---
 

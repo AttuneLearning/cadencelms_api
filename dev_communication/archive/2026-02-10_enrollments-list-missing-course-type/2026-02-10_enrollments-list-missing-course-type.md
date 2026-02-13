@@ -99,8 +99,10 @@ The enrollment list service appears to only query program-type enrollments when 
 
 ## Response Section (For Recipient)
 
-**Status:** Received
-**Response Date:**
+**Status:** Complete
+**Response Date:** 2026-02-13
+
+Resolved in `API-ISS-037` (`dev_communication/backend/issues/completed/API-ISS-037_enrollments-user-filtering.md`). Course-type enrollments now return correctly, filters are applied, and pagination totals align with filtered results.
 
 ---
 

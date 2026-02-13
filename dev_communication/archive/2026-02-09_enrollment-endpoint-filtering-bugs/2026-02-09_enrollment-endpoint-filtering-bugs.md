@@ -64,8 +64,10 @@ Without these fixes:
 
 ## Response Section (For Recipient)
 
-**Status:** Pending
-**Response Date:**
+**Status:** Complete
+**Response Date:** 2026-02-13
+
+Fixed in `API-ISS-037` (`dev_communication/backend/issues/completed/API-ISS-037_enrollments-user-filtering.md`). Authenticated learner filtering, course-type support, and course filter behavior were implemented.
 
 ---
 

@@ -53,10 +53,10 @@ Resolve module -> learning units -> linked questions (`LearningUnitQuestion`) fo
 
 ## Response Section (For Recipient)
 
-**Status:** [Received | In Progress | Complete | Declined]
-**Response Date:** YYYY-MM-DD
+**Status:** Complete
+**Response Date:** 2026-02-13
 
-[Response content here]
+Implemented in `API-ISS-044` (`dev_communication/backend/issues/completed/API-ISS-044_flashcard-retention-learningunitquestion-migration.md`). Flashcard/retention linkage was migrated to canonical learning-unit question paths.
 
 ---
 
