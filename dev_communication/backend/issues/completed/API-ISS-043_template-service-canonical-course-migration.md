@@ -105,4 +105,4 @@ Current evidence:
 **Commits**
 | Hash | Description |
 |------|-------------|
-| TBD | Finalize contract docs for canonical template `usedByCourses` fields and close issue |
+| f55df89 | Finalize contract docs for canonical template `usedByCourses` fields and close issue |
