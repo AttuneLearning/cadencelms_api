@@ -12,7 +12,11 @@ CadenceLMS requires consistent API design for predictable client development, ma
 
 ### Versioning
 
-URL-based: `/api/v2/{resource}`
+Default: no URL version prefix for the active API surface.
+
+- Current version pattern: `/{resource}`
+- Versioned prefixes (example: `/api/v2/{resource}`) are allowed only when explicitly requested by the Product Owner.
+- If a versioned prefix is introduced, it must be treated as a deliberate versioning event with explicit rollout scope.
 
 ### URL Structure
 
@@ -65,7 +69,7 @@ ISO 8601 UTC: `2026-01-27T15:30:00.000Z`
 
 **Positive:** Consistent developer experience, predictable error handling, efficient pagination.
 
-**Negative:** Existing v1 endpoints require migration, envelope adds payload overhead.
+**Negative:** Version transitions require explicit product coordination instead of automatic URL versioning.
 
 ## Patterns
 
@@ -76,4 +80,5 @@ ISO 8601 UTC: `2026-01-27T15:30:00.000Z`
 
 - [[ADR-AUTH-001-UNIFIED-AUTHORIZATION-MODEL]]
 - [[ADR-API-002-API-CACHING-STRATEGY]]
+- [[ADR-API-004-IDEAL-ENDPOINT-STRUCTURE-AND-RESPONSE-ENVELOPE]]
 - `src/utils/ApiError.ts`, `src/utils/ApiResponse.ts`
